@@ -1,24 +1,26 @@
 from __future__ import print_function
+import numpy as np
+import random
 import math
 
-class Neuron:
-    def __init__(self, init_w = 0.0, init_b = 0.0):
-        self.w = init_w   # weight of one input
-        self.b = init_b   # bias
+class GateNeuron:
+    def __init__(self):
+        self.w = np.array([random.random(), random.random()])   # weight of one input
+        self.b = np.array([random.random()])   # bias
         print("Initial w: {0}, b: {1}".format(self.w, self.b))
 
     def v(self, w, b, input):
-        return w * input + b
+        return np.dot(w, input) + b
 
     def activation(self, v):
-        return max(0.0, v)
+        return max(np.array([0.0]), v)
 
-    def y(self, input):
+    def feedforward(self, input):
         v = self.v(self.w, self.b, input)
         return self.activation(v)
 
     def squared_error(self, input, y_target):
-        return 1.0 / 2.0 * math.pow(self.y(input) - y_target, 2)
+        return 1.0 / 2.0 * math.pow(self.feedforward(input) - y_target, 2)
 
     def activation_derivative(self, v):
         if v >= 0:
@@ -34,11 +36,11 @@ class Neuron:
         for i in xrange(maxEpoch):
             for idx in xrange(data.numTrainData):
                 input = data.training_input_value[idx]
-                y = n.y(input)
+                y = n.feedforward(input)
                 y_target = data.training_y_target[idx]
 
                 v = self.v(self.w, self.b, input)
-                error = self.y(input) - y_target
+                error = self.feedforward(input) - y_target
 
                 self.w = self.w - alpha * error * self.activation_derivative(v) * input
                 self.b = self.b - alpha * error * self.activation_derivative(v)
@@ -53,31 +55,31 @@ class Neuron:
 
 class Data:
     def __init__(self):
-        self.training_input_value = [1.0, 2.0, 3.0]
-        self.training_y_target = [6.0, 7.0, 8.0]
+        self.training_input_value = np.array([(0.0, 0.0), (1.0, 0.0), (0.0, 1.0), (1.0, 1.0)])
+        self.training_y_target = np.array([1.0, 0.0, 0.0, 1.0])
         self.numTrainData = len(self.training_input_value)
 
 if __name__ == '__main__':
-    n = Neuron(5.0, -1.0)
+    n = GateNeuron()
     d = Data()
     for idx in xrange(d.numTrainData):
         input = d.training_input_value[idx]
-        y = n.y(input)
+        y = n.feedforward(input)
         y_target = d.training_y_target[idx]
         print("x: {0}, y: {1}, y_target: {2}, error: {3}".format(
             input,
-            n.y(input),
+            n.feedforward(input),
             y_target,
             n.squared_error(input, y_target)))
 
-    n.learning(0.1, 100, d)
+    n.learning(0.1, 1000, d)
 
     for idx in xrange(d.numTrainData):
         input = d.training_input_value[idx]
-        y = n.y(input)
+        y = n.feedforward(input)
         y_target = d.training_y_target[idx]
         print("x: {0}, y: {1}, y_target: {2}, error: {3}".format(
             input,
-            n.y(input),
+            n.feedforward(input),
             y_target,
             n.squared_error(input, y_target)))
