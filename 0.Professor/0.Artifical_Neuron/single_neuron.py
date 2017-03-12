@@ -6,18 +6,18 @@ class Neuron:
         self.b = init_b   # bias
         print("Initial w: {0}, b: {1}".format(self.w, self.b))
 
-    def v(self, w, b, input):
-        return w * input + b
+    def u(self, input):
+        return self.w * input + self.b
 
-    def activation(self, v):
-        return max(0.0, v)
+    def f(self, u):
+        return max(0.0, u)
 
-    def y(self, input):
-        v = self.v(self.w, self.b, input)
-        return self.activation(v)
+    def z(self, input):
+        u = self.u(input)
+        return self.f(u)
 
 if __name__ == '__main__':
     n = Neuron(5.0, -1.0)
-    print(n.y(1.0))
-    print(n.y(2.0))
-    print(n.y(3.0))
+    print(n.z(1.0))
+    print(n.z(2.0))
+    print(n.z(3.0))
