@@ -26,24 +26,30 @@ class Neuron:
         else:
             return 0
 
-    def numerical_f_derivative(self, u):
-        delta = 0.00000001
-        return (self.f(u + delta) - self.f(u)) / delta
+    # def numerical_f_derivative(self, u):
+    #     delta = 0.00000001
+    #     return (self.f(u + delta) - self.f(u)) / delta
+
+    def d_E_over_d_w(self, input, z_target):
+        u = self.u(input)
+        z = self.f(u)
+        error = z - z_target
+        return error * self.f_derivative(u) * input
+
+    def d_E_over_d_b(self, input, z_target):
+        u = self.u(input)
+        z = self.f(u)
+        error = z - z_target
+        return error * self.f_derivative(u)
 
     def learning(self, alpha, maxEpoch, data):
         for i in xrange(maxEpoch):
             for idx in xrange(data.numTrainData):
                 input = data.training_input_value[idx]
-                u = self.u(input)
-                z = n.f(u)
                 z_target = data.training_z_target[idx]
-                error = z - z_target
 
-                self.w = self.w - alpha * error * self.f_derivative(u) * input
-                self.b = self.b - alpha * error * self.f_derivative(u)
-
-                #self.w = self.w - alpha * error * self.numerical_f_derivative(u) * input
-                #self.b = self.b - alpha * error * self.numerical_f_derivative(u)
+                self.w = self.w - alpha * self.d_E_over_d_w(input, z_target)
+                self.b = self.b - alpha * self.d_E_over_d_b(input, z_target)
 
             sum = 0.0
             for idx in xrange(data.numTrainData):
