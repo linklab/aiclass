@@ -31,6 +31,8 @@ print("env.observation_space.n:", env.observation_space.n)
 print("env.action_space.n:", env.action_space.n)
 Q = np.zeros([env.observation_space.n, env.action_space.n])
 
+#Discount Factor
+discount_factor = .99   # <-- Updated for ver.2
 num_episodes = 2000
 
 # list to contain total rewards and steps per episode
@@ -44,13 +46,21 @@ for i in range(num_episodes):
 
     # The Q-Table learning algorithm
     while not done:
-        action = rargmax(Q[state, :])
+        #Decaying Random Noise <-- Updated for ver.2
+        e = 0.1 / (i + 1)
+        if np.random.rand(1) < e:
+            action = env.action_space.sample()
+        else:
+            action = rargmax(Q[state, :])
+
+        #Decaying Random Noise <-- Updated for ver.2
+        #action = np.argmax(Q[state, :] + np.random.randn(1, env.action_space.n) / (i+1))
 
         # Get new state and reward from environment
         new_state, reward, done, info = env.step(action)
 
         # Update Q-Table with new knowledge using learning rate
-        Q[state, action] = reward + np.max(Q[new_state, :])
+        Q[state, action] = reward + discount_factor * np.max(Q[new_state, :]) # <-- Updated for ver.2
 
         rAll += reward
         state = new_state
