@@ -39,7 +39,7 @@ num_episodes = 2000
 rList = []
 
 for i in range(num_episodes):
-    # Rest environment and get first new observation
+    # Reset environment and get first new observation
     state = env.reset()
     rAll = 0
     done = False
@@ -47,7 +47,8 @@ for i in range(num_episodes):
     # The Q-Table learning algorithm
     while not done:
         #Decaying Random Noise <-- Updated for ver.2
-        e = 0.1 / (i + 1)
+        #e = 0.1 / (i + 1)
+        e = 1. / ((i / 50) + 10)
         if np.random.rand(1) < e:
             action = env.action_space.sample()
         else:

@@ -51,9 +51,9 @@ while True:
         break
 
     action = arrow_keys[key]
-    state, reward, done, info = env.step(action)
+    new_state, reward, done, info = env.step(action)
     env.render()
-    print("Action: {0} --> State: {1}, Reward: {2}, Done: {3}, Info: {4}".format(action, state, reward, done, info))
+    print("Action: {0} --> New State: {1}, Reward: {2}, Done: {3}, Info: {4}".format(action, new_state, reward, done, info))
 
     if done:
         print("Finished with reward", reward)
