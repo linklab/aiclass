@@ -1,149 +1,169 @@
-import gym
+# -*- coding: utf-8 -*-
+# https://github.com/openai/gym/wiki/CartPole-v0
 import tensorflow as tf
+import gym
 import numpy as np
-import time
-from collections import deque
+import random
+import matplotlib.pyplot as plt
 
+env = gym.make('CartPole-v0')
+input_size = env.observation_space.shape[0]     # 4
+output_size = env.action_space.n                # 2
+
+# 꺼내서 사용할 리플레이 갯수
+REPLAY = 10
+
+# 리플레이를 저장할 리스트
+REPLAY_MEMORY = []
+
+# 미니배치
+MINIBATCH = 50
+
+# 하이퍼파라미터
+learning_rate = 0.1
+num_episodes = 1000
+e = 0.1
+discount_factor = .9
+rList = []
+train_error_list = []
+episode_list = []
+
+# 네트워크 클래스 구성
 class DQN:
-    def __init__(self, session, input_size, hidden_size, output_size):
+    def __init__(self, session, input_size, output_size, name="main"):
+        # 네트워크 정보 입력
         self.session = session
         self.input_size = input_size
-        self.hidden_size = hidden_size
         self.output_size = output_size
-        self.learning_rate = 0.1
-        self.discount_factor = .99
+        self.net_name = name
+        self.hidden_size = 16
+        # 네트워크 생성
         self.build_network()
-        print("input_size:", self.input_size)
-        print("hidden_size:", self.hidden_size)
-        print("output_size:", self.output_size)
 
     def build_network(self):
-        self.X = tf.placeholder(shape=[None, input_size], dtype=tf.float32)
-        self.Y = tf.placeholder(shape=[None, output_size], dtype=tf.float32)
+        # Vanilla Neural Network (Just one hidden layer)
+        self.X=tf.placeholder(dtype=tf.float32, shape=[None, self.input_size])
+        self.Y=tf.placeholder(dtype=tf.float32, shape=(1, env.action_space.n))
 
-        W1 = tf.Variable(tf.random_normal([self.input_size, self.hidden_size], mean=0.0, stddev=1.0))
-        self.U1 = tf.matmul(self.X, W1)        # (1, 4) * (4, 16) = (1, 16)
-        self.Z1 = tf.nn.relu(self.U1)               # (1, 16)
+        self.W1 = tf.Variable(tf.random_normal([self.input_size, self.hidden_size], mean=0.0, stddev=1.0))
+        self.W2 = tf.Variable(tf.random_normal([self.hidden_size, self.output_size], mean=0.0, stddev=1.0))
 
-        W2 = tf.Variable(tf.random_normal([self.hidden_size, self.output_size], mean=0.0, stddev=1.0))
-        self.Qpred = tf.matmul(self.Z1, W2)    # (1, 16) * (16, 2) = (1, 2)
+        self.L1=tf.nn.tanh(tf.matmul(self.X, self.W1))
 
-        self.loss = tf.reduce_sum(tf.square(self.Y - self.Qpred))
-        self.train = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
+        self.Q_pred = tf.matmul(self.L1, self.W2)
 
-    def predict(self, episode, state):
-        x = np.reshape(state, [1, self.input_size])
-        Q = self.session.run(self.Qpred, feed_dict={self.X: x})
-        return Q
+        # 손실 함수
+        self.loss = tf.reduce_sum(tf.square(self.Y - self.Q_pred))
+        self.train = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(self.loss)
 
-    def update(self, episode, x_stack, y_stack):
-        loss_value, _ = self.session.run([self.loss, self.train], feed_dict={self.X: x_stack, self.Y: y_stack})
-        if episode % 10 == 0:
-            print("Episode: {0}, Loss Value: {1}".format(episode, loss_value))
+    # 예측한 Q값 구하기
+    def predict(self, state):
+        x = np.reshape(state, [1,self.input_size])
+        return self.session.run(self.Q_pred, feed_dict={self.X: x})
+
+    # 네트워크 학습
+    def update(self, x, y):
+        loss_value, _ = self.session.run([self.loss, self.train], feed_dict={self.X: x, self.Y: y})
         return loss_value
 
-    def replay_train(self, episode, train_batch):
-        x_stack = np.empty(0).reshape(0, self.input_size)
-        y_stack = np.empty(0).reshape(0, self.output_size)
+# 미니배치를 이용한 학습
+def replay_train(DQN):
+    error_sum = 0
+    for sample in random.sample(REPLAY_MEMORY, REPLAY):
+        state, action, reward, new_state, done = sample
+        Q = DQN.predict(state)
+        # DQN 알고리즘으로 학습
+        if done:
+            Q[0, action] = -100
+        else:
+            Q[0, action] = reward + discount_factor * np.max(DQN.predict(new_state))
 
-        for state, action, reward, next_state, done in train_batch:
-            Q = self.predict(episode, state)
-
-            if done:
-                Q[0, action] = reward
-            else:
-                Q[0, action] = reward + self.discount_factor * np.max(self.predict(new_state))
-
-            x_stack = np.vstack([x_stack, state])
-            y_stack = np.vstack([y_stack, Q])
-
-        return self.update(episode, x_stack, y_stack)
-
-    def bot_play(self):
-        state = env.reset()
-        reward_sum = 0
-        num_actions = 0
-        while True:
-            env.render()
-            action = self.predict(0, state)
-            num_actions += 1
-            state, reward, done, info = env.step(action)
-            reward_sum += reward
-
-            if done:
-                print("=============================================")
-                print("Total number of actions: {0}, Total rewards: {1}".format(num_actions, reward_sum))
-                break
+        loss_value = DQN.update(np.reshape(state, [1, DQN.input_size]), Q)
+        error_sum += loss_value
+    return error_sum / REPLAY
 
 
+def bot_play(DQN):
+    state = env.reset()
+    reward_sum = 0
+    num_actions = 0
+    while True:
+        env.render()
+        action = np.argmax(DQN.predict(state))
+        new_state, reward, done, info = env.step(action)
+        reward_sum += reward
+        state = new_state
+        num_actions += 1
+
+        if done:
+            print("=============================================")
+            print("Total number of actions: {0}, Total rewards: {1}".format(num_actions, reward_sum))
+            break
+
+
+def draw_error_values():
+    fig = plt.figure(figsize=(20, 5))
+    plt.ion()
+    plt.subplot(111)
+    plt.plot(episode_list[0:], train_error_list[0:], 'r', label='Train')
+    plt.ylabel('Error Values')
+    plt.xlabel('Episodes')
+    plt.grid(True)
+    plt.legend(loc='upper right')
+    plt.show()
+    input("Press Enter to close the trained error figure...")
+    plt.close(fig)
 
 if __name__ == "__main__":
-    env = gym.make('CartPole-v0')
-    env.reset()
-    num_episodes = 2000
-    REPLAY_MEMORY = 50000
-    replay_buffer = deque()
-    rList = []
-
-    input_size = env.observation_space.shape[0]     # 4
-    output_size = env.action_space.n                # 2
-
     with tf.Session() as sess:
-        init = tf.global_variables_initializer()
-        sess.run(init)
+        # mainDQN 이라는 DQN 클래스 생성
+        mainDQN = DQN(sess, input_size, output_size)
 
-        main_dqn = DQN(sess, input_size, 16, output_size)
+        # 변수 초기화
+        sess.run(tf.global_variables_initializer())
 
         for episode in range(num_episodes):
-            # Reset environment and get first new observation
             state = env.reset()
-            rAll = 0
-            e = 1. / ((episode / 50) + 10)
+            e = 1. / ((episode/10)+1)
+            rall = 0
             done = False
             num_actions = 0
 
-            # The Q-Network training
-            while not done:
-                if np.random.rand(1) < e:
+            while not done and num_actions < 5000:
+                env.render()
+                # e-greedy 를 사용하여 action값 구함
+                if e > np.random.rand(1):
                     action = env.action_space.sample()
                 else:
-                    Qs = main_dqn.predict(episode, state)
-                    action = np.argmax(Qs)
-                    print("Episode: {0}, State: {1}, Qs: {2}".format(episode, state, Qs))
+                    action = np.argmax(mainDQN.predict(state))
 
-                # Get new state and reward from environment
-                new_state, reward, done, info = env.step(action)
+                # action을 수행함
+                new_state, reward, done, _ = env.step(action)
 
-                if done:
-                    # Big Penalty
-                    reward = -100
+                # state, action, reward, next_state, done 을 메모리에 저장
+                REPLAY_MEMORY.append([state, action, reward, new_state, done])
 
-                replay_buffer.append((state, action, reward, new_state, done))
-                if len(replay_buffer) > REPLAY_MEMORY:
-                    replay_buffer.popleft()
+                # 메모리에 50000개 이상의 값이 들어가면 가장 먼저 들어간 것부터 삭제
+                if len(REPLAY_MEMORY) > 50000:
+                    del REPLAY_MEMORY[0]
 
+                rall += reward
                 state = new_state
                 num_actions += 1
-                if num_actions > 10000:
-                    break
-                rAll += reward
 
-            rList.append(rAll)
-            print("Episode: {0}, Total Step: {1}, Total Rewards: {2}".format(episode, num_actions, rAll))
-            if num_actions > 10000:
-                break
+            # 10 번의 스탭마다 미니배치로 학습
+            if not episode == 0 and episode % 10 == 0:
+                episode_list.append(episode)
+                mean_error_sum = 0
+                for _ in range(MINIBATCH):
+                    mean_error_sum += replay_train(mainDQN)
+                train_error_list.append(mean_error_sum / MINIBATCH)
 
-            if episode % 10 == 1:
-                #Get a random batch of experiences.
-                for _ in range(50):
-                    minibatch = random.sample(replay_buffer, 10)
-                    loss, _ = main_dqn.replay_train(episode, minibatch)
-                print("Loss: {0}".format(loss))
+            rList.append(rall)
+            print("Episode {0} finished after {1} actions with r={2}. Running score: {3}".format(episode, num_actions, rall, np.mean(rList)))
 
-            time.sleep(1) # delays for 1 second
-
-            # If the last 10's average steps are over 70, it's good enough
-            if len(rList) > 10 and np.mean(rList[-10:]) > 50:
-                break
-
-        main_dqn.bot_play()
+        env.reset()
+        env.close()
+        draw_error_values()
+        input("Press Enter to make the trained bot play...")
+        bot_play(mainDQN)

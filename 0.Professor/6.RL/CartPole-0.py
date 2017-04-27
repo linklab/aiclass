@@ -1,3 +1,4 @@
+# https://github.com/openai/gym/wiki/CartPole-v0
 import gym
 
 env = gym.make('CartPole-v0')

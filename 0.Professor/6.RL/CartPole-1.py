@@ -1,3 +1,4 @@
+# https://github.com/openai/gym/wiki/CartPole-v0
 import gym
 import tensorflow as tf
 import numpy as np

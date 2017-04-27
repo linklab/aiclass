@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
+# https://github.com/openai/gym/wiki/CartPole-v0
 import tensorflow as tf
 import gym
 import numpy as np
 import random
+import matplotlib.pyplot as plt
 
 env = gym.make('CartPole-v0')
 input_size = env.observation_space.shape[0]     # 4
@@ -19,10 +21,12 @@ MINIBATCH = 50
 
 # 하이퍼파라미터
 learning_rate = 0.1
-num_episodes = 2000
+num_episodes = 1000
 e = 0.1
 discount_factor = .9
 rList = []
+train_error_list = []
+episode_list = []
 
 # 네트워크 클래스 구성
 class DQN:
@@ -37,9 +41,9 @@ class DQN:
         self.build_network()
 
     def build_network(self):
-        # 네트워크 구조
+        # Vanilla Neural Network (Just one hidden layer)
         self.X=tf.placeholder(dtype=tf.float32, shape=[None, self.input_size])
-        self.Y=tf.placeholder(dtype=tf.float32, shape=(1, env.action_space.n))
+        self.Y=tf.placeholder(dtype=tf.float32, shape=[None, self.output_size])
 
         self.W1 = tf.Variable(tf.random_normal([self.input_size, self.hidden_size], mean=0.0, stddev=1.0))
         self.W2 = tf.Variable(tf.random_normal([self.hidden_size, self.output_size], mean=0.0, stddev=1.0))
@@ -54,15 +58,17 @@ class DQN:
 
     # 예측한 Q값 구하기
     def predict(self, state):
-        x = np.reshape(state, [1,self.input_size])
+        x = np.reshape(state, [1, self.input_size])
         return self.session.run(self.Q_pred, feed_dict={self.X: x})
 
     # 네트워크 학습
     def update(self, x, y):
-        self.session.run(self.train, feed_dict={self.X: x, self.Y: y})
+        loss_value, _ = self.session.run([self.loss, self.train], feed_dict={self.X: x, self.Y: y})
+        return loss_value
 
 # 미니배치를 이용한 학습
 def replay_train(DQN):
+    error_sum = 0
     for sample in random.sample(REPLAY_MEMORY, REPLAY):
         state, action, reward, new_state, done = sample
         Q = DQN.predict(state)
@@ -72,9 +78,42 @@ def replay_train(DQN):
         else:
             Q[0, action] = reward + discount_factor * np.max(DQN.predict(new_state))
 
-        DQN.update(np.reshape(state, [1, DQN.input_size]), Q)
+        loss_value = DQN.update(np.reshape(state, [1, DQN.input_size]), Q)
+        error_sum += loss_value
+    return error_sum / REPLAY
 
-# 메인
+
+def bot_play(DQN):
+    state = env.reset()
+    reward_sum = 0
+    num_actions = 0
+    while True:
+        env.render()
+        action = np.argmax(DQN.predict(state))
+        new_state, reward, done, info = env.step(action)
+        reward_sum += reward
+        state = new_state
+        num_actions += 1
+
+        if done:
+            print("=============================================")
+            print("Total number of actions: {0}, Total rewards: {1}".format(num_actions, reward_sum))
+            break
+
+
+def draw_error_values():
+    fig = plt.figure(figsize=(20, 5))
+    plt.ion()
+    plt.subplot(111)
+    plt.plot(episode_list[0:], train_error_list[0:], 'r', label='Train')
+    plt.ylabel('Error Values')
+    plt.xlabel('Episodes')
+    plt.grid(True)
+    plt.legend(loc='upper right')
+    plt.show()
+    input("Press Enter to close the trained error figure...")
+    plt.close(fig)
+
 if __name__ == "__main__":
     with tf.Session() as sess:
         # mainDQN 이라는 DQN 클래스 생성
@@ -83,23 +122,22 @@ if __name__ == "__main__":
         # 변수 초기화
         sess.run(tf.global_variables_initializer())
 
-        for step in range(num_episodes):
+        for episode in range(num_episodes):
             state = env.reset()
-            e = 1. / ((step/10)+1)
+            e = 1. / ((episode/10)+1)
             rall = 0
             done = False
-            count=0
+            num_actions = 0
 
-            while not done and count < 5000:
+            while not done and num_actions < 5000:
                 env.render()
-                count+=1
                 # e-greedy 를 사용하여 action값 구함
                 if e > np.random.rand(1):
                     action = env.action_space.sample()
                 else:
                     action = np.argmax(mainDQN.predict(state))
 
-                # action을 취함
+                # action을 수행함
                 new_state, reward, done, _ = env.step(action)
 
                 # state, action, reward, next_state, done 을 메모리에 저장
@@ -111,11 +149,21 @@ if __name__ == "__main__":
 
                 rall += reward
                 state = new_state
+                num_actions += 1
 
             # 10 번의 스탭마다 미니배치로 학습
-            if step % 10 == 0 :
+            if not episode == 0 and episode % 10 == 0:
+                episode_list.append(episode)
+                mean_error_sum = 0
                 for _ in range(MINIBATCH):
-                    replay_train(mainDQN)
+                    mean_error_sum += replay_train(mainDQN)
+                train_error_list.append(mean_error_sum / MINIBATCH)
 
             rList.append(rall)
-            print("Episode {} finished after {} timesteps with r={}. Running score: {}".format(step, count, rall, np.mean(rList)))
+            print("Episode {0} finished after {1} actions with r={2}. Running score: {3}".format(episode, num_actions, rall, np.mean(rList)))
+
+        env.reset()
+        env.close()
+        draw_error_values()
+        input("Press Enter to make the trained bot play...")
+        bot_play(mainDQN)
