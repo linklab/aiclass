@@ -40,6 +40,7 @@ register(
 )
 
 env = gym.make("FrozenLake-v3")
+
 env.reset()
 env.render()
 
@@ -50,6 +51,11 @@ while True:
         print("Game aborted!")
         break
 
+    # 0 = LEFT, 1 = UP, 2, 3
+# LEFT = 0
+# DOWN = 1
+# RIGHT = 2
+# UP = 3
     action = arrow_keys[key]
     new_state, reward, done, info = env.step(action)
     env.render()

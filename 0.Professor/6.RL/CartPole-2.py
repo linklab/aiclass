@@ -21,18 +21,18 @@ class DQN:
         self.X = tf.placeholder(shape=[None, input_size], dtype=tf.float32)
         self.Y = tf.placeholder(shape=[None, output_size], dtype=tf.float32)
 
-        self.W1 = tf.Variable(tf.random_normal([self.input_size, self.hidden_size], mean=0.0, stddev=1.0))
-        self.U1 = tf.matmul(self.X, self.W1)        # (1, 4) * (4, 16) = (1, 16)
+        W1 = tf.Variable(tf.random_normal([self.input_size, self.hidden_size], mean=0.0, stddev=1.0))
+        self.U1 = tf.matmul(self.X, W1)        # (1, 4) * (4, 16) = (1, 16)
         self.Z1 = tf.nn.relu(self.U1)               # (1, 16)
 
-        self.W2 = tf.Variable(tf.random_normal([self.hidden_size, self.output_size], mean=0.0, stddev=1.0))
-        self.Qpred = tf.matmul(self.Z1, self.W2)    # (1, 16) * (16, 2) = (1, 2)
+        W2 = tf.Variable(tf.random_normal([self.hidden_size, self.output_size], mean=0.0, stddev=1.0))
+        self.Qpred = tf.matmul(self.Z1, W2)    # (1, 16) * (16, 2) = (1, 2)
 
         self.loss = tf.reduce_sum(tf.square(self.Y - self.Qpred))
         self.train = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
 
     def predict(self, episode, state):
-        x = np.reshape(state, [1, input_size])
+        x = np.reshape(state, [1, self.input_size])
         Q = self.session.run(self.Qpred, feed_dict={self.X: x})
         return Q
 
@@ -59,7 +59,7 @@ class DQN:
 
         return self.update(episode, x_stack, y_stack)
 
-    def bot_play(self, main_dqn):
+    def bot_play(self):
         state = env.reset()
         reward_sum = 0
         num_actions = 0
@@ -146,3 +146,4 @@ if __name__ == "__main__":
             if len(rList) > 10 and np.mean(rList[-10:]) > 50:
                 break
 
+        main_dqn.bot_play()
