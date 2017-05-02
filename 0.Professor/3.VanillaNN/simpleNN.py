@@ -34,7 +34,7 @@ class VanillaNN:
 
     #Create model
     def makeModel(self, learning_rate):
-        self.learning_rate   = learning_rate
+        self.learning_rate = learning_rate
 
         #tf Graph input
         self.x = tf.placeholder(tf.float32, (None, self.n_input))
