@@ -7,10 +7,6 @@ import random
 import time
 import matplotlib.pyplot as plt
 
-env = gym.make('CartPole-v0')
-input_size = env.observation_space.shape[0]     # 4
-output_size = env.action_space.n                # 2
-
 # 리플레이를 저장할 리스트
 REPLAY_MEMORY = []
 
@@ -98,6 +94,7 @@ def bot_play(DQN):
     See our trained network in action
     """
     input("Press Enter to make the trained bot play...")
+    env = gym.make('CartPole-v0')
     state = env.reset()
     reward_sum = 0
     num_actions = 0
@@ -130,6 +127,10 @@ def draw_error_values():
     plt.close(fig)
 
 if __name__ == "__main__":
+    env = gym.make('CartPole-v0')
+    input_size = env.observation_space.shape[0]     # 4
+    output_size = env.action_space.n                # 2
+
     with tf.Session() as sess:
         # DQN 클래스의 mainDQN 인스턴스 생성
         mainDQN = DQN(sess, input_size, output_size)
