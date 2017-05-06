@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # https://github.com/openai/gym/wiki/CartPole-v0
+# Must read - https://www.nervanasys.com/demystifying-deep-reinforcement-learning/
 import tensorflow as tf
 import gym
 import numpy as np
