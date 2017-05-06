@@ -39,7 +39,7 @@ train = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(
 
 # Set Q-learning related parameters
 discount_factor = .99
-num_episodes = 2000
+max_episodes = 2000
 
 # list to contain total rewards and steps per episode
 rList = []
@@ -51,7 +51,7 @@ with tf.Session() as sess:
     init = tf.global_variables_initializer()
     sess.run(init)
 
-    for i in range(num_episodes):
+    for i in range(max_episodes):
         # Reset environment and get first new observation
         state = env.reset()
         rAll = 0
@@ -87,7 +87,7 @@ with tf.Session() as sess:
 
         rList.append(rAll)
 
-print("Success rate: " + str(sum(rList)/num_episodes))
+print("Success rate: " + str(sum(rList)/max_episodes))
 plt.plot(rList)
 plt.ylim(-0.5, 1.5)
 plt.show()
