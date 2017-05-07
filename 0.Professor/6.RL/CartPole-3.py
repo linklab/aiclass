@@ -141,7 +141,6 @@ def get_copy_var_ops(src_scope_name='main', target_scope_name='target'):
     target_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=target_scope_name)
 
     for src_var, target_var in zip(src_vars, target_vars):
-        print(src_var, target_var)
         op_holder.append(target_var.assign(src_var.value()))
 
     return op_holder
