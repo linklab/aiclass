@@ -18,8 +18,9 @@ while episode < 10:
     new_state, reward, done, info = env.step(action)
     print("Action {0}: {1} --> Reward: {2}, Done: {3}, Info: {4}".format(num_actions, action_desc[action], reward, done, info))
     print("New State:", new_state.shape, np.sum(new_state, axis=(0, 1)))
+    #print("New State:", new_state.shape, new_state)
     reward_sum += reward
-    time.sleep(3)
+    time.sleep(1)
 
     if done:
         print("Total reward for this episode {0} was: {1}".format(episode, reward_sum))
