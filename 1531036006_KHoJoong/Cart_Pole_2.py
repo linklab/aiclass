@@ -1,15 +1,14 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 # https://github.com/openai/gym/wiki/CartPole-v0
 import tensorflow as tf
 import gym
 import numpy as np
+import random
 import matplotlib.pyplot as plt
+from collections import deque
 
 # 리플레이를 저장할 리스트
-REPLAY_MEMORY = []
-
-# 미니배치 - 꺼내서 사용할 리플레이 갯수
-MINIBATCH = 50
+REPLAY_MEMORY = deque()
 
 # 하이퍼파라미터
 INITIAL_EPSILON = 0.5
@@ -40,14 +39,14 @@ class DQN:
         self.X = tf.placeholder(shape=[None, self.input_size], dtype=tf.float32)
         self.Y = tf.placeholder(shape=[None], dtype=tf.float32)
 
-        self.W1 = tf.Variable(tf.truncated_normal(shape=[self.input_size, self.hidden_size], mean=0.0, stddev=1.0))
-        self.B1 = tf.Variable(tf.zeros(shape=[self.hidden_size]))
-        self.W2 = tf.Variable(tf.truncated_normal(shape=[self.hidden_size, self.output_size], mean=0.0, stddev=1.0))
-        self.B2 = tf.Variable(tf.zeros(shape=[self.output_size]))
+        W1 = tf.Variable(tf.truncated_normal(shape=[self.input_size, self.hidden_size], mean=0.0, stddev=1.0))
+        B1 = tf.Variable(tf.zeros(shape=[self.hidden_size]))
+        W2 = tf.Variable(tf.truncated_normal(shape=[self.hidden_size, self.output_size], mean=0.0, stddev=1.0))
+        B2 = tf.Variable(tf.zeros(shape=[self.output_size]))
 
-        self.L1 = tf.nn.tanh(tf.matmul(self.X, self.W1) + self.B1)
+        L1 = tf.nn.relu(tf.matmul(self.X, W1) + B1)
 
-        self.Qpred = tf.matmul(self.L1, self.W2) + self.B2
+        self.Qpred = tf.matmul(L1, W2) + B2
 
         # 손실 함수 및 최적화 함수
         self.action = tf.placeholder(shape=[None, self.output_size], dtype=tf.float32)
@@ -71,23 +70,32 @@ class DQN:
             #print("Episode: {0}, State: {1}, Q_h: {2}, Action: {3}".format(episode, state, Q_h, action))
         return action
 
-    # 네트워크 학습
-    def update(self, state, new_state, action, reward):
-        x = np.reshape(state, newshape=[1, self.input_size])
-        if done:
-            # it's a terminal state
-            y = -100
-        else:
-            # Obtain the Q_y values by feeding the new state through the network
-            y = reward + discount_factor * np.max(self.predict(new_state))
+    def update_from_memory(self, batch_size):
+        state_batch = np.ndarray(shape=[batch_size, self.input_size])
+        action_batch = np.ndarray(shape=[batch_size, self.output_size])
 
-        one_hot_action = np.zeros(self.output_size)
-        one_hot_action[action] = 1
-        one_hot_action = np.reshape(one_hot_action, newshape=[1, self.output_size])
+        minibatch = random.sample(REPLAY_MEMORY, batch_size)
+        i = 0
+        y_batch = []
+        for sample in minibatch:
+            state, action, reward, new_state, done = sample         # unpacking
 
-        loss_value, _ = self.session.run([self.loss, self.optimizer], feed_dict={self.X: x, self.Y: [y], self.action: one_hot_action})
+            if done:
+                y_batch.append(reward)
+            else:
+                y_batch.append(reward + discount_factor * np.max(self.predict(new_state)))
+
+            one_hot_action = np.zeros(self.output_size) # [0.0, 0.0]
+            one_hot_action[action] = 1
+
+            state_batch[i] = state
+            action_batch[i] = one_hot_action
+            i += 1
+
+        # DQN 알고리즘으로 학습
+        loss_value, _ = self.session.run([self.loss, self.optimizer],
+                                 feed_dict={self.X: state_batch, self.Y: y_batch, self.action: action_batch})
         return loss_value
-
 
 def bot_play(DQN, env):
     """
@@ -104,8 +112,6 @@ def bot_play(DQN, env):
         state = new_state
 
     return reward_sum
-
-
 
 def draw_error_values():
     fig = plt.figure(figsize=(20, 5))
@@ -128,6 +134,9 @@ if __name__ == "__main__":
     input_size = env.observation_space.shape[0]     # 4
     output_size = env.action_space.n                # 2
 
+    # 미니배치 - 꺼내서 사용할 리플레이 갯수
+    BATCH_SIZE = 32
+
     with tf.Session() as sess:
         # DQN 클래스의 mainDQN 인스턴스 생성
         mainDQN = DQN(sess, input_size, output_size)
@@ -148,14 +157,24 @@ if __name__ == "__main__":
                 action = mainDQN.egreedy_action(epsilon, env, state)
                 new_state, reward, done, _ = env.step(action)
 
-                loss_value = mainDQN.update(state, new_state, action, reward)
+                # state, action, reward, next_state, done 을 메모리에 저장
+                REPLAY_MEMORY.append((state, action, reward, new_state, done))
+
+                # 메모리에 10000개 이상의 값이 들어가면 가장 먼저 들어간 것부터 삭제
+                if len(REPLAY_MEMORY) > 10000:
+                    REPLAY_MEMORY.popleft()
+
+                # REPLAY_MEMORY 크기가 BATCH_SIZE 보다 크면 학습
+                if len(REPLAY_MEMORY) > BATCH_SIZE:
+                    mean_loss_value = mainDQN.update_from_memory(BATCH_SIZE)
 
                 rAll += reward
                 state = new_state
 
-            episode_list.append(episode)
-            train_error_list.append(loss_value)
-            actions_list.append(rAll)
+            if len(REPLAY_MEMORY) > BATCH_SIZE:
+                episode_list.append(episode)
+                train_error_list.append(mean_loss_value)
+                actions_list.append(rAll)
 
             if episode % TEST_PERIOD == 0:
                 total_reward = 0
@@ -166,8 +185,6 @@ if __name__ == "__main__":
                 print("episode: {0}, Epsilon: {1}, Evaluation Average Reward: {2}".format(episode,epsilon, ave_reward))
                 if ave_reward >= 200:
                     break
-
-            # time.sleep(1) # delays for 1 second between episodes
 
         env.reset()
         env.close()

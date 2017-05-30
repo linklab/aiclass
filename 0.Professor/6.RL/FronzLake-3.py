@@ -33,13 +33,13 @@ Q = np.zeros([env.observation_space.n, env.action_space.n])
 
 #Discount Factor
 discount_factor = .99   # <-- Updated for ver.2
-num_episodes = 2000
+max_episodes = 2000
 learning_rate = 0.85     # <-- Updated for ver.3
 
 # list to contain total rewards and steps per episode
 rList = []
 
-for i in range(num_episodes):
+for i in range(max_episodes):
     # Reset environment and get first new observation
     state = env.reset()
     rAll = 0
@@ -69,7 +69,7 @@ for i in range(num_episodes):
 
     rList.append(rAll)
 
-print("Success rate: " + str(sum(rList)/num_episodes))
+print("Success rate: " + str(sum(rList)/max_episodes))
 print("Final Q-Table Values")
 print("LEFT DOWN RIGHT UP")
 print(Q)

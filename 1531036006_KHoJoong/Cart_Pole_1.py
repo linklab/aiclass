@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 # https://github.com/openai/gym/wiki/CartPole-v0
 import tensorflow as tf
 import gym
@@ -72,7 +72,7 @@ class DQN:
         return action
 
     # 네트워크 학습
-    def update(self, state, new_state, action, reward):
+    def update(self, state, new_state, action):
         x = np.reshape(state, newshape=[1, self.input_size])
         if done:
             # it's a terminal state
@@ -148,7 +148,7 @@ if __name__ == "__main__":
                 action = mainDQN.egreedy_action(epsilon, env, state)
                 new_state, reward, done, _ = env.step(action)
 
-                loss_value = mainDQN.update(state, new_state, action, reward)
+                loss_value = mainDQN.update(state, new_state, action)
 
                 rAll += reward
                 state = new_state
