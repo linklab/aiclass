@@ -2,10 +2,8 @@ import tensorflow as tf
 import gym
 import random
 import matplotlib.pyplot as plt
-
 from collections import deque
 import matplotlib.pyplot as plt
-#from urllib.request import urlopen   # in Python3
 import numpy as np
 
 
@@ -87,18 +85,15 @@ class CNNDQN:
     def predict(self, state):
         x = np.reshape(state, newshape=[1, self.input_size])
         pQ = self.session.run(self.Qpred, feed_dict={self.X: x})
-        #print("Predict Q : {0}".format(pQ))
         return pQ
 
     # e-greedy 를 사용하여 action값 구함
     def egreedy_action(self, epsilon, env, state):
         if np.random.rand(1) < epsilon:
             action = env.action_space.sample()
-            # print("Episode: {0}, Action: {1}".format(episode, action))
         else:
             Q_h = self.predict(state)
             action = np.argmax(Q_h)
-            # print("Episode: {0}, State: {1}, Q_h: {2}, Action: {3}".format(episode, state, Q_h, action))
         return action
 
 def update_from_memory(mainDQN, targetDQN, batch_size):
@@ -112,14 +107,12 @@ def update_from_memory(mainDQN, targetDQN, batch_size):
     for sample in minibatch:
         state, action, reward, new_state, done = sample         # unpacking
 
-        one_hot_action = np.zeros(mainDQN.output_size)  # [0.0, 0.0]
+        one_hot_action = np.zeros(mainDQN.output_size)
 
         if done:
             one_hot_action[action] = reward
         else:
             one_hot_action[action] = reward + discount_factor * np.max(targetDQN.predict(new_state))
-
-
 
         state_batch[i] = np.reshape(state, newshape=[1, 80*80*5])
         y_batch[i] = one_hot_action
@@ -141,7 +134,7 @@ def update_from_memory2(mainDQN, targetDQN, TMPMOMORY, batch_size):
     for sample in minibatch:
         state, action, reward, new_state, done = sample         # unpacking
 
-        one_hot_action = np.zeros(mainDQN.output_size)  # [0.0, 0.0]
+        one_hot_action = np.zeros(mainDQN.output_size) 
 
         if done:
             one_hot_action[action] = reward
@@ -154,7 +147,6 @@ def update_from_memory2(mainDQN, targetDQN, TMPMOMORY, batch_size):
 
     loss_value, _ = mainDQN.session.run([mainDQN.loss, mainDQN.optimizer],
                                        feed_dict={mainDQN.X: state_batch, mainDQN.Y: y_batch})
-
 
     return loss_value
 
@@ -320,7 +312,8 @@ if __name__ == "__main__":
             new_state, reward, done, info = env.step(1)  # FIRE
             state_memory[4] = Preprocessing_Image(new_state)
 
-            #INPUT MEMORY에 4개를 채운 후...
+            #INPUT MEMORY에 5개를 채운 후...
+
             action = 0
             realaction = 1
             lives = 5
@@ -369,16 +362,10 @@ if __name__ == "__main__":
                         tmpstate_memory, tmpaction, prevreward, tmpnew_state_memory, tmpdone = TMP_MEMORY[len(TMP_MEMORY) - before]
                         TMP_MEMORY[len(TMP_MEMORY) - before] = ((tmpstate_memory, tmpaction, 1, tmpnew_state_memory, tmpdone))
 
-                # 메모리에 10000개 이상의 값이 들어가면 가장 먼저 들어간 것부터 삭제
 
-
-
-
-                # REPLAY_MEMORY 크기가 BATCH_SIZE 보다 클 때 학습
+                # REPLAY_MEMORY 크기가 BATCH_SIZE 보다 크고 10000개 이상일 때 매회 10프레임마다 학습
                 if len(REPLAY_MEMORY) > 10000 and total_count % (before/2):
                     mean_loss_value = update_from_memory(mainDQN, targetDQN, BATCH_SIZE)
-
-
 
                 total_count += 1
                 state_memory = np.copy(new_state_memory)
@@ -388,12 +375,11 @@ if __name__ == "__main__":
                     print("ToalCount : {0}, Target NN Copied".format(total_count))
                     print("ToalCount : {0}, Saved NN Copied".format(total_count))
                     saver.save(sess, "./DeepMind_complete5")
-            k = 0
+            
             if(rAll > 3):
+                k = 0
                 for k in range(len(TMP_MEMORY)):
                     REPLAY_MEMORY.append(TMP_MEMORY[k])
-
-
 
             if len(REPLAY_MEMORY) > 80000:
                 REPLAY_MEMORY.popleft()
