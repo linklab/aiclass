@@ -22,3 +22,7 @@ OSX : 4개
 8. 이 때 Total reword가 기존 Episode의 신기록이거나 신기록과 같으면 TMPMEMORY에 있는 데이터 전부 학습
    그 외에는 32개 batch로 Random 학습
 
+
+약 500 episode 실행 중
+최고기록 13
+평균기록 3
