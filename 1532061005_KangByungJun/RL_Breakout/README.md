@@ -28,4 +28,4 @@ OSX : 4개
 평균기록 3
 
 
-![600 episode](./src/episode600.gif)
+![600 episode](./res/episode600.gif)
