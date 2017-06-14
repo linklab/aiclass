@@ -26,3 +26,6 @@ OSX : 4개
 약 500 episode 실행 중
 최고기록 13
 평균기록 3
+
+
+![600 episode](./src/episode600.gif)
