@@ -166,7 +166,7 @@ if __name__ == "__main__":
         # 변수 초기화
         init = tf.global_variables_initializer()
         sess.run(init)
-        epsilon = INITIAL_EPSILON
+
 
         copy_ops = get_copy_var_ops(src_scope_name='main', target_scope_name='target')
         sess.run(copy_ops)
@@ -175,9 +175,10 @@ if __name__ == "__main__":
             state = env.reset()
             rAll = 0
             done = False
-            epsilon *= 0.99
+            epsilon = INITIAL_EPSILON
 
             while not done:
+                epsilon *= 0.99
                 # action을 수행함 --> Get new state and reward from environment
                 action = mainDQN.egreedy_action(epsilon, env, state)
                 new_state, reward, done, _ = env.step(action)
