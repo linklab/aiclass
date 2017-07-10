@@ -20,7 +20,9 @@ while episode < 10:
     print("New State:", new_state.shape, np.sum(new_state, axis=(0, 1)))
     #print("New State:", new_state.shape, new_state)
     reward_sum += reward
-    time.sleep(1)
+    if reward == 1.0:
+        break
+    time.sleep(0.1)
 
     if done:
         print("Total reward for this episode {0} was: {1}".format(episode, reward_sum))
