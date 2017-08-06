@@ -29,7 +29,7 @@ class Sigmoid:
 
     def backward(self, din):
         dx = din * self.out * (1.0 - self.out)
-        return dxdx
+        return dx
 
 
 class Affine:
