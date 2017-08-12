@@ -1,9 +1,9 @@
 # coding: utf-8
-import numpy as np
 from common.functions import *
 from common.util import im2col, col2im
 
-class Relu:
+
+class ReLU:
     def __init__(self):
         self.mask = None
 
@@ -17,6 +17,7 @@ class Relu:
         din[self.mask] = 0
         dx = din
         return dx
+
 
 class Sigmoid:
     def __init__(self):
@@ -50,6 +51,7 @@ class Affine:
         self.dW = np.dot(self.x.T, din)
         self.db = np.sum(din, axis=0)
         return dx
+
 
 class SoftmaxWithCrossEntropyLoss:
     def __init__(self):
@@ -96,13 +98,11 @@ class BatchNormalization:
         self.gamma = gamma
         self.beta = beta
         self.momentum = momentum
-        self.input_shape = None # Conv層の場合は4次元、全結合層の場合は2次元  
+        self.input_shape = None
 
-        # テスト時に使用する平均と分散
         self.running_mean = running_mean
         self.running_var = running_var  
         
-        # backward時に使用する中間データ
         self.batch_size = None
         self.xc = None
         self.std = None
