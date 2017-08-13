@@ -79,8 +79,8 @@ class Dropout:
         self.dropout_ratio = dropout_ratio
         self.mask = None
 
-    def forward(self, x, train_flg=True):
-        if train_flg:
+    def forward(self, x, is_train=True):
+        if is_train:
             self.mask = np.random.rand(*x.shape) > self.dropout_ratio
             return x * self.mask
         else:
@@ -109,23 +109,23 @@ class BatchNormalization:
         self.dgamma = None
         self.dbeta = None
 
-    def forward(self, x, train_flg=True):
+    def forward(self, x, is_train=True):
         self.input_shape = x.shape
         if x.ndim != 2:
             N, C, H, W = x.shape
             x = x.reshape(N, -1)
 
-        out = self.__forward(x, train_flg)
+        out = self.__forward(x, is_train)
         
         return out.reshape(*self.input_shape)
             
-    def __forward(self, x, train_flg):
+    def __forward(self, x, is_train):
         if self.running_mean is None:
             N, D = x.shape
             self.running_mean = np.zeros(D)
             self.running_var = np.zeros(D)
                         
-        if train_flg:
+        if is_train:
             mu = x.mean(axis=0)
             xc = x - mu
             var = np.mean(xc**2, axis=0)

@@ -28,7 +28,8 @@ initializers = {
 
 
 class MultiLayerNet:
-    def __init__(self, input_size, hidden_size_list, output_size, activation='ReLU', initializer='He'):
+    def __init__(self, input_size, hidden_size_list, output_size, activation='ReLU', initializer='He',
+                 optimizer='AdaGrad', learning_rate=0.01):
         self.input_size = input_size
         self.output_size = output_size
         self.hidden_size_list = hidden_size_list
@@ -43,8 +44,8 @@ class MultiLayerNet:
         self.last_layer = None
         self.layering(activation)
 
-        # Optimization Method
-        self.optimizer = None
+        # Optimizer Initialization
+        self.optimizer = optimizers[optimizer](lr=learning_rate)
 
     def weight_initialization(self, initializer):
         params_size_list = [self.input_size] + self.hidden_size_list + [self.output_size]
@@ -99,14 +100,7 @@ class MultiLayerNet:
 
         return grads
 
-    def learning(self, learning_rate, x_batch, t_batch, optimizer = 'AdaGrad'):
-        if self.optimizer is None:
-            self.optimizer = optimizers[optimizer](lr=learning_rate)
+    def learning(self, x_batch, t_batch):
         grads = self.backpropagation_gradient(x_batch, t_batch)
         self.optimizer.update(self.params, grads)
 
-
-class MultiLayerNetExtended(MultiLayerNet):
-    def __init__(self, input_size, hidden_size_list, output_size, activation='ReLU', initializer='He',
-                 use_batchnorm=False, weight_decay_lambda=0, use_dropout = False, dropout_ration = 0.5):
-        super.__init__(input_size, hidden_size_list, output_size, activation, initializer)
