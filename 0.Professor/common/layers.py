@@ -81,10 +81,10 @@ class Dropout:
 
     def forward(self, x, is_train=True):
         if is_train:
-            self.mask = np.random.rand(*x.shape) > self.dropout_ratio
+            self.mask = np.random.rand(*x.shape) >= self.dropout_ratio
             return x * self.mask
         else:
-            return x * (1.0 - self.dropout_ratio)
+            return x
 
     def backward(self, dout):
         return dout * self.mask
