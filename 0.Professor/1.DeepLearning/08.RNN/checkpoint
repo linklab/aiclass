@@ -1,2 +1,0 @@
-model_checkpoint_path: "rnn_sine_model.ckpt"
-all_model_checkpoint_paths: "rnn_sine_model.ckpt"
