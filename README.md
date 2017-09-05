@@ -9,7 +9,10 @@ aiclass
 
 - git fetch origin master
 - git pull origin master
-- git commit -m "message" && git add * && git push origin master
+
+- git commit -m "message"
+- git add *
+- git push origin master
 
 # how to push without ID/PW
 
