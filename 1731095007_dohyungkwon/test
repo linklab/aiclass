@@ -8,3 +8,6 @@ Username for 'https://github.com': <USERNAME>
 Password for 'https://USERNAME@github.com': <PASSWORD>
 
 git config --global credential.helper 'cache --timeout 7200'
+
+
+source from: https://stackoverflow.com/questions/6565357/git-push-requires-username-and-password
