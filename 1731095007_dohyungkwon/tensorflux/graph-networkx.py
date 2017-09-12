@@ -1,8 +1,10 @@
 # Reference: http://www.deepideas.net/deep-learning-from-scratch-i-computational-graphs/
+import networkx as nx
+
 _default_graph = None
 
 
-class Graph():# 클래스를 만들 때는 두 줄을 new line
+class Graph(nx.Graph):# 클래스를 만들 때는 두 줄을 new line
     """Represents a computational graph (a neural network)
     """
 
@@ -11,6 +13,7 @@ class Graph():# 클래스를 만들 때는 두 줄을 new line
         self.operations = []
         self.placeholders = []
         self.variables = []
+        super().__init__()
 
     def initialize(self):
         global _default_graph
@@ -32,6 +35,7 @@ class Placeholder:
 
         # Append this placeholder to the list of placeholders in the currently active default graph
         _default_graph.placeholders.append(self)
+        _default_graph.add_node(self) # _default_graph is node of networkx lib
 
     def __str__(self): # 이 객체를 print할 때 찍히는 내용
         return self.name
@@ -55,6 +59,7 @@ class Variable:
             self.name = 'v' + str(len(_default_graph.variables) + 1)
         # Append this variable to the list of variables in the currently active default graph
         _default_graph.variables.append(self)
+        _default_graph.add_node(self)
 
     def __str__(self):
         return self.name
@@ -84,8 +89,11 @@ class Operation:
         for input_node in input_nodes:
             input_node.consumers.append(self) # 각각의 변수가 갖고 있는 컨슈머를 지금 오퍼레이션(자기자신)을 등록
 
+            _default_graph.add_edge(input_node, self)# place of edge
+
         # Append this operation to the list of operations in the currently active default graph
         _default_graph.operations.append(self)
+        _default_graph.add_node(self)
 
     def forward(self):
         """Computes the output of this operation.

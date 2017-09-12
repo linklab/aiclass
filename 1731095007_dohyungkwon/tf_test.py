@@ -1,5 +1,7 @@
 from tensorflux import graph as tfg # graph 모듈을 객체화
 from tensorflux import session as tfs
+import networkx as nx
+import matplotlib.pyplot as plt
 
 g = tfg.Graph()
 g.initialize()
@@ -21,6 +23,7 @@ z = tfg.Add(y, b, name="z")
 session = tfs.Session()
 output = session.run(z, {x: 1.0}) # z:operation
 print(output)
+print()
 
 #--------------
 # Create variables
@@ -39,9 +42,10 @@ y = tfg.Matmul(A, x, name="y")
 # Create output node z
 z = tfg.Add(y, b, name="z")
 
-#nx.draw_networkx(g, with_labels=True)
-#plt.show(block=True)
-
 session = tfs.Session()
 output = session.run(z, {x: [1, 2]})
 print(output)
+print()
+#--------------
+nx.draw_networkx(g, with_labels=True)
+plt.show(block=True)
