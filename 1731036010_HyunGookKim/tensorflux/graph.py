@@ -1,4 +1,5 @@
 import networkx as nx
+
 _default_graph = None
 
 
@@ -11,6 +12,7 @@ class Graph(nx.Graph):
         self.operations = []
         self.placeholders = []
         self.variables = []
+        super().__init__()
 
     def initialize(self):
         global _default_graph
@@ -36,7 +38,6 @@ class Placeholder:
     def __str__(self):
         return self.name
 
-
 class Variable:
     """Represents a variable (i.e. an intrinsic, changeable parameter of a computational graph).
     """
@@ -59,7 +60,6 @@ class Variable:
 
     def __str__(self):
         return self.name
-
 
 class Operation:
     """Represents a graph node that performs a computation (forwaring operation).
@@ -87,7 +87,6 @@ class Operation:
 
         # Append this operation to the list of operations in the currently active default graph
         _default_graph.operations.append(self)
-        _default_graph.add_node(self)
 
     def forward(self):
         """Computes the output of this operation.
