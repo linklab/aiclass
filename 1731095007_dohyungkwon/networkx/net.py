@@ -5,4 +5,3 @@ g.add_edge('a','b')
 nx.draw_networkx(g)
 plt.show()
 
-
