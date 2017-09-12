@@ -61,7 +61,7 @@ x = tfg.Placeholder(name="x")
 # It means A*x+b
 
 # Create hidden node y
-y = tfg.Matmul(A, x, name="y")
+y = tfg.Matmul(W, x, name="y")
 
 # Create output node z
 z = tfg.Add(y, b, name="z")
