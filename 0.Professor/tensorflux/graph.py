@@ -30,7 +30,7 @@ class Placeholder:
         self.consumers = []
         self.name = name
         if self.name is None:
-            self.name = str(len(_default_graph.placeholders) + 1)
+            self.name = 'p' + str(len(_default_graph.placeholders) + 1)
 
         # Append this placeholder to the list of placeholders in the currently active default graph
         _default_graph.placeholders.append(self)
@@ -53,7 +53,7 @@ class Variable:
         self.consumers = []
         self.name = name
         if self.name is None:
-            self.name = str(len(_default_graph.variables) + 1)
+            self.name = 'v' + str(len(_default_graph.variables) + 1)
 
         # Append this variable to the list of variables in the currently active default graph
         _default_graph.variables.append(self)
@@ -79,7 +79,7 @@ class Operation:
         self.consumers = []
         self.name = name
         if self.name is None:
-            self.name = str(len(_default_graph.operations) + 1)
+            self.name = 'o' + str(len(_default_graph.operations) + 1)
 
         # Append this operation to the list of consumers of all input nodes
         for input_node in input_nodes:
@@ -122,6 +122,31 @@ class Add(Operation):
         """
         self.inputs = [x_value, y_value]
         return x_value + y_value
+
+
+class Mul(Operation):
+    """Returns x * y.
+    """
+
+    def __init__(self, x, y, name=None):
+        """Construct add
+
+        Args:
+          x: First summand node
+          y: Second summand node
+        """
+        self.inputs = None
+        super().__init__([x, y], name)
+
+    def forward(self, x_value, y_value):
+        """Compute the output of the add operation
+
+        Args:
+          x_value: First summand value
+          y_value: Second summand value
+        """
+        self.inputs = [x_value, y_value]
+        return x_value * y_value
 
 
 class Matmul(Operation):
