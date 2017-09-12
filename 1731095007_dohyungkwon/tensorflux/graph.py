@@ -24,6 +24,7 @@ class Placeholder:
     def __init__(self, name=None):
         """Construct placeholder
         """
+        self.output = None
         self.consumers = [] # placeholder를 소비하는 변수인 operation노드를 의미한다.
         self.name = name
         if self.name is None:
@@ -47,6 +48,7 @@ class Variable:
           initial_value: The initial value of this variable
         """
         self.value = initial_value
+        self.output = None
         self.consumers = []
         self.name = name
         if self.name is None:
@@ -70,6 +72,7 @@ class Operation:
         """Construct Forwarding Operation
         """
         self.input_nodes = input_nodes
+        self.output = None
 
         # Initialize list of consumers (i.e. nodes that receive this operation's output as input)
         self.consumers = []
