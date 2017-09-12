@@ -18,6 +18,9 @@ class Session:
         # Perform a post-order traversal of the graph to bring the nodes into the right order
         nodes_postorder = self.traverse_postorder(operation) #리스트
 
+        for node in nodes_postorder:
+            print(node)
+
         # Iterate all nodes to determine their value
         for node in nodes_postorder:
             if type(node) == tfg.Placeholder:
