@@ -1,10 +1,10 @@
-from tensorflux import graph as tfg
-from tensorflux import session as tfs
+from Tensorflux import graph as tfg
+from Tensorflux import session as tfs
 import networkx as nx
 import matplotlib.pyplot as plt
 
-g = tfg.Graph()
-g.initialize()
+g = tfg.Graph() #그래프 객체 생성
+g.initialize() #생성한 그래프 객체 초기화
 
 # Create variables
 A = tfg.Variable([[1, 0], [0, -1]], name="A")

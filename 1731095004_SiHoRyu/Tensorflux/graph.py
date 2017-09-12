@@ -1,3 +1,4 @@
+# Reference: http://www.deepideas.net/deep-learning-from-scratch-i-computational-graphs/
 import networkx as nx
 
 _default_graph = None
@@ -7,7 +8,7 @@ class Graph(nx.Graph):
     """Represents a computational graph (a neural network)
     """
 
-    def __init__(self):
+    def __init__(self): #생성자
         """Construct Graph"""
         self.operations = []
         self.placeholders = []
@@ -15,9 +16,8 @@ class Graph(nx.Graph):
         super().__init__()
 
     def initialize(self):
-        global _default_graph
+        global _default_graph #global keyword is used for using a global variable that is in outside of classes
         _default_graph = self
-
 
 class Placeholder:
     """Represents a placeholder node that has to be provided with a value
@@ -26,7 +26,8 @@ class Placeholder:
     def __init__(self, name=None):
         """Construct placeholder
         """
-        self.consumers = []
+        self.output = None
+        self.consumers = [] #placeholder에 값이 들어 갈텐데 flux가 사용함?
         self.name = name
         if self.name is None:
             self.name = 'p' + str(len(_default_graph.placeholders) + 1)
@@ -48,6 +49,7 @@ class Variable:
         Args:
           initial_value: The initial value of this variable
         """
+        self.output = None
         self.value = initial_value
         self.consumers = []
         self.name = name
@@ -61,6 +63,7 @@ class Variable:
     def __str__(self):
         return self.name
 
+
 class Operation:
     """Represents a graph node that performs a computation (forwaring operation).
 
@@ -73,7 +76,7 @@ class Operation:
         """Construct Forwarding Operation
         """
         self.input_nodes = input_nodes
-
+        self.output = None
         # Initialize list of consumers (i.e. nodes that receive this operation's output as input)
         self.consumers = []
         self.name = name
@@ -98,7 +101,7 @@ class Operation:
         return self.name
 
 
-class Add(Operation):
+class Add(Operation): #상속
     """Returns x + y element-wise.
     """
 
@@ -109,6 +112,7 @@ class Add(Operation):
           x: First summand node
           y: Second summand node
         """
+        self.output = None
         self.inputs = None
         super().__init__([x, y], name)
 

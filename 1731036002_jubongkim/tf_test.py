@@ -1,8 +1,9 @@
-from tensorflux import graph as tfg
-from tensorflux import session as tfs
 import networkx as nx
 import matplotlib.pyplot as plt
+from tensorflux import graph as tfg
+from tensorflux import session as tfs
 
+# Create a new graph
 g = tfg.Graph()
 g.initialize()
 

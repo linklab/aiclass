@@ -42,7 +42,7 @@ class Variable:
     """Represents a variable (i.e. an intrinsic, changeable parameter of a computational graph).
     """
 
-    def __init__(self, initial_value=None, name=None):
+    def __init__(self, initial_value: object = None, name: object = None) -> object:
         """Construct Variable
 
         Args:
@@ -60,6 +60,7 @@ class Variable:
 
     def __str__(self):
         return self.name
+
 
 class Operation:
     """Represents a graph node that performs a computation (forwaring operation).

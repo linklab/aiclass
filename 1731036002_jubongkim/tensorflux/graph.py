@@ -1,3 +1,4 @@
+# Reference: http://www.deepideas.net/deep-learning-from-scratch-i-computational-graphs/
 import networkx as nx
 
 _default_graph = None
@@ -36,7 +37,7 @@ class Placeholder:
         _default_graph.add_node(self)
 
     def __str__(self):
-        return self.name
+        return "P: " + self.name
 
 class Variable:
     """Represents a variable (i.e. an intrinsic, changeable parameter of a computational graph).
@@ -59,7 +60,7 @@ class Variable:
         _default_graph.add_node(self)
 
     def __str__(self):
-        return self.name
+        return "V: " + self.name
 
 class Operation:
     """Represents a graph node that performs a computation (forwaring operation).
@@ -95,7 +96,7 @@ class Operation:
         pass
 
     def __str__(self):
-        return self.name
+        return "O: " + self.name
 
 
 class Add(Operation):
