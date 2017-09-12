@@ -1,7 +1,8 @@
+import networkx as nx
 _default_graph = None
 
 
-class Graph():
+class Graph(nx.Graph):
     """Represents a computational graph (a neural network)
     """
 
@@ -30,6 +31,7 @@ class Placeholder:
 
         # Append this placeholder to the list of placeholders in the currently active default graph
         _default_graph.placeholders.append(self)
+        _default_graph.add_node(self)
 
     def __str__(self):
         return self.name
@@ -53,6 +55,7 @@ class Variable:
 
         # Append this variable to the list of variables in the currently active default graph
         _default_graph.variables.append(self)
+        _default_graph.add_node(self)
 
     def __str__(self):
         return self.name
@@ -80,9 +83,11 @@ class Operation:
         # Append this operation to the list of consumers of all input nodes
         for input_node in input_nodes:
             input_node.consumers.append(self)
+            _default_graph.add_edge(input_node, self)
 
         # Append this operation to the list of operations in the currently active default graph
         _default_graph.operations.append(self)
+        _default_graph.add_node(self)
 
     def forward(self):
         """Computes the output of this operation.
