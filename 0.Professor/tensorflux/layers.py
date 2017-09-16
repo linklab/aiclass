@@ -2,14 +2,13 @@
 import tensorflux.graph as tfg
 import math
 import numpy as np
-from numba import jit
+import tensorflux.functions as tff
 import random
 
 
 class Affine(tfg.Operation):
     """Returns w * x + b.
     """
-
     def __init__(self, w, x, b, name=None):
         """Construct Affine
 
@@ -19,7 +18,6 @@ class Affine(tfg.Operation):
         self.inputs = None
         super().__init__([w, x, b], name)
 
-    @jit
     def forward(self, w_value, x_value, b_value):
         """Compute the output of the add operation
 
@@ -27,7 +25,8 @@ class Affine(tfg.Operation):
           x_value: Weight value, y_value: Input value, b_value: Bias value
         """
         self.inputs = [w_value, x_value, b_value]
-        return np.matmul(x_value, w_value) + b_value # [Note] Matmax Order
+        # return np.matmul(x_value, w_value) + b_value # [Note] Matmax Order
+        return x_value.dot(w_value) + b_value  # [Note] Matmax Order
 
     def backward(self):
         pass
@@ -81,7 +80,7 @@ class Sigmoid(tfg.Operation):
 
     def forward(self, u_value):
         self.inputs = [u_value]
-        self.out = self.sigmoid(u_value)
+        self.out = tff.sigmoid(u_value)
         return self.out
 
     def backward(self, din):
@@ -89,10 +88,6 @@ class Sigmoid(tfg.Operation):
 
     def __str__(self):
         return "Sigmoid: " + self.name
-
-    @staticmethod
-    def sigmoid(x):
-        return 1 / (1 + np.exp(-x))
 
 
 class SquaredError(tfg.Operation):
@@ -107,14 +102,10 @@ class SquaredError(tfg.Operation):
 
     def forward(self, forward_final_output_value, target_value):
         self.inputs = [forward_final_output_value, target_value]
-        return self.squared_error(forward_final_output_value, target_value)
+        return tff.squared_error(forward_final_output_value, target_value)
 
     def backward(self, din):
         pass
 
     def __str__(self):
         return "SquaredError:" + self.name
-
-    @staticmethod
-    def squared_error(output_value, target_value):
-        return 0.5 * math.pow(output_value - target_value, 2)

@@ -2,6 +2,7 @@ from collections import OrderedDict
 import tensorflux.graph as tfg
 import tensorflux.enums as tfe
 import tensorflux.layers as tfl
+import networkx as nx
 
 
 class Single_Neuron_Net(tfg.Graph):
@@ -36,3 +37,10 @@ class Single_Neuron_Net(tfg.Graph):
         u = tfl.Affine(self.params['W' + str(idx)], self.input_node, self.params['b' + str(idx)], name="A")
         self.output = activator(u, name="R")
         self.error = tfl.SquaredError(self.output, self.target_node, name="SE")
+        if isinstance(self, nx.Graph):
+            self.add_edge(self.params['W' + str(idx)], u)
+            self.add_edge(self.input_node, u)
+            self.add_edge(self.params['b' + str(idx)], u)
+            self.add_edge(u, self.output)
+            self.add_edge(self.output, self.error)
+            self.add_edge(self.error, self.target_node)

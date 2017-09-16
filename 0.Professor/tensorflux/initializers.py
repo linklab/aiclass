@@ -41,9 +41,9 @@ class Truncated_Normal_Initializer(Initializer):
             self.params['W' + str(idx)] = tfg.Variable(
                 tff.get_truncated_normal(shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
                                          mean=0.0, sd=1.0, low=-3.0, upp=3.0),
-                                         name='W' + str(idx))
+                name='W' + str(idx))
             self.params['b' + str(idx)] = tfg.Variable(
                 tff.get_truncated_normal(shape=(self.params_size_list[idx + 1],),
                                          mean=0.0, sd=1.0, low=-3.0, upp=3.0),
-                                        name='b' + str(idx))
+                name='b' + str(idx))
 

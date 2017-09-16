@@ -1,3 +1,6 @@
+import numpy as np
+import math
+import matplotlib.pyplot as plt
 from scipy.stats import truncnorm
 
 
@@ -11,8 +14,15 @@ def get_truncated_normal(shape, mean=0, sd=1, low=0, upp=10):
     return x
 
 
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
+
+def squared_error(output_value, target_value):
+    return 0.5 * math.pow(output_value - target_value, 2)
+
+
 if __name__ == "__main__":
-    import matplotlib.pyplot as plt
     x1 = get_truncated_normal(shape=(1, 10000), mean=2, sd=1, low=1, upp=10)
     x2 = get_truncated_normal(shape=(1, 10000), mean=5.5, sd=1, low=1, upp=10)
     x3 = get_truncated_normal(shape=(1, 10000), mean=8, sd=1, low=1, upp=10)
