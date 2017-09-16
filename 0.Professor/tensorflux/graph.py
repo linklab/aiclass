@@ -1,3 +1,5 @@
+# -*- coding:utf-8 -*-
+
 # Reference: http://www.deepideas.net/deep-learning-from-scratch-i-computational-graphs/
 import networkx as nx
 
@@ -17,7 +19,14 @@ class Graph(nx.Graph):
 
     def initialize(self):
         global _default_graph
-        _default_graph = self
+
+        if _default_graph is not None:
+            _default_graph.operations.clear()
+            _default_graph.placeholders.clear()
+            _default_graph.variables.clear()
+            _default_graph.clear()
+        else:
+            _default_graph = self
 
 
 class Placeholder:
@@ -38,6 +47,7 @@ class Placeholder:
 
     def __str__(self):
         return "P: " + self.name
+
 
 class Variable:
     """Represents a variable (i.e. an intrinsic, changeable parameter of a computational graph).
@@ -61,6 +71,7 @@ class Variable:
 
     def __str__(self):
         return "V: " + self.name
+
 
 class Operation:
     """Represents a graph node that performs a computation (forwaring operation).
