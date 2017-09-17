@@ -43,6 +43,12 @@ class Variable:
         self.consumers = []
         self.name = name
 
+    def get_shape(self):
+        return self.value.shape
+
+    def set_value(self, value):
+        self.value = value
+
     def __str__(self):
         return "V: " + self.name
 

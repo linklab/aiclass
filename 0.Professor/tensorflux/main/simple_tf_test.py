@@ -27,7 +27,7 @@ z = tfg.Add(y, b, name="z")
 # plt.show(block=True)
 
 session = tfs.Session()
-output = session.run(z, {x: 1.0})
+output = session.run(z, feed_dict={x: 1.0})
 print(output)
 
 
@@ -49,7 +49,7 @@ y = tfg.Matmul(A, x, name="y")
 z = tfg.Add(y, b, name="z")
 
 session = tfs.Session()
-output = session.run(z, {x: [1, 2]})
+output = session.run(z, feed_dict={x: [1, 2]})
 print(output)
 
 
@@ -69,14 +69,14 @@ y = tfg.Affine(w, x, b, name="y")
 
 session = tfs.Session()
 
-output = session.run(y, {x: 1.0})
+output = session.run(y, feed_dict={x: 1.0})
 squared_error = tff.squared_error(output, 14.0)
 print("Output: {:4.1f}, Squared_Error: {:5.1f}".format(output, squared_error))
 
-output = session.run(y, {x: 2.0})
+output = session.run(y, feed_dict={x: 2.0})
 squared_error = tff.squared_error(output, 24.0)
 print("Output: {:4.1f}, Squared_Error: {:5.1f}".format(output, squared_error))
 
-output = session.run(y, {x: 3.0})
+output = session.run(y, feed_dict={x: 3.0})
 squared_error = tff.squared_error(output, 34.0)
 print("Output: {:4.1f}, Squared_Error: {:5.1f}".format(output, squared_error))
