@@ -2,9 +2,10 @@ from collections import OrderedDict
 import tensorflux.graph as tfg
 import tensorflux.enums as tfe
 import tensorflux.layers as tfl
-import tensorflux.functions as tff
+import tensorflux.session as tfs
 import networkx as nx
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 class Neural_Network(tfg.Graph):
@@ -23,6 +24,8 @@ class Neural_Network(tfg.Graph):
 
         self.output = None
         self.error = None
+
+        self.session = tfs.Session()
         super().__init__()
 
     def set_data(self, input_node, target_node):
@@ -62,26 +65,36 @@ class Neural_Network(tfg.Graph):
             param.value = temp_val
         return grads
 
-    def learning(self, max_epoch, data, x, target, session):
+    def learning(self, max_epoch, data, x, target):
         for epoch in range(max_epoch):
             sum_train_error = 0.0
             for idx in range(data.num_train_data):
                 train_input_data = data.training_input[idx]
                 train_target_data = data.training_target[idx]
 
-                grads = self.numerical_derivative(session, {x: train_input_data, target: train_target_data})
+                grads = self.numerical_derivative(self.session, {x: train_input_data, target: train_target_data})
                 self.optimizer.update(grads=grads)
-                sum_train_error += session.run(self.error, {x: train_input_data, target: train_target_data}, vervose=False)
+                sum_train_error += self.session.run(self.error, {x: train_input_data, target: train_target_data}, vervose=False)
 
             sum_validation_error = 0.0
             for idx in range(data.num_validation_data):
                 validation_input_data = data.validation_input[idx]
                 validation_target_data = data.validation_target[idx]
-                sum_validation_error += session.run(self.error, {x: validation_input_data, target: validation_target_data},
-                                                    vervose=False)
+                sum_validation_error += self.session.run(self.error,
+                                                         {x: validation_input_data, target: validation_target_data},
+                                                        vervose=False)
 
             print("Epoch {:3d} Completed - Average Train Error: {:7.6f} - Average Validation Error: {:7.6f}".format(
                 epoch, sum_train_error / data.num_train_data, sum_validation_error / data.num_validation_data))
+
+    def print_feed_forward(self, num_data, input_data, target_data, x):
+        for idx in range(num_data):
+            train_input_data = input_data[idx]
+            train_target_data = target_data[idx]
+
+            output = self.session.run(self.output, {x: train_input_data}, vervose=False)
+            print("Input Data: {:>5}, Feed Forward Output: {:>6}, Target: {:>6}".format(
+                str(train_input_data), np.array2string(output), str(train_target_data)))
 
     def draw_and_show(self):
         nx.draw_networkx(self, with_labels=True)
@@ -91,7 +104,6 @@ class Neural_Network(tfg.Graph):
 class Single_Neuron_Network(Neural_Network):
     def __init__(self, input_size, output_size):
         super().__init__(input_size, output_size)
-
 
     def initialize_scalar_param(self, value1, value2, initializer=tfe.Initializer.Value_Assignment.value):
         self.params['W0'] = initializer(value1, name='W0').get_variable()
@@ -118,10 +130,6 @@ class Single_Neuron_Network(Neural_Network):
 class Two_Neurons_Network(Neural_Network):
     def __init__(self, input_size, output_size):
         super().__init__(input_size, output_size)
-
-    def set_data(self, input_node, target_node):
-        self.input_node = input_node
-        self.target_node = target_node
 
     def initialize_param(self, initializer=tfe.Initializer.Zero.value):
         self.params['W0'] = initializer(shape=(self.input_size, self.output_size), name='W0').get_variable()
