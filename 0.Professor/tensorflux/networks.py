@@ -62,9 +62,31 @@ class Neural_Network(tfg.Graph):
             param.value = temp_val
         return grads
 
+    def learning(self, max_epoch, data, x, target, session):
+        for epoch in range(max_epoch):
+            sum_train_error = 0.0
+            for idx in range(data.num_train_data):
+                train_input_data = data.training_input[idx]
+                train_target_data = data.training_target[idx]
+
+                grads = self.numerical_derivative(session, {x: train_input_data, target: train_target_data})
+                self.optimizer.update(grads=grads)
+                sum_train_error += session.run(self.error, {x: train_input_data, target: train_target_data}, vervose=False)
+
+            sum_validation_error = 0.0
+            for idx in range(data.num_validation_data):
+                validation_input_data = data.validation_input[idx]
+                validation_target_data = data.validation_target[idx]
+                sum_validation_error += session.run(self.error, {x: validation_input_data, target: validation_target_data},
+                                                    vervose=False)
+
+            print("Epoch {:3d} Completed - Average Train Error: {:7.6f} - Average Validation Error: {:7.6f}".format(
+                epoch, sum_train_error / data.num_train_data, sum_validation_error / data.num_validation_data))
+
     def draw_and_show(self):
         nx.draw_networkx(self, with_labels=True)
         plt.show(block=True)
+
 
 class Single_Neuron_Network(Neural_Network):
     def __init__(self, input_size, output_size):

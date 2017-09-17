@@ -32,25 +32,7 @@ for idx in range(data.num_train_data):
         str(train_input_data), np.array2string(output), str(train_target_data)))
     print()
 
-max_epoch = 100
-for epoch in range(max_epoch):
-    sum_train_error = 0.0
-    for idx in range(data.num_train_data):
-        train_input_data = data.training_input[idx]
-        train_target_data = data.training_target[idx]
-
-        grads = n.numerical_derivative(session, {x: train_input_data, target: train_target_data})
-        n.optimizer.update(grads=grads)
-        sum_train_error += session.run(n.error, {x: train_input_data, target: train_target_data}, vervose=False)
-
-    sum_validation_error = 0.0
-    for idx in range(data.num_validation_data):
-        validation_input_data = data.validation_input[idx]
-        validation_target_data = data.validation_target[idx]
-        sum_validation_error += session.run(n.error, {x: validation_input_data, target: validation_target_data}, vervose=False)
-
-    print("Epoch {:3d} Completed - Average Train Error: {:7.6f} - Average Validation Error: {:7.6f}".format(
-        epoch, sum_train_error / data.num_train_data, sum_validation_error / data.num_validation_data))
+n.learning(max_epoch=100, data=data, x=x, target=target, session=session)
 
 print()
 for idx in range(data.num_test_data):
