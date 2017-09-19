@@ -26,6 +26,7 @@ class Affine(tfg.Operation):
         """
         self.inputs = [w_value, x_value, b_value]
         # return np.matmul(x_value, w_value) + b_value # [Note] Matmax Order
+        np.version.version
         return x_value.dot(w_value) + b_value  # [Note] Matmax Order
 
     def backward(self):
