@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import truncnorm
 
 
-def get_truncated_normal(shape, mean=0, sd=1, low=0, upp=10):
+def get_truncated_normal(shape, mean=0, sd=1, low=0, upp=10):# Advanced...
     x = truncnorm(a=(low - mean) / sd, b=(upp - mean) / sd, loc=mean, scale=sd)
     num_elements = 1
     for dim in shape:
@@ -22,12 +22,14 @@ def squared_error(output_value, target_value):
     return 0.5 * math.pow(output_value - target_value, 2)
 
 
-if __name__ == "__main__":
-    x1 = get_truncated_normal(shape=(1, 10000), mean=2, sd=1, low=1, upp=10)
+if __name__ == "__main__": # test용 능# run 가
+    x1 = get_truncated_normal(shape=(1, 10000), mean=2, sd=5, low=1, upp=10)
+    # 평균, 표준편차 -> 랜덤값; 극단값은 low와 upp을 이용하여 자른다.
+    # sd값을 조정해본다. 가로로 변한다.
     x2 = get_truncated_normal(shape=(1, 10000), mean=5.5, sd=1, low=1, upp=10)
     x3 = get_truncated_normal(shape=(1, 10000), mean=8, sd=1, low=1, upp=10)
 
-    fig, ax = plt.subplots(3, sharex=True)
+    fig, ax = plt.subplots(3, sharex=True) # histogram
     ax[0].hist(x1.flatten())
     ax[1].hist(x2.flatten())
     ax[2].hist(x3.flatten())

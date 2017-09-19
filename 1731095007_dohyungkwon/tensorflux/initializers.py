@@ -12,11 +12,11 @@ class Initializer:
         self.param = None
         self.initialize_param()
 
-    def initialize_param(self):
+    def initialize_param(self): # 상속을 의미
         pass
 
-    def get_variable(self):
-        return self.param
+    # def get_variable(self):
+    #     return self.param
 
 
 class Value_Assignment_Initializer(Initializer):
@@ -42,7 +42,7 @@ class Point_One_Initializer(Initializer):
     def initialize_param(self):
         self.param = tfg.Variable(np.ones(shape=self.shape) * 0.1, name=self.name)
 
-class Truncated_Normal_Initializer(Initializer):
+class Truncated_Normal_Initializer(Initializer): # functions.py
     def __init__(self, shape, name, mean=0.0, sd=1.0, low=-1.0, upp=1.0):
         self.mean = mean
         self.sd = sd
@@ -50,7 +50,7 @@ class Truncated_Normal_Initializer(Initializer):
         self.upp = upp
         super().__init__(shape, name)
 
-    def initialize_param(self):
+    def initialize_param(self):# functions.py
         self.param = tfg.Variable(tff.get_truncated_normal(shape=self.shape,
                                                            mean=self.mean,
                                                            sd=self.sd,

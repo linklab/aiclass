@@ -8,31 +8,37 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-class Neural_Network(tfg.Graph):
+class Neural_Network(tfg.Graph): # base class
     def __init__(self, input_size, output_size):
         self.input_size = input_size
         self.output_size = output_size
 
-        self.input_node = None
-        self.target_node = None
+        self.input_node = None # 붙일 노드
+        self.target_node = None # 붙일 노드
 
-        self.activator = None
+        self.activator = None # 네트워크 내에서 활용할 객체
         self.initializer = None
         self.optimizer = None
 
-        self.params = OrderedDict()
+        self.params = OrderedDict() # 순서를 관리하는 dictionary
+        # a = {}대신에, a = OrderdDict()
+        # a[1] = 'aaa'
+        # a[2] = 'bbb'
+        # dictionary는 순서 보장이 안됨
 
-        self.output = None
+        self.output = None # Optimizer붙이기 전, feed_forward 통과하여 나오는 값
         self.error = None
 
         self.session = tfs.Session()
-        super().__init__()
+        super().__init__() # graph..
 
     def set_data(self, input_node, target_node):
         self.input_node = input_node
         self.target_node = target_node
 
-    def initialize_param(self, initializer=tfe.Initializer.Zero.value):
+    def initialize_param(self, initializer=tfe.Initializer.Zero.value): # enum이 쓰이는 방식
+        # Zero.value ;enum 문법
+        # Zero_Initializer 클래스가 value가 됨
         pass
 
     def layering(self, activator=tfe.Activator.ReLU.value):
@@ -65,6 +71,8 @@ class Neural_Network(tfg.Graph):
             param.value = temp_val
         return grads
 
+    # https://www.dropbox.com/s/ni4r8gyfr1lw2t3/02.Artificial_Single_Neuron.pdf?dl=0
+    # page 18
     def learning(self, max_epoch, data, x, target):
         for epoch in range(max_epoch):
             sum_train_error = 0.0
@@ -105,15 +113,19 @@ class Single_Neuron_Network(Neural_Network):
     def __init__(self, input_size, output_size):
         super().__init__(input_size, output_size)
 
-    def initialize_scalar_param(self, value1, value2, initializer=tfe.Initializer.Value_Assignment.value):
+    def initialize_scalar_param(self, value1, value2,
+                                initializer=tfe.Initializer.Value_Assignment.value):
         self.params['W0'] = initializer(value1, name='W0').get_variable()
+        #initializer클래스의 생성자 호출. 즉 initializer(value1, name='W0')까지가 객체 생성
+        #initializers.py line22-, line 18-19
         self.params['b0'] = initializer(value2, name='b0').get_variable()
+        # Variable객체 두 개의 레퍼런스가 param에 할당되는 격
 
     def initialize_param(self, initializer=tfe.Initializer.Zero.value):
         self.params['W0'] = initializer(shape=(self.input_size, self.output_size), name='W0').get_variable()
         self.params['b0'] = initializer(shape=(self.output_size,), name='b0').get_variable()
 
-    def layering(self, activator=tfe.Activator.ReLU.value):
+    def layering(self, activator=tfe.Activator.ReLU.value): # layers.py
         self.activator = activator
         u = tfl.Affine(self.params['W0'], self.input_node, self.params['b0'], name="A")
         self.output = activator(u, name="O")
@@ -140,7 +152,7 @@ class Two_Neurons_Network(Neural_Network):
     def layering(self, activator=tfe.Activator.ReLU.value):
         self.activator = activator
         u0 = tfl.Affine(self.params['W0'], self.input_node, self.params['b0'], name="A0")
-        o0 = activator(u0, name="O0")
+        o0 = activator(u0, name="O0") # ReLU 클래스 생성자 격임
         u1 = tfl.Affine(self.params['W1'], o0, self.params['b1'], name="A1")
         self.output = activator(u1, name="O1")
         self.error = tfl.SquaredError(self.output, self.target_node, name="SE")
