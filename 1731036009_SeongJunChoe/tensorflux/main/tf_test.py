@@ -1,5 +1,6 @@
 from tensorflux import graph as tfg
 from tensorflux import session as tfs
+
 #import networkx as nx
 #import matplotlib.pyplot as plt
 
