@@ -1,8 +1,8 @@
 # -*- coding:utf-8 -*-
-import tensorflux.graph as tfg
+import tensorflux2.graph as tfg
 import math
 import numpy as np
-import tensorflux.functions as tff
+import tensorflux2.functions as tff
 import random
 
 

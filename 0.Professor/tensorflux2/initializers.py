@@ -1,7 +1,7 @@
 # -*- coding:utf-8 -*-
 import numpy as np
-import tensorflux.graph as tfg
-import tensorflux.functions as tff
+import tensorflux2.graph as tfg
+import tensorflux2.functions as tff
 
 
 class Initializer:
