@@ -13,8 +13,8 @@ class Data:
 class Simple_Function_Data(Data):
     # f(x)=10𝑥+4
     def __init__(self):
-        self.training_input = np.array([-1.0, 1.0, 2.0, 3.0])
-        self.training_target = np.array([-6.0, 14.0, 24.0, 34.0])
+        self.training_input = np.array([1.0, 2.0, 3.0])
+        self.training_target = np.array([14.0, 24.0, 34.0])
 
         self.validation_input = np.array([1.5, 2.5])
         self.validation_target = np.array([19.0, 29.0])
