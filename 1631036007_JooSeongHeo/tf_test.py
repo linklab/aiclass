@@ -35,14 +35,16 @@ b = tfg.Variable([1, 1], name="b")
 # Create placeholder
 x = tfg.Placeholder(name="x")
 
-# Create hidden node y
-y = tfg.Matmul(A, x, name="y")
-
-# Create output node z
-z = tfg.Add(y, b, name="z")
+# # Create hidden node y
+# y = tfg.Matmul(A, x, name="y")
+#
+# # Create output node z
+# z = tfg.Add(y, b, name="z")
 
 #nx.draw_networkx(g, with_labels=True)
 #plt.show(block=True)
+
+u = Affine(w,x,b)
 
 session = tfs.Session()
 output = session.run(z, {x: [1, 2]})

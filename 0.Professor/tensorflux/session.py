@@ -1,13 +1,15 @@
+# -*- coding:utf-8 -*-
+
 # Reference: http://www.deepideas.net/deep-learning-from-scratch-i-computational-graphs
 import numpy as np
-from tensorflux import graph as tfg
+import tensorflux.graph as tfg
 
 
 class Session:
     """Represents a particular execution of a computational graph.
     """
 
-    def run(self, operation, feed_dict={}):
+    def run(self, operation, feed_dict={}, vervose=True):
         """Computes the output of an operation
         
         Args:
@@ -33,9 +35,14 @@ class Session:
                 # Compute the output of this operation
                 node.output = node.forward(*node.inputs)
 
+            print(node.output)
+
             # Convert lists to numpy arrays
-            if type(node.output) == list:
-                node.output = np.array(node.output)
+            if type(node.output) is not np.ndarray:
+                node.output = np.asarray(node.output)
+
+            if vervose:
+                print("Node: {:>10} - Output Value: {:>5}".format(str(node), str(node.output)))
 
         # Return the requested node value
         return operation.output
