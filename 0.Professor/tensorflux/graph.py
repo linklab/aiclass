@@ -46,12 +46,6 @@ class Variable:
         self.consumers = []
         self.name = name
 
-    def get_shape(self):
-        return self.value.shape
-
-    def set_value(self, value):
-        self.value = value
-
     def __str__(self):
         return self.name
 
@@ -77,14 +71,6 @@ class Operation:
         # Append this operation to the list of consumers of all input nodes
         for input_node in input_nodes:
             input_node.consumers.append(self)
-<<<<<<< HEAD
-            _default_graph.add_edge(input_node, self)
-
-        # Append this operation to the list of operations in the currently active default graph
-        _default_graph.operations.append(self)
-        _default_graph.add_node(self)
-=======
->>>>>>> 93ddd19d864eda98ce74cf1c12f8cea04e58fa68
 
     def forward(self):
         """Computes the output of this operation.
