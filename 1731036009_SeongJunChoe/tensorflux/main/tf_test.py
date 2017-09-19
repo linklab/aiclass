@@ -1,10 +1,11 @@
 from tensorflux import graph as tfg
 from tensorflux import session as tfs
+
 #import networkx as nx
 #import matplotlib.pyplot as plt
 
 g = tfg.Graph() # 컴퓨테이션 그래프 클래스를 생성
-g.initialize() # 컴퓨테이션 그래프 클래스를 초기화
+#g.initialize() # 컴퓨테이션 그래프 클래스를 초기화
 #"""
 # Create variables
 a = tfg.Variable(5.0, name="a") #변수 클래스 a를 생성하고 초기화
