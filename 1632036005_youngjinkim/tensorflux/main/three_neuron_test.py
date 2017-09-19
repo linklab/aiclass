@@ -4,7 +4,7 @@ import tensorflux.networks as tfn
 import tensorflux.enums as tfe
 import datasource.simple as simple_data
 
-n = tfn.Two_Neurons_Network(input_size=2, output_size=1)
+n = tfn.Three_Neurons_Network(input_size=2, output_size=1)
 
 x = tfg.Placeholder(name="x")
 target = tfg.Placeholder(name="target")

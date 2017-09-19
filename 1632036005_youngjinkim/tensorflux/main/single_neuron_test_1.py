@@ -4,9 +4,6 @@ import tensorflux.networks as tfn
 import tensorflux.enums as tfe
 import datasource.simple as simple_data
 
-g = tfg.Graph()
-g.initialize()
-
 n = tfn.Single_Neuron_Network(input_size=1, output_size=1)
 
 x = tfg.Placeholder(name="x")
