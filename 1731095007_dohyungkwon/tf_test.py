@@ -48,8 +48,8 @@ print(output)
 print()
 print("-------------------")
 #--------------
-#nx.draw_networkx(g, with_labels=True)
-#plt.show(block=True)
+nx.draw_networkx(g, with_labels=True)
+plt.show(block=True)
 
 
 W = tfg.Variable(5.0, name="W")
