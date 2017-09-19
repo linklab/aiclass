@@ -22,11 +22,12 @@ class Placeholder:
     def __init__(self, name=None):
         """Construct placeholder
         """
+        self.output = None
         self.consumers = []
         self.name = name
 
     def __str__(self):
-        return "P: " + self.name
+        return self.name
 
 
 class Variable:
@@ -40,6 +41,8 @@ class Variable:
           initial_value: The initial value of this variable
         """
         self.value = initial_value
+        self.output = None
+
         self.consumers = []
         self.name = name
 
@@ -50,7 +53,7 @@ class Variable:
         self.value = value
 
     def __str__(self):
-        return "V: " + self.name
+        return self.name
 
 
 class Operation:
@@ -65,6 +68,7 @@ class Operation:
         """Construct Forwarding Operation
         """
         self.input_nodes = input_nodes
+        self.output = None
 
         # Initialize list of consumers (i.e. nodes that receive this operation's output as input)
         self.consumers = []
@@ -73,6 +77,14 @@ class Operation:
         # Append this operation to the list of consumers of all input nodes
         for input_node in input_nodes:
             input_node.consumers.append(self)
+<<<<<<< HEAD
+            _default_graph.add_edge(input_node, self)
+
+        # Append this operation to the list of operations in the currently active default graph
+        _default_graph.operations.append(self)
+        _default_graph.add_node(self)
+=======
+>>>>>>> 93ddd19d864eda98ce74cf1c12f8cea04e58fa68
 
     def forward(self):
         """Computes the output of this operation.
