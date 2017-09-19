@@ -15,7 +15,7 @@ n.initialize_scalar_param(5.0, -1.0) #https://www.dropbox.com/s/ni4r8gyfr1lw2t3/
 # networks.py line114
 
 n.layering(activator=tfe.Activator.ReLU.value) # ReLU.value : 클래스
-n.set_optimizer(optimizer=tfe.Optimizer.SGD.value, learning_rate=0.01) # networks.py
+n.set_optimizer(optimizer=tfe.Optimizer.SGD.value, learning_rate=0.058) # networks.py
 # network(computational graph) 구성 종료.
 
 data = simple_data.Simple_Function_Data()
@@ -32,7 +32,7 @@ n.print_feed_forward(num_data=data.num_train_data,
 n.learning(max_epoch=100, data=data, x=x, target=target) # networks.py
 # datasource/simple.py에서 데이터의 개수를 늘려주거나
 # max_epoch를 늘려줌으로써
-# learning_rate
+# learning_rate을 바꾸어주어도 된다.
 # 함수 estimation의 결과는 더 좋아지게 된다.
 
 n.print_feed_forward(num_data=data.num_test_data,
