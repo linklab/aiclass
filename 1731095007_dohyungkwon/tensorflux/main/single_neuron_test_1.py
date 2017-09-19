@@ -30,9 +30,15 @@ n.print_feed_forward(num_data=data.num_train_data,
 
 # x; placeholder
 n.learning(max_epoch=100, data=data, x=x, target=target) # networks.py
+# datasource/simple.py에서 데이터의 개수를 늘려주거나
+# max_epoch를 늘려줌으로써
+# learning_rate
+# 함수 estimation의 결과는 더 좋아지게 된다.
 
 n.print_feed_forward(num_data=data.num_test_data,
                      input_data=data.test_input,
                      target_data=data.test_target, x=x)
-# 이것이 바로 function estimation(generalization)
+
+# 이것이 바로 function estimation(generalization) 원리
+
 #n.draw_and_show()
