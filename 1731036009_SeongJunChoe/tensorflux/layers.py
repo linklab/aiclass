@@ -9,7 +9,7 @@ import random
 class Affine(tfg.Operation):
     """Returns w * x + b.
     """
-    def __init__(self, w, x, b, name=None):
+    def __init__(self, w, x, b, name=None): # w : 가중치 노드, x : 값 노드, b : bias 노드
         """Construct Affine
 
         Args:
@@ -36,7 +36,7 @@ class Affine(tfg.Operation):
 
 
 class ReLU(tfg.Operation):
-    def __init__(self, u, name=None):
+    def __init__(self, u, name=None):   # u : Affine 노드
         """Construct ReLU
 
         Args:
@@ -48,7 +48,10 @@ class ReLU(tfg.Operation):
 
     def forward(self, u_value):
         self.inputs = [u_value]
-
+        # u_value = [-1.0, 2.0, -2.0]
+        # mask = [True, False, True]
+        # out = [-1.0, 2.0, -2.0]
+        # out[mask] = [0, 2, 0] ==> FALSE 인 경우에만 출력하라
         if type(u_value) == np.ndarray:
             self.mask = (u_value <= 0)
             out = u_value.copy()
@@ -98,9 +101,9 @@ class SquaredError(tfg.Operation):
           output: output node
         """
         self.inputs = None
-        super().__init__([forward_final_output, target], name)
+        super().__init__([forward_final_output, target], name)  # 노드, 노드
 
-    def forward(self, forward_final_output_value, target_value):
+    def forward(self, forward_final_output_value, target_value):    # 값, 값
         self.inputs = [forward_final_output_value, target_value]
         return tff.squared_error(forward_final_output_value, target_value)
 
