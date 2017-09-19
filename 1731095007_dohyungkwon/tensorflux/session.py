@@ -35,7 +35,7 @@ class Session:
                 # Compute the output of this operation
                 node.output = node.forward(*node.inputs)
 
-            # print(node.output)
+            # print(node.output) # 주석 풀던가 말던가!
 
             # Convert lists to numpy arrays
             if type(node.output) is not np.ndarray:
