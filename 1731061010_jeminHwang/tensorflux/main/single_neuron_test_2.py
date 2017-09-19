@@ -19,4 +19,4 @@ n.print_feed_forward(num_data=data.num_train_data, input_data=data.training_inpu
 n.learning(max_epoch=100, data=data, x=x, target=target)
 n.print_feed_forward(num_data=data.num_test_data, input_data=data.test_input, target_data=data.test_target, x=x)
 
-#n.draw_and_show()
+n.draw_and_show()

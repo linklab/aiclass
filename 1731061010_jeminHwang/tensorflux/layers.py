@@ -50,9 +50,9 @@ class ReLU(tfg.Operation):
         self.inputs = [u_value]
 
         if type(u_value) == np.ndarray:
-            self.mask = (u_value <= 0)
-            out = u_value.copy()
-            out[self.mask] = 0
+            self.mask = (u_value <= 0)  # 각 엘리먼트를 계산해줌
+            out = u_value.copy()        # 밸류값
+            out[self.mask] = 0          # 마스크가 트루면 0 대입
         else:
             if u_value <= 0:
                 out = 0.0
