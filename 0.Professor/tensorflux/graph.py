@@ -22,11 +22,12 @@ class Placeholder:
     def __init__(self, name=None):
         """Construct placeholder
         """
+        self.output = None
         self.consumers = []
         self.name = name
 
     def __str__(self):
-        return "P: " + self.name
+        return self.name
 
 
 class Variable:
@@ -40,17 +41,13 @@ class Variable:
           initial_value: The initial value of this variable
         """
         self.value = initial_value
+        self.output = None
+
         self.consumers = []
         self.name = name
 
-    def get_shape(self):
-        return self.value.shape
-
-    def set_value(self, value):
-        self.value = value
-
     def __str__(self):
-        return "V: " + self.name
+        return self.name
 
 
 class Operation:
@@ -65,6 +62,7 @@ class Operation:
         """Construct Forwarding Operation
         """
         self.input_nodes = input_nodes
+        self.output = None
 
         # Initialize list of consumers (i.e. nodes that receive this operation's output as input)
         self.consumers = []

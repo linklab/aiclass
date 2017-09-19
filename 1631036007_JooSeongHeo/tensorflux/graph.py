@@ -1,22 +1,18 @@
-import networkx as nx
+# -*- coding:utf-8 -*-
 
-_default_graph = None
+# Reference: http://www.deepideas.net/deep-learning-from-scratch-i-computational-graphs/
+import networkx as nx
 
 
 class Graph(nx.Graph):
     """Represents a computational graph (a neural network)
     """
-
     def __init__(self):
         """Construct Graph"""
         self.operations = []
         self.placeholders = []
         self.variables = []
         super().__init__()
-
-    def initialize(self):
-        global _default_graph
-        _default_graph = self
 
 
 class Placeholder:
@@ -28,21 +24,16 @@ class Placeholder:
         """
         self.consumers = []
         self.name = name
-        if self.name is None:
-            self.name = 'p' + str(len(_default_graph.placeholders) + 1)
-
-        # Append this placeholder to the list of placeholders in the currently active default graph
-        _default_graph.placeholders.append(self)
-        _default_graph.add_node(self)
 
     def __str__(self):
-        return self.name
+        return "P: " + self.name
+
 
 class Variable:
     """Represents a variable (i.e. an intrinsic, changeable parameter of a computational graph).
     """
 
-    def __init__(self, initial_value: object = None, name: object = None) -> object:
+    def __init__(self, initial_value=None, name=None):
         """Construct Variable
 
         Args:
@@ -51,15 +42,15 @@ class Variable:
         self.value = initial_value
         self.consumers = []
         self.name = name
-        if self.name is None:
-            self.name = 'v' + str(len(_default_graph.variables) + 1)
 
-        # Append this variable to the list of variables in the currently active default graph
-        _default_graph.variables.append(self)
-        _default_graph.add_node(self)
+    def get_shape(self):
+        return self.value.shape
+
+    def set_value(self, value):
+        self.value = value
 
     def __str__(self):
-        return self.name
+        return "V: " + self.name
 
 
 class Operation:
@@ -78,16 +69,10 @@ class Operation:
         # Initialize list of consumers (i.e. nodes that receive this operation's output as input)
         self.consumers = []
         self.name = name
-        if self.name is None:
-            self.name = 'o' + str(len(_default_graph.operations) + 1)
 
         # Append this operation to the list of consumers of all input nodes
         for input_node in input_nodes:
             input_node.consumers.append(self)
-            _default_graph.add_edge(input_node, self)
-
-        # Append this operation to the list of operations in the currently active default graph
-        _default_graph.operations.append(self)
 
     def forward(self):
         """Computes the output of this operation.
@@ -96,7 +81,7 @@ class Operation:
         pass
 
     def __str__(self):
-        return self.name
+        return "O: " + self.name
 
 
 class Add(Operation):
