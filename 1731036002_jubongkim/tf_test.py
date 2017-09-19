@@ -23,6 +23,7 @@ z = tfg.Add(y, b, name="z")
 nx.draw_networkx(g, with_labels=True)
 plt.show(block=True)
 
+
 session = tfs.Session()
 output = session.run(z, {x: [1, 2]})
 print(output)
