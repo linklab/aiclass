@@ -34,5 +34,5 @@ n.learning(max_epoch=100, data=data, x=x, target=target) # networks.py
 n.print_feed_forward(num_data=data.num_test_data,
                      input_data=data.test_input,
                      target_data=data.test_target, x=x)
-
+# 이것이 바로 function estimation(generalization)
 #n.draw_and_show()
