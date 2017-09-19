@@ -80,12 +80,15 @@ class Neural_Network(tfg.Graph): # base class
                 train_input_data = data.training_input[idx]
                 train_target_data = data.training_target[idx]
 
+                # this file, line 51
+                # https://www.dropbox.com/s/ni4r8gyfr1lw2t3/02.Artificial_Single_Neuron.pdf?dl=0
+                # page 23, 24
                 grads = self.numerical_derivative(self.session, {x: train_input_data, target: train_target_data})
                 self.optimizer.update(grads=grads)
                 sum_train_error += self.session.run(self.error, {x: train_input_data, target: train_target_data}, vervose=False)
 
             sum_validation_error = 0.0
-            for idx in range(data.num_validation_data):
+            for idx in range(data.num_validation_data): # 검증용 데이터에서는 update를 하지 않음
                 validation_input_data = data.validation_input[idx]
                 validation_target_data = data.validation_target[idx]
                 sum_validation_error += self.session.run(self.error,
@@ -100,6 +103,8 @@ class Neural_Network(tfg.Graph): # base class
             train_input_data = input_data[idx]
             train_target_data = target_data[idx]
 
+            # output; by ReLU
+            # vervose True해보기
             output = self.session.run(self.output, {x: train_input_data}, vervose=False)
             print("Input Data: {:>5}, Feed Forward Output: {:>6}, Target: {:>6}".format(
                 str(train_input_data), np.array2string(output), str(train_target_data)))

@@ -20,6 +20,7 @@ n.set_optimizer(optimizer=tfe.Optimizer.SGD.value, learning_rate=0.01) # network
 
 data = simple_data.Simple_Function_Data()
 
+#networks.py line98
 n.print_feed_forward(num_data=data.num_train_data,
                      input_data=data.training_input,
                      target_data=data.training_target, x=x)
@@ -27,7 +28,8 @@ n.print_feed_forward(num_data=data.num_train_data,
 #https://www.dropbox.com/s/ni4r8gyfr1lw2t3/02.Artificial_Single_Neuron.pdf?dl=0
 # #13page
 
-n.learning(max_epoch=100, data=data, x=x, target=target)
+# x; placeholder
+n.learning(max_epoch=100, data=data, x=x, target=target) # networks.py
 
 n.print_feed_forward(num_data=data.num_test_data,
                      input_data=data.test_input,
