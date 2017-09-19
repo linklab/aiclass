@@ -15,8 +15,8 @@ class Initializer:
     def initialize_param(self): # 상속을 의미
         pass
 
-    # def get_variable(self):
-    #     return self.param
+    def get_variable(self):
+        return self.param
 
 
 class Value_Assignment_Initializer(Initializer):
