@@ -1,13 +1,18 @@
+# Reference: http://www.deepideas.net/deep-learning-from-scratch-i-computational-graphs/
 import networkx as nx
 
+
 class Graph(nx.Graph):
-    """ Represents a computation graph (a neural network)    """
+    """Represents a computational graph (a neural network)
+    """
+
     def __init__(self):
         """Construct Graph"""
         self.operations = []
         self.placeholders = []
         self.variables = []
         super().__init__()
+
 
 class Placeholder:
     """Represents a placeholder node that has to be provided with a value
@@ -20,30 +25,33 @@ class Placeholder:
         self.name = name
 
     def __str__(self):
-        return self.name
-
+        return "P: " + self.name
 
 class Variable:
-    """Represents a variable (i.e. an intrinsic, changeable parameter of a computational graph)."""
+    """Represents a variable (i.e. an intrinsic, changeable parameter of a computational graph).
+    """
+
     def __init__(self, initial_value=None, name=None):
         """Construct Variable
+
         Args:
           initial_value: The initial value of this variable
         """
         self.value = initial_value
+        self.output = None
         self.consumers = []
         self.name = name
 
     def __str__(self):
-        return self.name
-
+        return "V: " + self.name
 
 class Operation:
     """Represents a graph node that performs a computation (forwaring operation).
 
     An `Operation` is a node in a `Graph` that takes zero or
     more objects as input, and produces zero or more objects
-    as output.    """
+    as output.
+    """
 
     def __init__(self, input_nodes=[], name=None):
         """Construct Forwarding Operation
@@ -74,6 +82,7 @@ class Add(Operation):
 
     def __init__(self, x, y, name=None):
         """Construct add
+
         Args:
           x: First summand node
           y: Second summand node
@@ -83,6 +92,7 @@ class Add(Operation):
 
     def forward(self, x_value, y_value):
         """Compute the output of the add operation
+
         Args:
           x_value: First summand value
           y_value: Second summand value
@@ -97,6 +107,7 @@ class Mul(Operation):
 
     def __init__(self, x, y, name=None):
         """Construct add
+
         Args:
           x: First summand node
           y: Second summand node
@@ -106,6 +117,7 @@ class Mul(Operation):
 
     def forward(self, x_value, y_value):
         """Compute the output of the add operation
+
         Args:
           x_value: First summand value
           y_value: Second summand value
@@ -120,6 +132,7 @@ class Matmul(Operation):
 
     def __init__(self, x, y, name=None):
         """Construct matmul
+
         Args:
           x: First matrix
           y: Second matrix
@@ -129,6 +142,7 @@ class Matmul(Operation):
 
     def forward(self, x_value, y_value):
         """Compute the output of the matmul operation
+
         Args:
           x_value: First matrix value
           y_value: Second matrix value
