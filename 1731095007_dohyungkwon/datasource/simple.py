@@ -16,13 +16,15 @@ class Simple_Function_Data(Data):
         self.training_input = np.array([1.0, 2.0, 3.0])
         self.training_target = np.array([14.0, 24.0, 34.0])
 
-        self.validation_input = np.array([1.5, 2.5])
+        self.validation_input = np.array([1.5, 2.5])#1.0과 2.0의 사잇값
         self.validation_target = np.array([19.0, 29.0])
 
         self.test_input = np.array([0, 4.0])
         self.test_target = np.array([4.0, 44.0])
 
         super().__init__()
+
+        #총 9개의 변수가 잡힘
 
 
 class Or_Gate_Data(Data):

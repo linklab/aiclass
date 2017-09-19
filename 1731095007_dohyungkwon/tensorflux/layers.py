@@ -40,7 +40,7 @@ class ReLU(tfg.Operation):
         """Construct ReLU
 
         Args:
-          u: affine node
+          u: affine node. RuLU 다음에 튀어나는 값이 u 노드가 됨.
         """
         self.inputs = None
         self.mask = None
@@ -51,6 +51,7 @@ class ReLU(tfg.Operation):
 
         if type(u_value) == np.ndarray:
             self.mask = (u_value <= 0)
+            # [-1.0, 2.0, -2.0] --> [True, False, True]
             out = u_value.copy()
             out[self.mask] = 0
         else:
@@ -58,7 +59,7 @@ class ReLU(tfg.Operation):
                 out = 0.0
             else:
                 out = u_value
-        return out
+        return out # scalar, array 모두 커버 중
 
     def backward(self, din):
         pass
@@ -80,7 +81,7 @@ class Sigmoid(tfg.Operation):
 
     def forward(self, u_value):
         self.inputs = [u_value]
-        self.out = tff.sigmoid(u_value)
+        self.out = tff.sigmoid(u_value) # function.py
         return self.out
 
     def backward(self, din):
@@ -96,13 +97,14 @@ class SquaredError(tfg.Operation):
 
         Args:
           output: output node
+          forward_final_output: feedforward의 결과물
         """
         self.inputs = None
         super().__init__([forward_final_output, target], name)
 
     def forward(self, forward_final_output_value, target_value):
         self.inputs = [forward_final_output_value, target_value]
-        return tff.squared_error(forward_final_output_value, target_value)
+        return tff.squared_error(forward_final_output_value, target_value) # function.py
 
     def backward(self, din):
         pass
