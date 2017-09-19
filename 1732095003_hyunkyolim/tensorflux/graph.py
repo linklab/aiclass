@@ -1,5 +1,3 @@
-# -*- coding:utf-8 -*-
-
 # Reference: http://www.deepideas.net/deep-learning-from-scratch-i-computational-graphs/
 import networkx as nx
 
@@ -7,6 +5,7 @@ import networkx as nx
 class Graph(nx.Graph):
     """Represents a computational graph (a neural network)
     """
+
     def __init__(self):
         """Construct Graph"""
         self.operations = []
@@ -22,13 +21,11 @@ class Placeholder:
     def __init__(self, name=None):
         """Construct placeholder
         """
-        self.output = None
         self.consumers = []
         self.name = name
 
     def __str__(self):
-        return self.name
-
+        return "P: " + self.name
 
 class Variable:
     """Represents a variable (i.e. an intrinsic, changeable parameter of a computational graph).
@@ -42,13 +39,11 @@ class Variable:
         """
         self.value = initial_value
         self.output = None
-
         self.consumers = []
         self.name = name
 
     def __str__(self):
-        return self.name
-
+        return "V: " + self.name
 
 class Operation:
     """Represents a graph node that performs a computation (forwaring operation).
@@ -62,7 +57,6 @@ class Operation:
         """Construct Forwarding Operation
         """
         self.input_nodes = input_nodes
-        self.output = None
 
         # Initialize list of consumers (i.e. nodes that receive this operation's output as input)
         self.consumers = []
