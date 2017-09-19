@@ -1,6 +1,6 @@
 # Reference: http://www.deepideas.net/deep-learning-from-scratch-i-computational-graphs
 import numpy as np
-from tensorflux import graph as tfg
+from tensorflux2 import graph as tfg
 
 
 class Session:
@@ -58,4 +58,5 @@ class Session:
             nodes_postorder.append(node)
 
         recursive_visit(operation)
+
         return nodes_postorder
