@@ -20,7 +20,7 @@ $ git push origin master
 
 <pre>
 $ git config credential.helper store
-$ git push https://github.com/repo.git
+$ git push https://github.com/linklab/aiclass
 
 $ Username for 'https://github.com': <USERNAME>
 $ Password for 'https://USERNAME@github.com': <PASSWORD>
