@@ -3,10 +3,10 @@ import tensorflux_HW1.graph as tfg
 import tensorflux_HW1.networks as tfn
 import tensorflux_HW1.enums as tfe
 import datasource.simple as simple_data
-
+import numpy as np
 #세개의 뉴런을 사용해서 XOR 게이트가 학습되어야 함
-
-n = tfn.Two_Neurons_Network(input_size=2, output_size=1)
+#print(np.array([(0.0, 0.0), (1.0, 0.0), (0.0, 1.0), (1.0, 1.0)]))
+n = tfn.Three_Neurons_Network(input_size=2, output_size=1)
 
 x = tfg.Placeholder(name="x")
 
@@ -27,7 +27,7 @@ n.print_feed_forward(num_data=data.num_train_data, input_data=data.training_inpu
 #print(data.num_train_data)
 #print(data.training_input)
 
-n.learning(max_epoch=2, data=data, x=x, target=target)
+n.learning(max_epoch=1000, data=data, x=x, target=target)
 
 n.print_feed_forward(num_data=data.num_test_data, input_data=data.test_input, target_data=data.test_target, x=x)
 

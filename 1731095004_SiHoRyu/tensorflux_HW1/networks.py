@@ -187,7 +187,7 @@ class Three_Neurons_Network(Neural_Network):
         self.activator = activator
         u0 = tfl.Affine(self.params['W0'], self.input_node, self.params['b0'], name="A0")
         o0 = activator(u0, name="O0")
-
+        print(self.input_node)
         u1 = tfl.Affine(self.params['W1'], self.input_node, self.params['b1'], name="A1")
         o1 = activator(u1, name="O1")
 
@@ -195,7 +195,7 @@ class Three_Neurons_Network(Neural_Network):
         #여기서 두개의 아웃풋을 하나의 인풋으로 합치는 작업이 필요해보임
 
 
-        u2 = tfl.Affine(self.params['W2'], o0, self.params['b2'], name="A3")
+        u2 = tfl.AffineForThreeNeuron(self.params['W2'], o0, o1,self.params['b2'], name="A2")
         self.output = activator(u2, name="O2")
         self.error = tfl.SquaredError(self.output, self.target_node, name="SE")
 

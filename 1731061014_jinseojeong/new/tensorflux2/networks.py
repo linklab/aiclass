@@ -1,11 +1,12 @@
 from collections import OrderedDict
-import tensorflux.graph as tfg
-import tensorflux.enums as tfe
-import tensorflux.layers as tfl
-import tensorflux.session as tfs
+import tensorflux2.graph as tfg
+import tensorflux2.enums as tfe
+import tensorflux2.layers as tfl
+import tensorflux2.session as tfs
 import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np
+
 
 class Neural_Network(tfg.Graph):
     def __init__(self, input_size, output_size):
@@ -91,13 +92,16 @@ class Neural_Network(tfg.Graph):
             train_input_data = input_data[idx]
             train_target_data = target_data[idx]
 
-            output = self.session.run(self.output, {x: train_input_data}, vervose=False)
+            output = self.session.run(self.output,
+                                      {x: train_input_data},
+                                      vervose=False)
             print("Input Data: {:>5}, Feed Forward Output: {:>6}, Target: {:>6}".format(
                 str(train_input_data), np.array2string(output), str(train_target_data)))
 
     def draw_and_show(self):
         nx.draw_networkx(self, with_labels=True)
         plt.show(block=True)
+
 
 class Single_Neuron_Network(Neural_Network):
     def __init__(self, input_size, output_size):
@@ -113,7 +117,10 @@ class Single_Neuron_Network(Neural_Network):
 
     def layering(self, activator=tfe.Activator.ReLU.value):
         self.activator = activator
-        u = tfl.Affine(self.params['W0'], self.input_node, self.params['b0'], name="A")
+        u = tfl.Affine(self.params['W0'],
+                       self.input_node,
+                       self.params['b0'],
+                       name="A")
         self.output = activator(u, name="O")
         self.error = tfl.SquaredError(self.output, self.target_node, name="SE")
         if isinstance(self, nx.Graph):
@@ -123,6 +130,7 @@ class Single_Neuron_Network(Neural_Network):
             self.add_edge(u, self.output)
             self.add_edge(self.output, self.error)
             self.add_edge(self.error, self.target_node)
+
 
 class Two_Neurons_Network(Neural_Network):
     def __init__(self, input_size, output_size):
@@ -136,9 +144,13 @@ class Two_Neurons_Network(Neural_Network):
 
     def layering(self, activator=tfe.Activator.ReLU.value):
         self.activator = activator
-        u0 = tfl.Affine(self.params['W0'], self.input_node, self.params['b0'], name="A0")
+        u0 = tfl.Affine(self.params['W0'],
+                        self.input_node,
+                        self.params['b0'], name="A0")
         o0 = activator(u0, name="O0")
-        u1 = tfl.Affine(self.params['W1'], o0, self.params['b1'], name="A1")
+        u1 = tfl.Affine(self.params['W1'],
+                        o0,
+                        self.params['b1'], name="A1")
         self.output = activator(u1, name="O1")
         self.error = tfl.SquaredError(self.output, self.target_node, name="SE")
         if isinstance(self, nx.Graph):
@@ -153,54 +165,56 @@ class Two_Neurons_Network(Neural_Network):
             self.add_edge(self.output, self.error)
             self.add_edge(self.error, self.target_node)
 
+
+# 과제과제과제
+# 과제과제과제
+# 과제과제과제
+# 과제과제과제
+# 과제과제과제
 class Three_Neurons_Network(Neural_Network):
     def __init__(self, input_size, output_size):
         super().__init__(input_size, output_size)
 
-    def initialize_param(self, initializer=tfe.Initializer.Point_One.value):
+    def initialize_param(self, initializer=tfe.Initializer.Zero.value):
 
-        self.params['W0'] = initializer(shape=(self.input_size, self.input_size), name='W0').get_variable()
+        self.params['W0'] = initializer(shape=(self.input_size, self.output_size), name='W0').get_variable()
         self.params['b0'] = initializer(shape=(self.output_size,), name='b0').get_variable()
-
-        self.params['W1'] = initializer(shape=(self.input_size, self.input_size), name='W1').get_variable()
+        self.params['W1'] = initializer(shape=(self.input_size, self.output_size), name='W1').get_variable()
         self.params['b1'] = initializer(shape=(self.output_size,), name='b1').get_variable()
-
         self.params['W2'] = initializer(shape=(self.input_size, self.output_size), name='W2').get_variable()
         self.params['b2'] = initializer(shape=(self.output_size,), name='b2').get_variable()
 
-    def layering(self, activator=tfe.Activator.Sigmoid.value):
+    def layering(self, activator=tfe.Activator.ReLU.value):
+
         self.activator = activator
 
-        u0 = tfl.Affine(self.params['W0'], self.input_node, self.params['b0'], name="A0")
-        u1 = tfl.Affine(self.params['W1'], self.input_node, self.params['b1'], name="A1")
-
+        u0 = tfl.Affine(
+            self.params['W0'],
+            self.input_node,
+            self.params['b0'], name="A0")
         o0 = activator(u0, name="O0")
+
+        u1 = tfl.Affine(
+            self.params['W1'],
+            self.input_node,
+            self.params['b1'], name="A1")
         o1 = activator(u1, name="O1")
 
-
-        u2 = tfl.Affine(self.params['W2'], o0, self.params['b2'], name="A2")
-
-        self.output = activator(u2, name="O3")
+        u2 = tfl.Affine2(
+            self.params['W2'],
+            o0, o1,
+            self.params['b2'], name="A2")
+        self.output = activator(u2, name="O2")
 
         self.error = tfl.SquaredError(self.output, self.target_node, name="SE")
-
-        if isinstance(self, nx.Graph):
-            self.add_edge(self.params['W0'], u0)
-            self.add_edge(self.input_node, u0)
-            self.add_edge(self.params['b0'], u0)
-            self.add_edge(u0, o0)
-
-            self.add_edge(self.params['W1'], u1)
-            self.add_edge(self.input_node, u1)
-            self.add_edge(self.params['b1'], u1)
-            self.add_edge(u1, o1)
-
-
-            self.add_edge(self.params['W2'], u2)
-            self.add_edge(o0, u2)
-            self.add_edge(o1, u2)
-            self.add_edge(self.params['b2'], u2)
-            self.add_edge(u2, self.output)
-
-            self.add_edge(self.output, self.error)
-            self.add_edge(self.error, self.target_node)
+        # if isinstance(self, nx.Graph):
+        #     self.add_edge(self.params['W0'], u0)
+        #     self.add_edge(self.input_node, u0)
+        #     self.add_edge(self.params['b0'], u0)
+        #     self.add_edge(u0, o0)
+        #     self.add_edge(self.params['W1'], u1)
+        #     self.add_edge(self.input_node, u1)
+        #     self.add_edge(self.params['b1'], u1)
+        #     self.add_edge(u1, o1)
+        #     self.add_edge(self.output, self.error)
+        #     self.add_edge(self.error, self.target_node)

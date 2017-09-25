@@ -2,24 +2,72 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="51ae0ad0-5210-4b43-9ed3-a6ce495c2639" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/Tensorflux/main/three_neurons_HW.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/tensorflux_HW1/__init__.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/tensorflux_HW1/enums.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/tensorflux_HW1/functions.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/tensorflux_HW1/graph.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/tensorflux_HW1/initializers.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/tensorflux_HW1/layers.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/tensorflux_HW1/main/three_neurons_HW.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/tensorflux_HW1/networks.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/tensorflux_HW1/optimizers.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/tensorflux_HW1/session.py" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/networkx/net.py" afterPath="" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/misc.xml" afterPath="$PROJECT_DIR$/.idea/misc.xml" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1631036012_SangYub.Ji/tensorflow_test/ten.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1631036012_SangYub.Ji/tensorflux/main/Three_neuron_test.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/.idea/misc.xml" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/.idea/modules.xml" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/.idea/workspace.xml" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/datasource/simple.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/networkx/net.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/networkx_test/net.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/numba_test/numba_test.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/python_practices/test1.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/python_practices/test2.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/python_practices/test3.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/tensorflux/enums.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/tensorflux/functions.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/tensorflux/graph.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/tensorflux/initializers.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/tensorflux/layers.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/tensorflux/main/simple_tf_test.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/tensorflux/main/single_neuron_test_1.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/tensorflux/main/single_neuron_test_2.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/tensorflux/main/two_neuron_test.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/tensorflux/networks.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/tensorflux/optimizers.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/tensorflux/session.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/tensorflux2/enums.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/tensorflux2/functions.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/tensorflux2/graph.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/tensorflux2/initializers.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/tensorflux2/layer.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/tensorflux2/layers.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/tensorflux2/main/single_neuron_test_1.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/tensorflux2/main/single_neuron_test_2.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/tensorflux2/main/three_neuron_test.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/tensorflux2/main/two_neuron_test.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/tensorflux2/networks.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/tensorflux2/optimizers.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/tensorflux2/session.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/tf_test.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/old_trash/networkx/ani.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/old_trash/tensorflux/__init__.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/old_trash/tensorflux2/__init__.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/old_trash/test-text.txt" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/../1631036012_SangYub.Ji/ten.py" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/../1631036012_SangYub.Ji/tf_test.py" afterPath="" />
+      <change type="MOVED" beforePath="$PROJECT_DIR$/../1731061014_jinseojeong/README.md" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/old_trash/README.md" />
+      <change type="MOVED" beforePath="$PROJECT_DIR$/../1731061014_jinseojeong/README.md~" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/tensorflux2/__init__.py" />
+      <change type="MOVED" beforePath="$PROJECT_DIR$/../1731061014_jinseojeong/networkx/ani.py" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/networkx_test/ani.py" />
+      <change type="MOVED" beforePath="$PROJECT_DIR$/../1731061014_jinseojeong/networkx/net.py" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/old_trash/networkx/net.py" />
+      <change type="MOVED" beforePath="$PROJECT_DIR$/../1731061014_jinseojeong/simple_tf_test.py" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/old_trash/simple_tf_test.py" />
+      <change type="MOVED" beforePath="$PROJECT_DIR$/../1731061014_jinseojeong/tensorflux/__init__.py" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/datasource/__init__.py" />
+      <change type="MOVED" beforePath="$PROJECT_DIR$/../1731061014_jinseojeong/tensorflux/graph.py" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/old_trash/tensorflux/graph.py" />
+      <change type="MOVED" beforePath="$PROJECT_DIR$/../1731061014_jinseojeong/tensorflux/session.py" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/old_trash/tensorflux/session.py" />
+      <change type="MOVED" beforePath="$PROJECT_DIR$/../1731061014_jinseojeong/tensorflux2/__init__.py" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/new/tensorflux/__init__.py" />
+      <change type="MOVED" beforePath="$PROJECT_DIR$/../1731061014_jinseojeong/tensorflux2/graph.py" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/old_trash/tensorflux2/graph.py" />
+      <change type="MOVED" beforePath="$PROJECT_DIR$/../1731061014_jinseojeong/tensorflux2/layer.py" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/old_trash/tensorflux2/layer.py" />
+      <change type="MOVED" beforePath="$PROJECT_DIR$/../1731061014_jinseojeong/tensorflux2/session.py" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/old_trash/tensorflux2/session.py" />
+      <change type="MOVED" beforePath="$PROJECT_DIR$/../1731061014_jinseojeong/tf_test.py" afterPath="$PROJECT_DIR$/../1731061014_jinseojeong/old_trash/tf_test.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../1631036012_SangYub.Ji/datasource/simple.py" afterPath="$PROJECT_DIR$/../1631036012_SangYub.Ji/datasource/simple.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../1631036012_SangYub.Ji/tensorflux/graph.py" afterPath="$PROJECT_DIR$/../1631036012_SangYub.Ji/tensorflux/graph.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../1631036012_SangYub.Ji/tensorflux/main/single_neuron_test_1.py" afterPath="$PROJECT_DIR$/../1631036012_SangYub.Ji/tensorflux/main/single_neuron_test_1.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../1631036012_SangYub.Ji/tensorflux/main/single_neuron_test_2.py" afterPath="$PROJECT_DIR$/../1631036012_SangYub.Ji/tensorflux/main/single_neuron_test_2.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../1631036012_SangYub.Ji/tensorflux/networks.py" afterPath="$PROJECT_DIR$/../1631036012_SangYub.Ji/tensorflux/networks.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Tensorflux/graph.py" afterPath="$PROJECT_DIR$/Tensorflux/graph.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Tensorflux/graph_new.py" afterPath="$PROJECT_DIR$/Tensorflux/graph_new.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tf_affine.py" afterPath="$PROJECT_DIR$/tf_affine.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tf_test.py" afterPath="$PROJECT_DIR$/tf_test.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tensorflux_HW1/layers.py" afterPath="$PROJECT_DIR$/tensorflux_HW1/layers.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tensorflux_HW1/main/three_neurons_HW.py" afterPath="$PROJECT_DIR$/tensorflux_HW1/main/three_neurons_HW.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tensorflux_HW1/networks.py" afterPath="$PROJECT_DIR$/tensorflux_HW1/networks.py" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -33,7 +81,7 @@
       <file leaf-file-name="graph.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/tensorflux_HW1/graph.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1290">
+            <state relative-caret-position="628">
               <caret line="86" column="31" lean-forward="false" selection-start-line="86" selection-start-column="31" selection-end-line="86" selection-end-column="31" />
               <folding>
                 <element signature="e#2638#3201#0" expanded="false" />
@@ -61,8 +109,8 @@
       <file leaf-file-name="three_neurons_HW.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/tensorflux_HW1/main/three_neurons_HW.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="388">
-              <caret line="29" column="22" lean-forward="false" selection-start-line="29" selection-start-column="22" selection-end-line="29" selection-end-column="22" />
+            <state relative-caret-position="283">
+              <caret line="22" column="32" lean-forward="false" selection-start-line="22" selection-start-column="32" selection-end-line="22" selection-end-column="32" />
               <folding>
                 <element signature="e#89#123#0" expanded="true" />
               </folding>
@@ -70,7 +118,7 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="functions.py" pinned="false" current-in-tab="false">
+      <file leaf-file-name="functions.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/tensorflux_HW1/functions.py">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="315">
@@ -85,26 +133,27 @@
       <file leaf-file-name="layers.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/tensorflux_HW1/layers.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="385">
-              <caret line="26" column="49" lean-forward="true" selection-start-line="26" selection-start-column="49" selection-end-line="26" selection-end-column="49" />
+            <state relative-caret-position="345">
+              <caret line="39" column="47" lean-forward="false" selection-start-line="39" selection-start-column="47" selection-end-line="39" selection-end-column="47" />
               <folding>
                 <element signature="e#23#57#0" expanded="true" />
-                <element signature="e#1666#2099#0" expanded="false" />
+                <element signature="e#2969#3402#0" expanded="false" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="networks.py" pinned="false" current-in-tab="true">
+      <file leaf-file-name="networks.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/tensorflux_HW1/networks.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="107">
-              <caret line="134" column="48" lean-forward="true" selection-start-line="134" selection-start-column="48" selection-end-line="134" selection-end-column="48" />
+            <state relative-caret-position="1628">
+              <caret line="189" column="29" lean-forward="false" selection-start-line="189" selection-start-column="29" selection-end-line="189" selection-end-column="29" />
               <folding>
                 <element signature="e#0#35#0" expanded="true" />
                 <element signature="e#913#980#0" expanded="false" />
                 <element signature="e#3887#3956#0" expanded="false" />
                 <element signature="e#4008#5336#0" expanded="false" />
+                <element signature="e#5386#6964#0" expanded="false" />
               </folding>
             </state>
           </provider>
@@ -123,8 +172,8 @@
       <file leaf-file-name="simple.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/datasource/simple.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="28">
-              <caret line="31" column="28" lean-forward="false" selection-start-line="31" selection-start-column="13" selection-end-line="31" selection-end-column="28" />
+            <state relative-caret-position="56">
+              <caret line="30" column="88" lean-forward="true" selection-start-line="30" selection-start-column="30" selection-end-line="30" selection-end-column="88" />
               <folding>
                 <element signature="e#288#731#0" expanded="false" />
               </folding>
@@ -135,8 +184,8 @@
       <file leaf-file-name="session.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/tensorflux_HW1/session.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="189">
-              <caret line="19" column="48" lean-forward="false" selection-start-line="19" selection-start-column="48" selection-end-line="19" selection-end-column="48" />
+            <state relative-caret-position="204">
+              <caret line="34" column="0" lean-forward="false" selection-start-line="34" selection-start-column="0" selection-end-line="34" selection-end-column="0" />
               <folding>
                 <element signature="e#112#130#0" expanded="true" />
               </folding>
@@ -156,8 +205,8 @@
   <component name="FindInProjectRecents">
     <findStrings>
       <find>training_target</find>
-      <find>forward</find>
       <find>input_node</find>
+      <find>forward</find>
     </findStrings>
     <replaceStrings>
       <replace />
@@ -180,9 +229,9 @@
         <option value="$PROJECT_DIR$/tensorflux_HW1/enums.py" />
         <option value="$PROJECT_DIR$/tensorflux_HW1/initializers.py" />
         <option value="$PROJECT_DIR$/tensorflux_HW1/graph.py" />
-        <option value="$PROJECT_DIR$/tensorflux_HW1/main/three_neurons_HW.py" />
-        <option value="$PROJECT_DIR$/tensorflux_HW1/layers.py" />
         <option value="$PROJECT_DIR$/tensorflux_HW1/networks.py" />
+        <option value="$PROJECT_DIR$/tensorflux_HW1/layers.py" />
+        <option value="$PROJECT_DIR$/tensorflux_HW1/main/three_neurons_HW.py" />
       </list>
     </option>
   </component>
@@ -260,19 +309,19 @@
     </option>
   </component>
   <component name="RunManager" selected="Python.three_neurons_HW">
-    <configuration name="net" type="PythonConfigurationType" factoryName="Python" temporary="true">
+    <configuration name="layers" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs>
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/networkx_test" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/tensorflux_HW1" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <module name="1731095004_SiHoRyu" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/networkx_test/net.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/tensorflux_HW1/layers.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -346,19 +395,19 @@
       <option name="EMULATE_TERMINAL" value="false" />
     </configuration>
     <list size="5">
-      <item index="0" class="java.lang.String" itemvalue="Python.net" />
-      <item index="1" class="java.lang.String" itemvalue="Python.two_neuron_test" />
-      <item index="2" class="java.lang.String" itemvalue="Python.single_neuron_test_1 (1)" />
-      <item index="3" class="java.lang.String" itemvalue="Python.networks" />
-      <item index="4" class="java.lang.String" itemvalue="Python.three_neurons_HW" />
+      <item index="0" class="java.lang.String" itemvalue="Python.two_neuron_test" />
+      <item index="1" class="java.lang.String" itemvalue="Python.single_neuron_test_1 (1)" />
+      <item index="2" class="java.lang.String" itemvalue="Python.networks" />
+      <item index="3" class="java.lang.String" itemvalue="Python.three_neurons_HW" />
+      <item index="4" class="java.lang.String" itemvalue="Python.layers" />
     </list>
     <recent_temporary>
       <list size="5">
         <item index="0" class="java.lang.String" itemvalue="Python.three_neurons_HW" />
-        <item index="1" class="java.lang.String" itemvalue="Python.two_neuron_test" />
+        <item index="1" class="java.lang.String" itemvalue="Python.layers" />
         <item index="2" class="java.lang.String" itemvalue="Python.networks" />
-        <item index="3" class="java.lang.String" itemvalue="Python.single_neuron_test_1 (1)" />
-        <item index="4" class="java.lang.String" itemvalue="Python.net" />
+        <item index="3" class="java.lang.String" itemvalue="Python.two_neuron_test" />
+        <item index="4" class="java.lang.String" itemvalue="Python.single_neuron_test_1 (1)" />
       </list>
     </recent_temporary>
   </component>
@@ -624,16 +673,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/tensorflux_HW1/session.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="189">
-          <caret line="19" column="48" lean-forward="false" selection-start-line="19" selection-start-column="48" selection-end-line="19" selection-end-column="48" />
-          <folding>
-            <element signature="e#112#130#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/tensorflux_HW1/__init__.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
@@ -664,12 +703,77 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/tensorflux_HW1/optimizers.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/datasource/simple.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="28">
-          <caret line="31" column="28" lean-forward="false" selection-start-line="31" selection-start-column="13" selection-end-line="31" selection-end-column="28" />
+        <state relative-caret-position="56">
+          <caret line="30" column="88" lean-forward="true" selection-start-line="30" selection-start-column="30" selection-end-line="30" selection-end-column="88" />
           <folding>
             <element signature="e#288#731#0" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tensorflux_HW1/graph.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="628">
+          <caret line="86" column="31" lean-forward="false" selection-start-line="86" selection-start-column="31" selection-end-line="86" selection-end-column="31" />
+          <folding>
+            <element signature="e#2638#3201#0" expanded="false" />
+            <element signature="e#3230#3780#0" expanded="false" />
+            <element signature="e#3812#4392#0" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tensorflux_HW1/session.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="204">
+          <caret line="34" column="0" lean-forward="false" selection-start-line="34" selection-start-column="0" selection-end-line="34" selection-end-column="0" />
+          <folding>
+            <element signature="e#112#130#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tensorflux_HW1/networks.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1628">
+          <caret line="189" column="29" lean-forward="false" selection-start-line="189" selection-start-column="29" selection-end-line="189" selection-end-column="29" />
+          <folding>
+            <element signature="e#0#35#0" expanded="true" />
+            <element signature="e#913#980#0" expanded="false" />
+            <element signature="e#3887#3956#0" expanded="false" />
+            <element signature="e#4008#5336#0" expanded="false" />
+            <element signature="e#5386#6964#0" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tensorflux_HW1/layers.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="345">
+          <caret line="39" column="47" lean-forward="false" selection-start-line="39" selection-start-column="47" selection-end-line="39" selection-end-column="47" />
+          <folding>
+            <element signature="e#23#57#0" expanded="true" />
+            <element signature="e#2969#3402#0" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tensorflux_HW1/main/three_neurons_HW.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="283">
+          <caret line="22" column="32" lean-forward="false" selection-start-line="22" selection-start-column="32" selection-end-line="22" selection-end-column="32" />
+          <folding>
+            <element signature="e#89#123#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -680,60 +784,6 @@
           <caret line="21" column="0" lean-forward="false" selection-start-line="21" selection-start-column="0" selection-end-line="21" selection-end-column="0" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/tensorflux_HW1/graph.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1290">
-          <caret line="86" column="31" lean-forward="false" selection-start-line="86" selection-start-column="31" selection-end-line="86" selection-end-column="31" />
-          <folding>
-            <element signature="e#2638#3201#0" expanded="false" />
-            <element signature="e#3230#3780#0" expanded="false" />
-            <element signature="e#3812#4392#0" expanded="false" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/tensorflux_HW1/layers.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="385">
-          <caret line="26" column="49" lean-forward="true" selection-start-line="26" selection-start-column="49" selection-end-line="26" selection-end-column="49" />
-          <folding>
-            <element signature="e#23#57#0" expanded="true" />
-            <element signature="e#1666#2099#0" expanded="false" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/tensorflux_HW1/optimizers.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/tensorflux_HW1/main/three_neurons_HW.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="388">
-          <caret line="29" column="22" lean-forward="false" selection-start-line="29" selection-start-column="22" selection-end-line="29" selection-end-column="22" />
-          <folding>
-            <element signature="e#89#123#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/tensorflux_HW1/networks.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="107">
-          <caret line="134" column="48" lean-forward="true" selection-start-line="134" selection-start-column="48" selection-end-line="134" selection-end-column="48" />
-          <folding>
-            <element signature="e#0#35#0" expanded="true" />
-            <element signature="e#913#980#0" expanded="false" />
-            <element signature="e#3887#3956#0" expanded="false" />
-            <element signature="e#4008#5336#0" expanded="false" />
           </folding>
         </state>
       </provider>
