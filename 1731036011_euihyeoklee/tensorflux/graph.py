@@ -143,4 +143,5 @@ class Matmul(Operation):
           y_value: Second matrix value
         """
         self.inputs = [x_value, y_value]
+        # print(self.inputs)
         return x_value.dot(y_value)
