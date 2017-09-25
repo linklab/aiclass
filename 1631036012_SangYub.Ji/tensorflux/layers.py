@@ -22,7 +22,7 @@ class Affine(tfg.Operation):
         """Compute the output of the add operation
 
         Args:
-          x_value: Weight value, y_value: Input value, b_value: Bias value
+          w_value: Weight value, x_value: Input value, b_value: Bias value
         """
         self.inputs = [w_value, x_value, b_value]
         # return np.matmul(x_value, w_value) + b_value # [Note] Matmax Order
