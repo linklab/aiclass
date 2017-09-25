@@ -4,12 +4,12 @@ import tensorflux.networks as tfn
 import tensorflux.enums as tfe
 import datasource.simple as simple_data
 
-n = tfn.Single_Neuron_Network(input_size=2, output_size=1)
+n = tfn.Three_Neurons_Network(input_size=2, output_size=1)
 
 x = tfg.Placeholder(name="x")
 target = tfg.Placeholder(name="target")
 n.set_data(x, target)
-n.initialize_param(initializer=tfe.Initializer.Zero.value)
+n.initialize_param(initializer=tfe.Initializer.Point_One.value)
 n.layering(activator=tfe.Activator.ReLU.value)
 n.set_optimizer(optimizer=tfe.Optimizer.SGD.value, learning_rate=0.01)
 
