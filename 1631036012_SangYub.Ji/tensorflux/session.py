@@ -6,7 +6,7 @@ import tensorflux.graph as tfg
 
 
 class Session:
-    """Represents a particular execution of a computational graph.
+    """Represents a particular execution of a computational graph line.
     """
 
     def run(self, operation, feed_dict={}, vervose=True):
