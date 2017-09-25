@@ -1,5 +1,6 @@
 import networkx as nx
 
+
 class Graph(nx.Graph):
     """ Represents a computation graph (a neural network)    """
     def __init__(self):
@@ -8,6 +9,7 @@ class Graph(nx.Graph):
         self.placeholders = []
         self.variables = []
         super().__init__()
+
 
 class Placeholder:
     """Represents a placeholder node that has to be provided with a value
@@ -22,6 +24,7 @@ class Placeholder:
     def __str__(self):
         return self.name
 
+
 class Variable:
     """Represents a variable (i.e. an intrinsic, changeable parameter of a computational graph)."""
     def __init__(self, initial_value=None, name=None):
@@ -35,6 +38,7 @@ class Variable:
 
     def __str__(self):
         return self.name
+
 
 class Operation:
     """Represents a graph node that performs a computation (forwaring operation).
@@ -65,6 +69,7 @@ class Operation:
     def __str__(self):
         return "O: " + self.name
 
+
 class Add(Operation):
     """Returns x + y element-wise.
     """
@@ -87,6 +92,7 @@ class Add(Operation):
         self.inputs = [x_value, y_value]
         return x_value + y_value
 
+
 class Mul(Operation):
     """Returns x * y.
     """
@@ -108,6 +114,7 @@ class Mul(Operation):
         """
         self.inputs = [x_value, y_value]
         return x_value * y_value
+
 
 class Matmul(Operation):
     """Multiplies matrix x by matrix y, producing x * y.

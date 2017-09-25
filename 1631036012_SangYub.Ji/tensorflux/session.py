@@ -49,7 +49,6 @@ class Session:
     def traverse_postorder(operation):
         """Performs a post-order traversal, returning a list of nodes
         in the order in which they have to be computed
-
         Args:
            operation: The operation to start traversal at
         """
