@@ -19,6 +19,15 @@ def sigmoid(x):
 
 
 def squared_error(output_value, target_value):
+    # ovA = np.ndarray(shape=(3,), dtype=float, order='F')
+    # cnt = 0
+    # for n in output_value:
+    #     ovA[cnt] = 0.5 * math.pow(n-target_value, 2)
+    #     # print(ovA[cnt])
+    #     cnt = cnt + 1
+    #
+    # print(np.argmax(ovA))
+    # return np.argmax(ovA)
     return 0.5 * math.pow(output_value - target_value, 2)
 
 # functions 파일을 테스트함

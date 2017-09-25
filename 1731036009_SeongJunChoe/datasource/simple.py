@@ -66,3 +66,44 @@ class Xor_Gate_Data(Data):
         self.test_input = np.array([(0.0, 0.0), (1.0, 0.0), (0.0, 1.0), (1.0, 1.0)])
         self.test_target = np.array([0.0, 1.0, 1.0, 0.0])
         super().__init__()
+
+class Or_Gate_Data_Three(Data):
+    def __init__(self):
+        # 훈련 데이터
+        self.training_input = np.array([(0.0, 0.0), (1.0, 0.0), (0.0, 1.0), (1.0, 1.0)])
+        self.training_target = np.array([0.0, 1.0, 1.0, 1.0])
+        # 검증용 데이터
+        self.validation_input = np.array([(0.0, 0.0), (1.0, 0.0), (0.0, 1.0), (1.0, 1.0)])
+        self.validation_target = np.array([0.0, 1.0, 1.0, 1.0])
+        # 테스트용 데이터
+        self.test_input = np.array([(0.0, 0.0), (1.0, 0.0), (0.0, 1.0), (1.0, 1.0)])
+        self.test_target = np.array([0.0, 1.0, 1.0, 1.0])
+        super().__init__()
+
+
+class And_Gate_Data_Three(Data):
+    def __init__(self):
+        # 훈련 데이터
+        self.training_input = np.array([(0.0, 0.0), (1.0, 0.0), (0.0, 1.0), (1.0, 1.0)])
+        self.training_target = np.array([0.0, 0.0, 0.0, 1.0])
+        # 검증용 데이터
+        self.validation_input = np.array([(0.0, 0.0), (1.0, 0.0), (0.0, 1.0), (1.0, 1.0)])
+        self.validation_target = np.array([0.0, 0.0, 0.0, 1.0])
+        # 테스트용 데이터
+        self.test_input = np.array([(0.0, 0.0), (1.0, 0.0), (0.0, 1.0), (1.0, 1.0)])
+        self.test_target = np.array([0.0, 0.0, 0.0, 1.0])
+        super().__init__()
+
+
+class Xor_Gate_Data_Three(Data):
+    def __init__(self):
+        # 훈련 데이터
+        self.training_input = np.array([(0.0, 0.0), (1.0, 0.0), (0.0, 1.0), (1.0, 1.0)])
+        self.training_target = np.array([0.0, 1.0, 1.0, 0.0])
+        # 검증용 데이터
+        self.validation_input = np.array([(0.0, 0.0), (1.0, 0.0), (0.0, 1.0), (1.0, 1.0)])
+        self.validation_target = np.array([0.0, 1.0, 1.0, 0.0])
+        # 테스트용 데이터
+        self.test_input = np.array([(0.0, 0.0), (1.0, 0.0), (0.0, 1.0), (1.0, 1.0)])
+        self.test_target = np.array([0.0, 1.0, 1.0, 0.0])
+        super().__init__()
