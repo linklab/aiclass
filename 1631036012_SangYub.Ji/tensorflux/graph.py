@@ -124,7 +124,6 @@ class Matmul(Operation):
         """Construct matmul
         Args:
           x: First matrix
-          y: Second matrix
         """
         self.inputs = None
         super().__init__([x, y], name)
