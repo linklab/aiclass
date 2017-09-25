@@ -3,7 +3,6 @@
 # Reference: http://www.deepideas.net/deep-learning-from-scratch-i-computational-graphs/
 import networkx as nx
 
-
 class Graph(nx.Graph):
     """Represents a computational graph (a neural network)
     """

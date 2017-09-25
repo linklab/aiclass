@@ -1,26 +1,24 @@
 # -*- coding:utf-8 -*-
-
 # Reference: http://www.deepideas.net/deep-learning-from-scratch-i-computational-graphs/
 import networkx as nx
 
+#networkx 라이브러리 이용
+#Graph 클래스는 networkx 모듈에 있는 Graph 클래스를 상속 받음
 class Graph(nx.Graph):
-    """Represents a computational graph (a neural network)
-    """
+    """Represents a computational graph (a neural network)"""
     def __init__(self):
         """Construct Graph"""
         self.operations = []
         self.placeholders = []
         self.variables = []
-        super().__init__()
+        super().__init__() #부모클래스의 생성자 호출
 
 
 class Placeholder:
     """Represents a placeholder node that has to be provided with a value
-       when computing the output of a computational graph
-    """
+       when computing the output of a computational graph"""
     def __init__(self, name=None):
-        """Construct placeholder
-        """
+        """Construct placeholder"""
         self.output = None
         self.consumers = []
         self.name = name
@@ -50,6 +48,8 @@ class Variable:
 #    def set_value(self, value):
  #       self.value = value
 
+    def get_value(self):
+        return self.value
     def __str__(self):
         return "V: " + self.name
 
@@ -65,7 +65,7 @@ class Operation:
     def __init__(self, input_nodes=[], name=None):
         """Construct Forwarding Operation
         """
-        self.input_nodes = input_nodes
+        self.input_nodes = input_nodes #from ReLu 생성자 [u]
         self.output = None
         # Initialize list of consumers (i.e. nodes that receive this operation's output as input)
         self.consumers = []
@@ -80,6 +80,11 @@ class Operation:
         "" Must be implemented by the particular operation.
         """
         pass
+
+    def get_output(self):
+        return self.output
+    def get_input_nodes(self):
+        return self.input_nodes
 
     def __str__(self):
         return "O: " + self.name
@@ -122,6 +127,7 @@ class Mul(Operation):
           x: First summand node
           y: Second summand node
         """
+        self.output = None
         self.inputs = None
         super().__init__([x, y], name)
 
@@ -147,6 +153,7 @@ class Matmul(Operation):
           x: First matrix
           y: Second matrix
         """
+        self.output = None
         self.inputs = None
         super().__init__([x, y], name)
 

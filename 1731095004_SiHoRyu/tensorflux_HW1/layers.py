@@ -1,8 +1,8 @@
 # -*- coding:utf-8 -*-
-import Tensorflux.graph_new as tfg
+import tensorflux_HW1.graph as tfg
 import math
 import numpy as np
-import Tensorflux.functions as tff
+import tensorflux_HW1.functions as tff
 import random
 
 
@@ -13,7 +13,7 @@ class Affine(tfg.Operation):
         """Construct Affine
 
         Args:
-          x: Weight node, y: Input node, b: Bias node
+          w: Weight node, x: Input node, b: Bias node
         """
         self.inputs = None
         super().__init__([w, x, b], name)
@@ -58,6 +58,7 @@ class ReLU(tfg.Operation):
                 out = 0.0
             else:
                 out = u_value
+        #print(out)
         return out
 
     def backward(self, din):

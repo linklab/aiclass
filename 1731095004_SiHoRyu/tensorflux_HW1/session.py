@@ -2,12 +2,11 @@
 
 # Reference: http://www.deepideas.net/deep-learning-from-scratch-i-computational-graphs
 import numpy as np
-import Tensorflux.graph_new as tfg
+import tensorflux_HW1.graph as tfg
 
 
 class Session:
-    """Represents a particular execution of a computational graph.
-    """
+    """Represents a particular execution of a computational graph."""
 
     def run(self, operation, feed_dict={}, vervose=True):
         """Computes the output of an operation
