@@ -91,6 +91,9 @@ class Operation:
         """
         pass
 
+    def extended(self, data):
+        self.input_nodes.append(data)
+
     def __str__(self):
         return "O: " + self.name
 

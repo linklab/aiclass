@@ -6,34 +6,65 @@ import tensorflux.functions as tff
 import random
 
 
-class Affine(tfg.Operation):
+class AffineFL(tfg.Operation):
     """Returns w * x + b.
     """
-    def __init__(self, w, x, b, name=None): # w : 가중치 노드, x : 값 노드, b : bias 노드
-        """Construct Affine
+    # def __init__(self, w, x, b, name=None): # w : 가중치 노드, x : 값 노드, b : bias 노드
+    #     """Construct Affine
+    #
+    #     Args:
+    #       x: Weight node, y: Input node, b: Bias node
+    #     """
+    #     self.inputs = None
+    #     super().__init__([w, x, b], name)
 
-        Args:
-          x: Weight node, y: Input node, b: Bias node
-        """
+    def __init__(self, w, x, b, name=None):
         self.inputs = None
         super().__init__([w, x, b], name)
 
-    def forward(self, w_value, x_value, b_value):
+
+    def forward(self, w, x, b):
         """Compute the output of the add operation
 
         Args:
           x_value: Weight value, y_value: Input value, b_value: Bias value
         """
-        self.inputs = [w_value, x_value, b_value]
+        self.inputs = [w, x, b]
         # return np.matmul(x_value, w_value) + b_value # [Note] Matmax Order
-        return x_value.dot(w_value) + b_value  # [Note] Matmax Order
-
+        return x.dot(w) + b  # [Note] Matmax Order
     def backward(self):
         pass
 
     def __str__(self):
         return "Affine: " + self.name
 
+class AffineSL(tfg.Operation):
+    """Returns w * x + b.
+    """
+    def __init__(self, w, x1, x2, b, name=None):
+        """Construct Affine
+        Args:
+          x: Weight node, y: Input node, b: Bias node
+        """
+        self.inputs = None
+        super().__init__([w, x1, x2, b], name)
+
+    def forward(self, w, x1, x2, b):
+
+        val_x1 = np.dot(x1, w) + b
+        val_x2 = np.dot(x2, w) + b
+
+        val_Result = np.greater(val_x1, val_x2)
+        if val_Result == True:
+            return val_x1
+        elif val_Result == False:
+            return val_x2
+
+    def backward(self):
+        pass
+
+    def __str__(self):
+        return "Affine2: " + self.name
 
 class ReLU(tfg.Operation):
     def __init__(self, u, name=None):   # u : Affine 노드
@@ -47,11 +78,6 @@ class ReLU(tfg.Operation):
         super().__init__([u], name)
 
     def forward(self, u_value):
-        self.inputs = [u_value]
-        # u_value = [-1.0, 2.0, -2.0]
-        # mask = [True, False, True]
-        # out = [-1.0, 2.0, -2.0]
-        # out[mask] = [0, 2, 0] ==> FALSE 인 경우에만 출력하라
         if type(u_value) == np.ndarray:
             self.mask = (u_value <= 0)
             out = u_value.copy()
@@ -68,7 +94,6 @@ class ReLU(tfg.Operation):
 
     def __str__(self):
         return "ReLU: " + self.name
-
 
 class Sigmoid(tfg.Operation):
     def __init__(self, u, name=None):
