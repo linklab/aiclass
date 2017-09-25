@@ -2,7 +2,6 @@ from tensorflux2 import graph as tfg
 from tensorflux2 import session as tfs
 
 g = tfg.Graph()
-g.initialize()
 
 # Create variables
 w = tfg.Variable(5.0, name="a")

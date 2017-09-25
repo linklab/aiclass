@@ -1,7 +1,7 @@
 # Reference: http://www.deepideas.net/deep-learning-from-scratch-i-computational-graphs/
-import tensorflux.graph as tfg
-import tensorflux.networks as tfn
-import tensorflux.enums as tfe
+import tensorflux2.graph as tfg
+import tensorflux2.networks as tfn
+import tensorflux2.enums as tfe
 import datasource.simple as simple_data
 
 n = tfn.Two_Neurons_Network(input_size=2, output_size=1)
@@ -19,4 +19,4 @@ n.print_feed_forward(num_data=data.num_train_data, input_data=data.training_inpu
 n.learning(max_epoch=100, data=data, x=x, target=target)
 n.print_feed_forward(num_data=data.num_test_data, input_data=data.test_input, target_data=data.test_target, x=x)
 
-#n.draw_and_show()
+# n.draw_and_show()
