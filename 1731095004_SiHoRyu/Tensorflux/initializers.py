@@ -27,6 +27,8 @@ class Value_Assignment_Initializer(Initializer):
     def initialize_param(self):
         self.param = tfg.Variable(self.value, name=self.name)
 
+    def get_variable(self):
+        return self.param
 
 class Zero_Initializer(Initializer):
     def initialize_param(self):

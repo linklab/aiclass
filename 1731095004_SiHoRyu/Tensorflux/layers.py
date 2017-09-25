@@ -1,8 +1,8 @@
 # -*- coding:utf-8 -*-
-import tensorflux.graph as tfg
+import Tensorflux.graph_new as tfg
 import math
 import numpy as np
-import tensorflux.functions as tff
+import Tensorflux.functions as tff
 import random
 
 
@@ -26,7 +26,6 @@ class Affine(tfg.Operation):
         """
         self.inputs = [w_value, x_value, b_value]
         # return np.matmul(x_value, w_value) + b_value # [Note] Matmax Order
-        np.version.version
         return x_value.dot(w_value) + b_value  # [Note] Matmax Order
 
     def backward(self):
