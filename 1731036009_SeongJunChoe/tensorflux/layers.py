@@ -51,14 +51,20 @@ class AffineSL(tfg.Operation):
 
     def forward(self, w, x1, x2, b):
 
-        val_x1 = np.dot(x1, w) + b
-        val_x2 = np.dot(x2, w) + b
+        self.inputs = [w, x1, x2, b]
 
-        val_Result = np.greater(val_x1, val_x2)
-        if val_Result == True:
-            return val_x1
-        elif val_Result == False:
-            return val_x2
+        x_input = np.asarray([x1, x2]).T
+        #
+        # val_x1 = np.dot(x1, w) + b
+        # val_x2 = np.dot(x2, w) + b
+        #
+        # val_Result = np.greater(val_x1, val_x2)
+        # if val_Result == True:
+        #     return val_x1
+        # elif val_Result == False:
+        #     return val_x2
+
+        return x_input.dot(w) + b
 
     def backward(self):
         pass
