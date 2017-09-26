@@ -9,7 +9,6 @@ class Initializer(Enum):
     One = tfi.One_Initializer
     Point_One = tfi.Point_One_Initializer
     Random = tfi.Random_Initializer
-    Random2 = tfi.Random_Initializer2
     Truncated_Normal=tfi.Truncated_Normal_Initializer
     Value_Assignment=tfi.Value_Assignment_Initializer
 

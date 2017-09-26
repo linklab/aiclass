@@ -85,9 +85,9 @@ class Neural_Network(tfg.Graph):
                 sum_validation_error += self.session.run(self.error,
                                                          {x: validation_input_data, target: validation_target_data},
                                                         vervose=False)
-
-            print("Epoch {:3d} Completed - Average Train Error: {:7.6f} - Average Validation Error: {:7.6f}".format(
-                epoch, sum_train_error / data.num_train_data, sum_validation_error / data.num_validation_data))
+            if(epoch%1000==0):
+                print("Epoch {:3d} Completed - Average Train Error: {:7.6f} - Average Validation Error: {:7.6f}".format(
+                    epoch, sum_train_error / data.num_train_data, sum_validation_error / data.num_validation_data))
 
     def print_feed_forward(self, num_data, input_data, target_data, x):
         for idx in range(num_data):
@@ -190,7 +190,7 @@ class Three_Neurons_Network(Neural_Network):
         o0 = activator(u0, name="O0")
         u1 = tfl.Affine(self.params['W1'], self.input_node, self.params['b1'], name="A1")
         o1 = activator(u1, name="O1")
-        u2 = tfl.Affine2(self.params['W2'], o0, o1,self.params['b2'], name="A2")
+        u2 = tfl.Affine2(self.params['W2'], o0, o1, self.params['b2'], name="A2")
 
         self.output = activator(u2, name="O2")
         # self.output = activator(z1, name="O2")
