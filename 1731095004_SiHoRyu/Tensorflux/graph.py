@@ -1,5 +1,5 @@
 # Reference: http://www.deepideas.net/deep-learning-from-scratch-i-computational-graphs/
-import networkx as nx
+import networkx_test as nx
 
 #_default_graph = None
 

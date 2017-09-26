@@ -35,7 +35,27 @@ class Affine(tfg.Operation):
         return "Affine: " + self.name
 
 
+class Affine2(tfg.Operation):
+    def __init__(self, w, x1, x2, b, name=None):
+        self.inputs = None
+        super().__init__([w,x1,x2,b], name)
+
+    def forward(self, w_value, x1_value, x2_value, b_value):
+        self.inputs = [w_value,x1_value,x2_value,b_value]
+        x_input = np.asarray([x1_value, x2_value,]).T
+
+        # return (w_value[0]*x1_value+w_value[1]*x2_value)+b_value
+        return x_input.dot(w_value) + b_value
+
+    def backward(self, w_value, x1_value, x2_value, b_value,error):
+        pass
+
+    def __str__(self):
+        return "Affine2: " + self.name
+
+
 class ReLU(tfg.Operation):
+
     def __init__(self, u, name=None):
         """Construct ReLU
 
@@ -44,6 +64,7 @@ class ReLU(tfg.Operation):
         """
         self.inputs = None
         self.mask = None
+        self.out = None
         super().__init__([u], name)
 
     def forward(self, u_value):
@@ -58,6 +79,7 @@ class ReLU(tfg.Operation):
                 out = 0.0
             else:
                 out = u_value
+        self.out = out
         return out
 
     def backward(self, din):
@@ -65,6 +87,9 @@ class ReLU(tfg.Operation):
 
     def __str__(self):
         return "ReLU: " + self.name
+
+    def value(self):
+        return self.out
 
 
 class Sigmoid(tfg.Operation):

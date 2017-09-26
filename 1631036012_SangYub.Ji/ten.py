@@ -1,3 +1,0 @@
-import tensorflow
-
-print("Ok")

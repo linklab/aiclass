@@ -42,6 +42,7 @@ class Point_One_Initializer(Initializer):
     def initialize_param(self):
         self.param = tfg.Variable(np.ones(shape=self.shape) * 0.1, name=self.name)
 
+
 class Truncated_Normal_Initializer(Initializer):
     def __init__(self, shape, name, mean=0.0, sd=1.0, low=-1.0, upp=1.0):
         self.mean = mean

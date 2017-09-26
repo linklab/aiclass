@@ -1,6 +1,6 @@
 from Tensorflux import graph as tfg
 from Tensorflux import session as tfs
-import networkx as nx
+import networkx_test as nx
 import matplotlib.pyplot as plt
 
 g = tfg.Graph() #그래프 객체 생성

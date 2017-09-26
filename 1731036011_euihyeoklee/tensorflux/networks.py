@@ -74,7 +74,8 @@ class Neural_Network(tfg.Graph):
 
                 grads = self.numerical_derivative(self.session, {x: train_input_data, target: train_target_data})
                 self.optimizer.update(grads=grads)
-                sum_train_error += self.session.run(self.error, {x: train_input_data, target: train_target_data}, vervose=False)
+                sum_train_error += self.session.run(self.error, {x: train_input_data, target: train_target_data},
+                                                    vervose=False)
 
             sum_validation_error = 0.0
             for idx in range(data.num_validation_data):
@@ -82,7 +83,7 @@ class Neural_Network(tfg.Graph):
                 validation_target_data = data.validation_target[idx]
                 sum_validation_error += self.session.run(self.error,
                                                          {x: validation_input_data, target: validation_target_data},
-                                                        vervose=False)
+                                                         vervose=False)
 
             print("Epoch {:3d} Completed - Average Train Error: {:7.6f} - Average Validation Error: {:7.6f}".format(
                 epoch, sum_train_error / data.num_train_data, sum_validation_error / data.num_validation_data))
@@ -105,9 +106,9 @@ class Single_Neuron_Network(Neural_Network):
     def __init__(self, input_size, output_size):
         super().__init__(input_size, output_size)
 
-    def initialize_scalar_param(self, value1, value2, initializer=tfe.Initializer.Value_Assignment.value):
-        self.params['W0'] = initializer(value1, name='W0').get_variable()
-        self.params['b0'] = initializer(value2, name='b0').get_variable()
+    # def initialize_scalar_param(self, value1, value2, initializer=tfe.Initializer.Value_Assignment.value):
+    #     self.params['W0'] = initializer(value1, name='W0').get_variable()
+    #     self.params['b0'] = initializer(value2, name='b0').get_variable()
 
     def initialize_param(self, initializer=tfe.Initializer.Zero.value):
         self.params['W0'] = initializer(shape=(self.input_size, self.output_size), name='W0').get_variable()
@@ -155,3 +156,29 @@ class Two_Neurons_Network(Neural_Network):
             self.add_edge(u1, self.output)
             self.add_edge(self.output, self.error)
             self.add_edge(self.error, self.target_node)
+
+
+class Three_Neurons_Network(Neural_Network):
+    def __init__(self, input_size, output_size):
+        super().__init__(input_size, output_size)
+
+    def initialize_param(self, initializer=tfe.Initializer.Zero.value):
+        self.params['W0'] = initializer(shape=(self.input_size, self.output_size), name='W0').get_variable()
+        self.params['b0'] = initializer(shape=(self.output_size,), name='b0').get_variable()
+        self.params['W1'] = initializer(shape=(self.input_size, self.output_size), name='W1').get_variable()
+        self.params['b1'] = initializer(shape=(self.output_size,), name='b1').get_variable()
+        self.params['W2'] = initializer(shape=(self.input_size, self.output_size), name='W2').get_variable()
+        self.params['b2'] = initializer(shape=(self.output_size,), name='b2').get_variable()
+
+    def layering(self, activator=tfe.Activator.ReLU.value):
+        self.activator = activator
+        u0 = tfl.Affine(self.params['W0'], self.input_node, self.params['b0'], name='A0')
+        o0 = activator(u0, name="O0")
+
+        u1 = tfl.Affine(self.params['W1'], self.input_node, self.params['b1'], name='A1')
+        o1 = activator(u1, name="O1")
+
+        u2 = tfl.AffineGather(self.params['W2'], o0, o1, self.params['b2'], name='A2')
+
+        self.output = activator(u2, name="O2")
+        self.error = tfl.SquaredError(self.output, self.target_node, name="SE")

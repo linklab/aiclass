@@ -3,6 +3,7 @@
 # Reference: http://www.deepideas.net/deep-learning-from-scratch-i-computational-graphs
 import numpy as np
 import tensorflux.graph as tfg
+import tensorflux.layers as tfl
 
 
 class Session:
@@ -19,6 +20,7 @@ class Session:
 
         # Perform a post-order traversal of the graph to bring the nodes into the right order
         nodes_postorder = self.traverse_postorder(operation)
+        # print(nodes_postorder)
 
         # Iterate all nodes to determine their value
         for node in nodes_postorder:
@@ -29,11 +31,22 @@ class Session:
                 # Set the node value to the variable's value attribute
                 node.output = node.value
             else:  # Operation
-                # Get the input values for this operation from node_values
+                # print(node)
                 node.inputs = [input_node.output for input_node in node.input_nodes]
-
-                # Compute the output of this operation
+                # print(*node.inputs)
                 node.output = node.forward(*node.inputs)
+                # if type(node) == tfl.Affine:
+                #     # Get the input values for this operation from node_values
+                #     node.inputs = [input_node.output for input_node in node.input_nodes]
+                #     # print(node)
+                #     print(*node.inputs)
+                #     # Compute the output of this operation
+                #     node.output = node.forward(*node.inputs)
+                # elif type(node) == tfl.ReLU:
+                #     node.inputs = [input_node.output for input_node in node.input_nodes]
+                #     # print(node)
+                #     print(*node.inputs)
+                #     node.output = node.forward(*node.inputs)
 
             # Convert lists to numpy arrays
             if type(node.output) is not np.ndarray:

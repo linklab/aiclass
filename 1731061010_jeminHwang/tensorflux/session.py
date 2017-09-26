@@ -19,7 +19,6 @@ class Session:
 
         # Perform a post-order traversal of the graph to bring the nodes into the right order
         nodes_postorder = self.traverse_postorder(operation)
-
         # Iterate all nodes to determine their value
         for node in nodes_postorder:
             if type(node) == tfg.Placeholder:
@@ -31,7 +30,6 @@ class Session:
             else:  # Operation
                 # Get the input values for this operation from node_values
                 node.inputs = [input_node.output for input_node in node.input_nodes]
-
                 # Compute the output of this operation
                 node.output = node.forward(*node.inputs)
 

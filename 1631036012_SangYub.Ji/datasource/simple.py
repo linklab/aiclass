@@ -60,5 +60,5 @@ class Xor_Gate_Data(Data):
         self.validation_target = np.array([0.0, 1.0, 1.0, 0.0])
 
         self.test_input = np.array([(0.0, 0.0), (1.0, 0.0), (0.0, 1.0), (1.0, 1.0)])
-        self.test_target = np.array([0.0, 1.0, 1.0, 0.0])
+        self.test_target = np.array([0.0, 0.0, 0.0, 1.0])
         super().__init__()

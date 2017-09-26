@@ -28,4 +28,4 @@ n.print_feed_forward(num_data=data.num_test_data,
                      input_data=data.test_input,
                      target_data=data.test_target, x=x)
 
-#n.draw_and_show()
+n.draw_and_show()
