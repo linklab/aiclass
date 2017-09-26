@@ -1,7 +1,7 @@
 # Reference: http://www.deepideas.net/deep-learning-from-scratch-i-computational-graphs/
-import networkx as nx
+import networkx_test as nx
 
-_default_graph = None
+#_default_graph = None
 
 
 class Graph(nx.Graph):
@@ -15,9 +15,9 @@ class Graph(nx.Graph):
         self.variables = []
         super().__init__()
 
-    def initialize(self):
-        global _default_graph #global keyword is used for using a global variable that is in outside of classes
-        _default_graph = self
+#    def initialize(self):
+#        global _default_graph #global keyword is used for using a global variable that is in outside of classes
+#        _default_graph = self
 
 class Placeholder:
     """Represents a placeholder node that has to be provided with a value
@@ -26,21 +26,21 @@ class Placeholder:
     def __init__(self, name=None):
         """Construct placeholder
         """
-        self.output = None
-        self.consumers = [] #placeholder에 값이 들어 갈텐데 flux가 사용함?
+        #self.output = None
+        #self.consumers = [] #placeholder에 값이 들어 갈텐데 flux가 사용함?
         self.name = name
         if self.name is None:
             self.name = 'p' + str(len(_default_graph.placeholders) + 1)
 
         # Append this placeholder to the list of placeholders in the currently active default graph
-        _default_graph.placeholders.append(self)
-        _default_graph.add_node(self)
+#        _default_graph.placeholders.append(self)
+#        _default_graph.add_node(self)
 
     def __str__(self):
         return self.name
 
 class Variable:
-    """Represents a variable (i.e. an intrinsic, changeable parameter of a computational graph).
+    """Represents a variable (i.e. an    intrinsic, changeable parameter of a computational graph).
     """
 
     def __init__(self, initial_value=None, name=None):
