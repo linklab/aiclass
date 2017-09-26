@@ -16,9 +16,9 @@ class Affine(tfg.Operation):
           x: Weight node, y: Input node, b: Bias node
         """
         self.inputs = None
-        graph.add_edge(w, self)
-        graph.add_edge(x, self)
-        graph.add_edge(b, self)
+        #tfg.add_edge(w, self)
+        #tfg.add_edge(x, self)
+        #tfg.add_edge(b, self)
         super().__init__([w, x, b], name)
 
     def forward(self, w_value, x_value, b_value):
@@ -48,10 +48,10 @@ class Affine2(tfg.Operation):
           x: Weight node, y: Input node, b: Bias node
         """
         self.inputs = None
-        graph.add_edge(w, self)
-        graph.add_edge(x1, self)
-        graph.add_edge(x2, self)
-        graph.add_edge(b, self)
+        #tfg.add_edge(w, self)
+        #tfg.add_edge(x1, self)
+        #tfg.add_edge(x2, self)
+        #tfg.add_edge(b, self)
         super().__init__([w, x1, x2, b], name)
 
     def forward(self, w_value, x1_value, x2_value, b_value):

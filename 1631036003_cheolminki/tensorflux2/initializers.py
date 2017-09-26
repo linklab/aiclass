@@ -41,13 +41,6 @@ class One_Initializer(Initializer):
 class Point_One_Initializer(Initializer):
     def initialize_param(self):
         self.param = tfg.Variable(np.ones(shape=self.shape) * 0.1, name=self.name)
-        #print(self.shape)
-
-class Random_Initializer(Initializer):
-    def initialize_param(self):
-        #print (self.shape[0], self.shape[1] )
-        self.param = tfg.Variable(np.random.uniform(low=-1, high=1, size=self.shape), name=self.name)
-        print (self.param.value)
 
 class Truncated_Normal_Initializer(Initializer):
     def __init__(self, shape, name, mean=0.0, sd=1.0, low=-1.0, upp=1.0):
@@ -63,3 +56,7 @@ class Truncated_Normal_Initializer(Initializer):
                                                            sd=self.sd,
                                                            low=self.low,
                                                            upp=self.upp), name=self.name)
+
+class Random_Initializer(Initializer):
+    def initialize_param(self):
+        self.param = tfg.Variable(np.random.randn(self.shape), name=self.name)
