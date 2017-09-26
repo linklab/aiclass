@@ -26,7 +26,6 @@ class Affine(tfg.Operation):
         """
         self.inputs = [w_value, x_value, b_value]
         # return np.matmul(x_value, w_value) + b_value # [Note] Matmax Order
-        np.version.version
         return x_value.dot(w_value) + b_value  # [Note] Matmax Order
 
     def backward(self):
@@ -34,7 +33,6 @@ class Affine(tfg.Operation):
 
     def __str__(self):
         return "Affine: " + self.name
-
 
 class ReLU(tfg.Operation):
     def __init__(self, u, name=None):
@@ -110,3 +108,51 @@ class SquaredError(tfg.Operation):
 
     def __str__(self):
         return "SquaredError:" + self.name
+
+
+class AffineGather(tfg.Operation):
+    """Returns w * x + b.
+     """
+
+    def __init__(self, w, x1, x2, b, name=None):
+        """Construct Affine
+
+        Args:
+        x: Weight node, y: Input node, b: Bias node
+        """
+        self.inputs = None
+        super().__init__([w, x1, x2, b], name)
+
+    def forward(self, w_value, x1, x2, b_value):
+        """Compute the output of the add operation
+
+        Args:
+        x_value: Weight value, y_value: Input value, b_value: Bias value
+        """
+        # print("--x1" + str(x1))
+        # print("--x2" + str(x2))
+        # self.inputs = [w_value, x1, x2, b_value]
+        # print(self.inputs[0])
+
+        # output1 = np.dot(x1, w_value) + b_value
+        # output2 = np.dot(x2, w_value) + b_value
+
+        # print(x1[0])
+        output = np.array([[x1[0], x2[0]]])
+
+
+        # output2 = x2.dot(w_value) + b_value
+        # print(output1)
+        # output_list = [x1.dot(w_value) + b_value, x2.dot(w_value) + b_value]
+        # output = np.array(output_list)
+        #
+        return output.dot(w_value) + b_value
+
+    def backward(self):
+        pass
+
+    def __str__(self):
+        return "AffineGather: " + self.name
+
+
+

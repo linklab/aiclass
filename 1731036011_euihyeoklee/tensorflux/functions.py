@@ -26,6 +26,7 @@ if __name__ == "__main__":
     x1 = get_truncated_normal(shape=(1, 10000), mean=2, sd=1, low=1, upp=10)
     x2 = get_truncated_normal(shape=(1, 10000), mean=5.5, sd=1, low=1, upp=10)
     x3 = get_truncated_normal(shape=(1, 10000), mean=8, sd=1, low=1, upp=10)
+    # print(x1)
 
     fig, ax = plt.subplots(3, sharex=True)
     ax[0].hist(x1.flatten())

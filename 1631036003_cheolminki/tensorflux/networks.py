@@ -155,3 +155,58 @@ class Two_Neurons_Network(Neural_Network):
             self.add_edge(u1, self.output)
             self.add_edge(self.output, self.error)
             self.add_edge(self.error, self.target_node)
+
+class Three_Neurons_Network(Neural_Network):
+    def __init__(self, input_size, output_size):
+        super().__init__(input_size, output_size)
+
+    def initialize_param(self, initializer=tfe.Initializer.Zero.value):
+        self.params['W11'] = initializer(shape=(self.input_size, self.output_size), name='W11').get_variable()
+        self.params['b11'] = initializer(shape=(self.output_size,), name='b11').get_variable()
+        self.params['W12'] = initializer(shape=(self.input_size, self.output_size), name='W12').get_variable()
+        self.params['b12'] = initializer(shape=(self.output_size,), name='b12').get_variable()
+
+        self.params['W21'] = initializer(shape=(self.output_size, self.output_size), name='W21').get_variable()
+        self.params['W22'] = initializer(shape=(self.output_size, self.output_size), name='W22').get_variable()
+        self.params['b2'] = initializer(shape=(self.output_size,), name='b2').get_variable()
+
+    def layering(self, activator=tfe.Activator.ReLU.value):
+        self.activator = activator
+
+        u11 = tfl.Affine(self.params['W11'], self.input_node, self.params['b11'], name="A11")
+        o11 = activator(u11, name="O11")
+
+        u12 = tfl.Affine(self.params['W12'], self.input_node, self.params['b12'], name="A12")
+        o12 = activator(u12, name="O12")
+
+        u21 = tfl.Affine(self.params['W21'], o11, self.params['b2'], name="A21")
+        u22 = tfl.Affine(self.params['W22'], o12, self.params['b2'], name="A22")
+        u2 = u21 + u22
+        self.output = activator(u2, name="O2")
+        self.error = tfl.SquaredError(self.output, self.target_node, name="SE")
+        if isinstance(self, nx.Graph):
+            self.add_edge(self.params['W11'], u11)
+            self.add_edge(self.input_node, u11)
+            self.add_edge(self.params['b11'], u11)
+            self.add_edge(u11, o11)
+
+            self.add_edge(self.params['W12'], u12)
+            self.add_edge(self.input_node, u12)
+            self.add_edge(self.params['b12'], u12)
+            self.add_edge(u12, o12)
+
+            self.add_edge(self.params['b2'], u21)
+            self.add_edge(o11, u21)
+            self.add_edge(self.params['W21'], u21)
+
+            self.add_edge(self.params['b2'], u22)
+            self.add_edge(o12, u22)
+            self.add_edge(self.params['W22'], u22)
+
+            self.add_edge(u21, u2)
+            self.add_edge(u22, u2)
+
+            self.add_edge(u2, self.output)
+            self.add_edge(self.output, self.error)
+            self.add_edge(self.error, self.target_node)
+

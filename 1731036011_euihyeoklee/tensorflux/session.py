@@ -63,4 +63,5 @@ class Session:
             nodes_postorder.append(node)
 
         recursive_visit(operation)
+
         return nodes_postorder

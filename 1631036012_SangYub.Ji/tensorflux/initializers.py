@@ -20,6 +20,7 @@ class Initializer:
 
 
 class Value_Assignment_Initializer(Initializer):
+
     def __init__(self, value, name):
         self.value = value
         super().__init__([1], name)
