@@ -5,15 +5,16 @@ import tensorflux.functions as tff
 
 
 class Initializer:
-    def __init__(self, shape, name):
+    def __init__(self, shape, name, input_value = None):
         self.shape = shape
         self.name = name
-
+        self.input_value = input_value
         self.param = None
         self.initialize_param()
 
     def initialize_param(self):
-        pass
+        self.param = tfg.Variable(self.input_value,name=self.name)
+        # pass
 
     def get_variable(self):
         return self.param
@@ -38,9 +39,15 @@ class One_Initializer(Initializer):
         self.param = tfg.Variable(np.ones(shape=self.shape), name=self.name)
 
 
+class Random_Initializer(Initializer):
+    def initialize_param(self):
+        self.param = tfg.Variable(np.random.randn(self.shape[0],self.shape[1]), name=self.name)
+
+
 class Point_One_Initializer(Initializer):
     def initialize_param(self):
         self.param = tfg.Variable(np.ones(shape=self.shape) * 0.1, name=self.name)
+
 
 class Truncated_Normal_Initializer(Initializer):
     def __init__(self, shape, name, mean=0.0, sd=1.0, low=-1.0, upp=1.0):
