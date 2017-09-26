@@ -10,7 +10,7 @@ class Initializer(Enum):
     Point_One = tfi.Point_One_Initializer
     Truncated_Normal=tfi.Truncated_Normal_Initializer
     Value_Assignment=tfi.Value_Assignment_Initializer
-
+    Randn = tfi.Randn_Initializer
 
 class Optimizer(Enum):
     SGD = tfo.SGD

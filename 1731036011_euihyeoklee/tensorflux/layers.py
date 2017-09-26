@@ -131,14 +131,14 @@ class AffineGather(tfg.Operation):
         """
         # print("--x1" + str(x1))
         # print("--x2" + str(x2))
-        # self.inputs = [w_value, x1, x2, b_value]
+        self.inputs = [w_value, x1, x2, b_value]
         # print(self.inputs[0])
 
         # output1 = np.dot(x1, w_value) + b_value
         # output2 = np.dot(x2, w_value) + b_value
 
         # print(x1[0])
-        output = np.array([[x1[0], x2[0]]])
+        output = np.asarray([x1, x2]).T
 
 
         # output2 = x2.dot(w_value) + b_value
