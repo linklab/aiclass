@@ -18,6 +18,9 @@ class Initializer:
     def get_variable(self):
         return self.param
 
+class Random_Initializer(Initializer):
+    def initialize_param(self):
+        self.param = tfg.Variable(np.random.randn(self.shape[0],self.shape[1]), name=self.name)
 
 class Value_Assignment_Initializer(Initializer):
     def __init__(self, value, name):
