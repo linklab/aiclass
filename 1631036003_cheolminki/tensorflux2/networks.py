@@ -66,7 +66,6 @@ class Neural_Network(tfg.Graph):
         return grads
 
     def learning(self, max_epoch, data, x, target, verbose=False):
-        print_epoch = 1000
         for epoch in range(max_epoch):
             sum_train_error = 0.0
             for idx in range(data.num_train_data):
@@ -83,9 +82,9 @@ class Neural_Network(tfg.Graph):
                 validation_target_data = data.validation_target[idx]
                 sum_validation_error += self.session.run(self.error,
                                                          {x: validation_input_data, target: validation_target_data}, verbose)
-            if epoch%print_epoch == 0:
-                print("Epoch {:3d} Completed - Average Train Error: {:7.6f} - Average Validation Error: {:7.6f}".format(
-                  epoch, sum_train_error / data.num_train_data, sum_validation_error / data.num_validation_data))
+
+            print("Epoch {:3d} Completed - Average Train Error: {:7.6f} - Average Validation Error: {:7.6f} - [Params] {:20}".format(
+                epoch, sum_train_error / data.num_train_data, sum_validation_error / data.num_validation_data, self.get_params_str()))
 
     def get_params_str(self):
         params_str = ""
@@ -178,16 +177,3 @@ class Three_Neurons_Network(Neural_Network):
         self.params['W2'] = initializer(shape=(self.input_size, self.output_size), name='W2').get_variable()
         self.params['b2'] = initializer(shape=(self.output_size,), name='b2').get_variable()
 
-    def layering(self, activator=tfe.Activator.ReLU.value):
-        self.activator = activator
-
-        u0 = tfl.Affine(self.params['W0'], self.input_node, self.params['b0'], name="A0", graph=self)
-        o0 = activator(u0, name="O0", graph=self)
-
-        u1 = tfl.Affine(self.params['W1'], self.input_node, self.params['b1'], name="A1", graph=self)
-        o1 = activator(u1, name="O1", graph=self)
-
-        u2 = tfl.Affine2(self.params['W2'], o0, o1, self.params['b2'], name="A2", graph=self)
-        self.output = activator(u2, name="O2", graph=self)
-
-        self.error = tfl.SquaredError(self.output, self.target_node, name="SE", graph=self)
