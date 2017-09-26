@@ -1,89 +1,93 @@
 # -*- coding:utf-8 -*-
-import tensorflux.graph as tfg
+import HW1.tensorflux.graph as tfg
 import math
 import numpy as np
-import tensorflux.functions as tff
+import HW1.tensorflux.functions as tff
 import random
 
 
-class AffineFL(tfg.Operation):
+class Affine(tfg.Operation):
     """Returns w * x + b.
     """
-    # def __init__(self, w, x, b, name=None): # w : 가중치 노드, x : 값 노드, b : bias 노드
-    #     """Construct Affine
-    #
-    #     Args:
-    #       x: Weight node, y: Input node, b: Bias node
-    #     """
-    #     self.inputs = None
-    #     super().__init__([w, x, b], name)
+    def __init__(self, w, x, b, name=None, graph=None):
+        """Construct Affine
 
-    def __init__(self, w, x, b, name=None):
+        Args:
+          x: Weight node, y: Input node, b: Bias node
+        """
         self.inputs = None
+        graph.add_edge(w, self)
+        graph.add_edge(x, self)
+        graph.add_edge(b, self)
         super().__init__([w, x, b], name)
 
-
-    def forward(self, w, x, b):
+    def forward(self, w_value, x_value, b_value):
         """Compute the output of the add operation
 
         Args:
           x_value: Weight value, y_value: Input value, b_value: Bias value
         """
-        self.inputs = [w, x, b]
-        # return np.matmul(x_value, w_value) + b_value # [Note] Matmax Order
-        return x.dot(w) + b  # [Note] Matmax Order
+        self.inputs = [w_value, x_value, b_value]
+        # return np.matmul(x_value, w_value) + b_value # [Note] Matmul Order
+        return x_value.dot(w_value) + b_value  # [Note] Matmul Order
+
     def backward(self):
         pass
 
     def __str__(self):
         return "Affine: " + self.name
 
-class AffineSL(tfg.Operation):
-    """Returns w * x + b.
+
+class Affine2(tfg.Operation):
+    """Returns w * (x1, x2) + b.
     """
-    def __init__(self, w, x1, x2, b, name=None):
+    def __init__(self, w, x1, x2, b, name=None, graph=None):
         """Construct Affine
+
         Args:
           x: Weight node, y: Input node, b: Bias node
         """
         self.inputs = None
+        graph.add_edge(w, self)
+        graph.add_edge(x1, self)
+        graph.add_edge(x2, self)
+        graph.add_edge(b, self)
         super().__init__([w, x1, x2, b], name)
 
-    def forward(self, w, x1, x2, b):
+    def forward(self, w_value, x1_value, x2_value, b_value):
+        """Compute the output of the add operation
 
-        self.inputs = [w, x1, x2, b]
-
-        x_input = np.asarray([x1, x2]).T
-        #
-        # val_x1 = np.dot(x1, w) + b
-        # val_x2 = np.dot(x2, w) + b
-        #
-        # val_Result = np.greater(val_x1, val_x2)
-        # if val_Result == True:
-        #     return val_x1
-        # elif val_Result == False:
-        #     return val_x2
-
-        return x_input.dot(w) + b
+        Args:
+          x_value: Weight value, y_value: Input value, b_value: Bias value
+        """
+        self.inputs = [w_value, x1_value, x2_value, b_value]
+        #x_input : (2,1)
+        x_input = np.asarray([x1_value, x2_value]).T
+        # return np.matmul(x_value, w_value) + b_value # [Note] Matmul Order
+        return x_input.dot(w_value) + b_value  # [Note] Matmul Order
 
     def backward(self):
         pass
 
     def __str__(self):
-        return "Affine2: " + self.name
+        return "Affine: " + self.name
 
 class ReLU(tfg.Operation):
-    def __init__(self, u, name=None):   # u : Affine 노드
+    def __init__(self, u, name=None, graph=None):
         """Construct ReLU
 
         Args:
           u: affine node
         """
         self.inputs = None
+        graph.add_edge(u, self)
+
         self.mask = None
         super().__init__([u], name)
 
     def forward(self, u_value):
+        self.inputs = [u_value]
+
         if type(u_value) == np.ndarray:
             self.mask = (u_value <= 0)
             out = u_value.copy()
@@ -95,21 +99,23 @@ class ReLU(tfg.Operation):
                 out = u_value
         return out
 
-    ##백워드 프로파게이션 구현 위치
     def backward(self, din):
         pass
 
     def __str__(self):
         return "ReLU: " + self.name
 
+
 class Sigmoid(tfg.Operation):
-    def __init__(self, u, name=None):
+    def __init__(self, u, name=None, graph=None):
         """Construct ReLU
 
         Args:
           u: affine node
         """
         self.inputs = None
+        graph.add_edge(u, self)
+
         self.out = None
         super().__init__([u], name)
 
@@ -118,7 +124,6 @@ class Sigmoid(tfg.Operation):
         self.out = tff.sigmoid(u_value)
         return self.out
 
-    ##백워드 프로파게이션 구현 위치
     def backward(self, din):
         pass
 
@@ -127,20 +132,21 @@ class Sigmoid(tfg.Operation):
 
 
 class SquaredError(tfg.Operation):
-    def __init__(self, forward_final_output, target, name=None):
+    def __init__(self, forward_final_output, target, name=None, graph=None):
         """Construct SquaredError
 
         Args:
           output: output node
         """
         self.inputs = None
-        super().__init__([forward_final_output, target], name)  # 노드, 노드
+        graph.add_edge(forward_final_output, self)
+        graph.add_edge(target, self)
+        super().__init__([forward_final_output, target], name)
 
-    def forward(self, forward_final_output_value, target_value):    # 값, 값
+    def forward(self, forward_final_output_value, target_value):
         self.inputs = [forward_final_output_value, target_value]
         return tff.squared_error(forward_final_output_value, target_value)
 
-    ##백워드 프로파게이션 구현 위치
     def backward(self, din):
         pass
 

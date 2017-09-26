@@ -21,23 +21,25 @@ class AffineForThreeNeuron(tfg.Operation):
     def forward(self, w_value, z1, z2, b_value):
 
         #z1 * weight + bias
-        #print(type(z1))
+        #print(z1)
+        #print(z2)
 
+        x_input = np.asarray([z1, z2]).T
         #value = [z1, z2]
         #print(value)
-        val_z1 = z1.dot(w_value) + b_value
-        val_z2 = z2.dot(w_value) + b_value
-        new_list = [float(val_z1), float(val_z2)]
-        new_value = np.array(new_list)
+    #        val_z1 = z1.dot(w_value) + b_value
+     #   val_z2 = z2.dot(w_value) + b_value
+        #new_list = [float(val_z1), float(val_z2)]
+        #new_value = np.array(new_list)
         #print(new_value)
         #set_value = val_z1 + val_z2
         #print(set_value)
         #print("x : " + str(z1))
         #print("output : " + str(z2))
-        #new_value = np.array([z1, z2])
+     #   new_value = np.array([z1, z2])
         #print(new_value) #[[ 0.1  0.1]]
         # return np.matmul(x_value, w_value) + b_value # [Note] Matmax Order
-        return new_value.dot(w_value) + b_value
+        return x_input.dot(w_value) + b_value
 
     def backward(self):
         pass
