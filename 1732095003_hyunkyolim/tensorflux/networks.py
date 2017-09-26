@@ -87,12 +87,12 @@ class Neural_Network(tfg.Graph):
             print("Epoch {:3d} Completed - Average Train Error: {:7.6f} - Average Validation Error: {:7.6f}".format(
                 epoch, sum_train_error / data.num_train_data, sum_validation_error / data.num_validation_data))
 
-    def print_feed_forward(self, num_data, input_data, target_data, x):
+    def print_feed_forward(self, num_data, input_data, target_data, x, verbose=False):
         for idx in range(num_data):
             train_input_data = input_data[idx]
             train_target_data = target_data[idx]
 
-            output = self.session.run(self.output, {x: train_input_data}, vervose=False)
+            output = self.session.run(self.output, {x: train_input_data}, verbose)
             print("Input Data: {:>5}, Feed Forward Output: {:>6}, Target: {:>6}".format(
                 str(train_input_data), np.array2string(output), str(train_target_data)))
 
@@ -157,4 +157,30 @@ class Two_Neurons_Network(Neural_Network):
             self.add_edge(self.error, self.target_node)
 
 
-# class Three_Neurons_Network(Neural_Network):
+class Three_Neurons_Network(Neural_Network):
+    def __init__(self, input_size, output_size):
+        super().__init__(input_size, output_size)
+
+    def initialize_param(self, initializer=tfe.Initializer.Zero.value):
+        self.params['W0'] = initializer(shape=(self.input_size, self.output_size), name='W0').get_variable()
+        self.params['b0'] = tfe.Initializer.Point_One.value(shape=(self.output_size,), name='b0').get_variable()
+
+        self.params['W1'] = initializer(shape=(self.input_size, self.output_size), name='W1').get_variable()
+        self.params['b1'] = tfe.Initializer.Point_One.value(shape=(self.output_size,), name='b1').get_variable()
+
+        self.params['W2'] = initializer(shape=(self.input_size, self.output_size), name='W2').get_variable()
+        self.params['b2'] = tfe.Initializer.Point_One.value(shape=(self.output_size,), name='b2').get_variable()
+
+    def layering(self, activator=tfe.Activator.ReLU.value):
+        self.activator = activator
+
+        u0 = tfl.Affine(self.params['W0'], self.input_node, self.params['b0'], name="A0", graph=self)
+        o0 = activator(u0, name="O0", graph=self)
+
+        u1 = tfl.Affine(self.params['W1'], self.input_node, self.params['b1'], name="A1", graph=self)
+        o1 = activator(u1, name="O1", graph=self)
+
+        u2 = tfl.Affine2(self.params['W2'], o0, o1, self.params['b2'], name="A2", graph=self)
+        self.output = activator(u2, name="O2", graph=self)
+
+        self.error = tfl.SquaredError(self.output, self.target_node, name="SE", graph=self)
