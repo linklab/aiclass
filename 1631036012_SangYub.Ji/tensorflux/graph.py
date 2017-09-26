@@ -1,5 +1,6 @@
 import networkx as nx
 
+
 class Graph(nx.Graph):
     """ Represents a computation graph (a neural network)    """
     def __init__(self):
@@ -8,6 +9,7 @@ class Graph(nx.Graph):
         self.placeholders = []
         self.variables = []
         super().__init__()
+
 
 class Placeholder:
     """Represents a placeholder node that has to be provided with a value
@@ -122,7 +124,6 @@ class Matmul(Operation):
         """Construct matmul
         Args:
           x: First matrix
-          y: Second matrix
         """
         self.inputs = None
         super().__init__([x, y], name)
@@ -134,4 +135,5 @@ class Matmul(Operation):
           y_value: Second matrix value
         """
         self.inputs = [x_value, y_value]
+        # print(self.inputs)
         return x_value.dot(y_value)

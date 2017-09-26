@@ -3,7 +3,7 @@
 
 import networkx as nx
 
-_default_graph = None
+#_default_graph = None
 
 
 class Graph(nx.Graph):      #nx.Graph를 상속받는다.
