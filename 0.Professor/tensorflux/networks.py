@@ -6,6 +6,7 @@ import tensorflux.session as tfs
 import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy import stats
 
 
 class Neural_Network(tfg.Graph):
@@ -83,8 +84,8 @@ class Neural_Network(tfg.Graph):
                 sum_validation_error += self.session.run(self.error,
                                                          {x: validation_input_data, target: validation_target_data}, verbose)
 
-            print("Epoch {:3d} Completed - Average Train Error: {:7.6f} - Average Validation Error: {:7.6f} - [Params] {:20}".format(
-                epoch, sum_train_error / data.num_train_data, sum_validation_error / data.num_validation_data, self.get_params_str()))
+            print("Epoch {:3d} Completed - Average Train Error: {:7.6f} - Average Validation Error: {:7.6f}".format(
+                epoch, sum_train_error / data.num_train_data, sum_validation_error / data.num_validation_data))
 
     def get_params_str(self):
         params_str = ""
@@ -92,6 +93,17 @@ class Neural_Network(tfg.Graph):
             params_str = params_str + param_key + ": " + str(param.value) + ", "
         params_str = params_str[0:-2]
         return params_str
+
+    def get_param_describe(self):
+        """
+        :return: starts.description
+        skewness - https://ko.wikipedia.org/wiki/%EB%B9%84%EB%8C%80%EC%B9%AD%EB%8F%84
+        kurtosis - https://ko.wikipedia.org/wiki/%EC%B2%A8%EB%8F%84
+        """
+        param_flatten_list = []
+        for param in self.params.values():
+            param_flatten_list.extend([item for item in param.value.flatten()])
+        return stats.describe(np.array(param_flatten_list))
 
     def print_feed_forward(self, num_data, input_data, target_data, x, verbose=False):
         for idx in range(num_data):
