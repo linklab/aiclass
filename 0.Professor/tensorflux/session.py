@@ -20,7 +20,7 @@ class Session:
         # Perform a post-order traversal of the graph to bring the nodes into the right order
         nodes_postorder = self.traverse_postorder(operation)
         if verbose:
-            print("[nodes_postorder]")
+            print("*** nodes in post-order ***")
 
         # Iterate all nodes to determine their value
         for node in nodes_postorder:
@@ -46,6 +46,9 @@ class Session:
 
             if verbose:
                 print("Node: {:>10} - Output Value: {:>5}".format(str(node), str(node.output)))
+
+        if verbose:
+            print()
 
         # Return the requested node value
         return operation.output

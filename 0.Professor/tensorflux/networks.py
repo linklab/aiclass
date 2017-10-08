@@ -66,8 +66,17 @@ class Neural_Network(tfg.Graph):
             param.value = temp_val
         return grads
 
-    def learning(self, max_epoch, data, verbose=False):
+    def learning(self, max_epoch, data, bp=True, print_period=10, verbose=False):
         for epoch in range(max_epoch):
+            if verbose and epoch % print_period == 0:
+                print()
+                print("--------------")
+                print("[Epoch {:d}]".format(epoch))
+                print()
+                verbose2 = True
+            else:
+                verbose2 = False
+
             sum_train_error = 0.0
             for idx in range(data.num_train_data):
                 train_input_data = data.training_input[idx]
@@ -77,13 +86,16 @@ class Neural_Network(tfg.Graph):
                                                     {
                                                         self.input_node: train_input_data,
                                                         self.target_node: train_target_data
-                                                    }, verbose)
+                                                    }, verbose2)
 
-                grads = self.numerical_derivative(self.session,
-                                                  {
-                                                      self.input_node: train_input_data,
-                                                      self.target_node: train_target_data
-                                                  })
+                if bp:
+                    grads = self.backward_propagation()
+                else:
+                    grads = self.numerical_derivative(self.session,
+                                                      {
+                                                          self.input_node: train_input_data,
+                                                          self.target_node: train_target_data
+                                                      })
 
                 self.optimizer.update(grads=grads)
 
@@ -95,16 +107,17 @@ class Neural_Network(tfg.Graph):
                                                          {
                                                              self.input_node: validation_input_data,
                                                              self.target_node: validation_target_data
-                                                         }, verbose)
+                                                         }, False)
 
-            print("Epoch {:3d} Completed - Average Train Error: {:7.6f} - Average Validation Error: {:7.6f}".format(
-                epoch,
-                sum_train_error / data.num_train_data,
-                sum_validation_error / data.num_validation_data
-            ))
+            if epoch % print_period == 0:
+                print("Epoch {:3d} Completed - Average Train Error: {:7.6f} - Average Validation Error: {:7.6f}".format(
+                    epoch,
+                    sum_train_error / data.num_train_data,
+                    sum_validation_error / data.num_validation_data
+                ))
 
-            if verbose:
-                print()
+    def backward_propagation(self):
+        pass
 
     def get_params_str(self):
         params_str = ""
@@ -157,52 +170,17 @@ class Single_Neuron_Network(Neural_Network):
         self.output = activator(self.affine, name="O", graph=self)
         self.error = tfl.SquaredError(self.output, self.target_node, name="SE", graph=self)
 
-    def learning_bp(self, max_epoch, data, verbose=False):
+    def backward_propagation(self):
         grads = {}
-        for epoch in range(max_epoch):
-            sum_train_error = 0.0
-            for idx in range(data.num_train_data):
-                if verbose:
-                    print("Epoch: {:d}, Train Data Index: {:d}".format(epoch, idx))
-                train_input_data = data.training_input[idx]
-                train_target_data = data.training_target[idx]
 
-                #forward
-                sum_train_error += self.session.run(self.error,
-                                                    {
-                                                        self.input_node: train_input_data,
-                                                        self.target_node: train_target_data
-                                                    }, verbose)
-                #backward
-                d_error = self.error.backward(1.0)
-                d_output = self.output.backward(d_error)
-                _ = self.affine.backward(d_output)
+        d_error = self.error.backward(1.0)
+        d_output = self.output.backward(d_error)
+        _ = self.affine.backward(d_output)
 
-                grads['W0'] = self.affine.dw
-                grads['b0'] = self.affine.db
+        grads['W0'] = self.affine.dw
+        grads['b0'] = self.affine.db
 
-                self.optimizer.update(grads=grads)
-
-                grads.clear()
-
-            sum_validation_error = 0.0
-            for idx in range(data.num_validation_data):
-                validation_input_data = data.validation_input[idx]
-                validation_target_data = data.validation_target[idx]
-                sum_validation_error += self.session.run(self.error,
-                                                         {
-                                                             self.input_node: validation_input_data,
-                                                             self.target_node: validation_target_data
-                                                         }, verbose)
-
-            print("Epoch {:3d} Completed - Average Train Error: {:7.6f} - Average Validation Error: {:7.6f}".format(
-                epoch,
-                sum_train_error / data.num_train_data,
-                sum_validation_error / data.num_validation_data
-            ))
-
-            if verbose:
-                print()
+        return grads
 
 
 class Two_Neurons_Network(Neural_Network):
@@ -226,56 +204,21 @@ class Two_Neurons_Network(Neural_Network):
         self.output = activator(self.affine1, name="O1", graph=self)
         self.error = tfl.SquaredError(self.output, self.target_node, name="SE", graph=self)
 
-    def learning_bp(self, max_epoch, data, verbose=False):
+    def backward_propagation(self):
         grads = {}
-        for epoch in range(max_epoch):
-            sum_train_error = 0.0
-            for idx in range(data.num_train_data):
-                if verbose:
-                    print("Epoch: {:d}, Train Data Index: {:d}".format(epoch, idx))
-                train_input_data = data.training_input[idx]
-                train_target_data = data.training_target[idx]
 
-                #forward
-                sum_train_error += self.session.run(self.error,
-                                                    {
-                                                        self.input_node: train_input_data,
-                                                        self.target_node: train_target_data
-                                                    }, verbose)
-                #backward
-                d_error = self.error.backward(1.0)
-                d_output = self.output.backward(d_error)
-                d_affine1 = self.affine1.backward(d_output)
-                d_activation0 = self.activation0.backward(d_affine1)
-                _ = self.affine0.backward(d_activation0)
+        d_error = self.error.backward(1.0)
+        d_output = self.output.backward(d_error)
+        d_affine1 = self.affine1.backward(d_output)
+        d_activation0 = self.activation0.backward(d_affine1)
+        _ = self.affine0.backward(d_activation0)
 
-                grads['W0'] = self.affine0.dw
-                grads['b0'] = self.affine0.db
-                grads['W1'] = self.affine1.dw
-                grads['b1'] = self.affine1.db
+        grads['W0'] = self.affine0.dw
+        grads['b0'] = self.affine0.db
+        grads['W1'] = self.affine1.dw
+        grads['b1'] = self.affine1.db
 
-                self.optimizer.update(grads=grads)
-
-                grads.clear()
-
-            sum_validation_error = 0.0
-            for idx in range(data.num_validation_data):
-                validation_input_data = data.validation_input[idx]
-                validation_target_data = data.validation_target[idx]
-                sum_validation_error += self.session.run(self.error,
-                                                         {
-                                                             self.input_node: validation_input_data,
-                                                             self.target_node: validation_target_data
-                                                         }, verbose)
-
-            print("Epoch {:3d} Completed - Average Train Error: {:7.6f} - Average Validation Error: {:7.6f}".format(
-                epoch,
-                sum_train_error / data.num_train_data,
-                sum_validation_error / data.num_validation_data
-            ))
-
-            if verbose:
-                print()
+        return grads
 
 
 class Three_Neurons_Network(Neural_Network):
@@ -311,59 +254,24 @@ class Three_Neurons_Network(Neural_Network):
 
         self.error = tfl.SquaredError(self.output, self.target_node, name="SE", graph=self)
 
-    def learning_bp(self, max_epoch, data, verbose=False):
+    def backward_propagation(self):
         grads = {}
-        for epoch in range(max_epoch):
-            sum_train_error = 0.0
-            for idx in range(data.num_train_data):
-                if verbose:
-                    print("Epoch: {:d}, Train Data Index: {:d}".format(epoch, idx))
-                train_input_data = data.training_input[idx]
-                train_target_data = data.training_target[idx]
 
-                #forward
-                sum_train_error += self.session.run(self.error,
-                                                    {
-                                                        self.input_node: train_input_data,
-                                                        self.target_node: train_target_data
-                                                    }, verbose)
-                #backward
-                d_error = self.error.backward(1.0)
-                d_output = self.output.backward(d_error)
-                d_affine2 = self.affine2.backward(d_output)
+        d_error = self.error.backward(1.0)
+        d_output = self.output.backward(d_error)
+        d_affine2 = self.affine2.backward(d_output)
 
-                d_activation0 = self.activation0.backward(d_affine2[0][0])
-                _ = self.affine0.backward(d_activation0)
+        d_activation0 = self.activation0.backward(d_affine2[0][0])
+        _ = self.affine0.backward(d_activation0)
 
-                d_activation1 = self.activation1.backward(d_affine2[0][1])
-                _ = self.affine1.backward(d_activation1)
+        d_activation1 = self.activation1.backward(d_affine2[0][1])
+        _ = self.affine1.backward(d_activation1)
 
-                grads['W0'] = self.affine0.dw
-                grads['b0'] = self.affine0.db
-                grads['W1'] = self.affine1.dw
-                grads['b1'] = self.affine1.db
-                grads['W2'] = self.affine2.dw
-                grads['b2'] = self.affine2.db
+        grads['W0'] = self.affine0.dw
+        grads['b0'] = self.affine0.db
+        grads['W1'] = self.affine1.dw
+        grads['b1'] = self.affine1.db
+        grads['W2'] = self.affine2.dw
+        grads['b2'] = self.affine2.db
 
-                self.optimizer.update(grads=grads)
-
-                grads.clear()
-
-            sum_validation_error = 0.0
-            for idx in range(data.num_validation_data):
-                validation_input_data = data.validation_input[idx]
-                validation_target_data = data.validation_target[idx]
-                sum_validation_error += self.session.run(self.error,
-                                                         {
-                                                             self.input_node: validation_input_data,
-                                                             self.target_node: validation_target_data
-                                                         }, verbose)
-
-            print("Epoch {:3d} Completed - Average Train Error: {:7.6f} - Average Validation Error: {:7.6f}".format(
-                epoch,
-                sum_train_error / data.num_train_data,
-                sum_validation_error / data.num_validation_data
-            ))
-
-            if verbose:
-                print()
+        return grads

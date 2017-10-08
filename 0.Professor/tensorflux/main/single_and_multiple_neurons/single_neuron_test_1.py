@@ -24,8 +24,8 @@ n.print_feed_forward(
     verbose=False
 )
 
-#n.learning(max_epoch=500, data=data, verbose=False)
-n.learning_bp(max_epoch=500, data=data, verbose=False)
+#n.learning(max_epoch=500, data=data, bp=False, print_period=10, verbose=False)
+n.learning(max_epoch=500, data=data, bp=True, print_period=10, verbose=False)
 
 n.print_feed_forward(
     num_data=data.num_test_data,
