@@ -79,8 +79,8 @@ class Neural_Network(tfg.Graph):
 
             sum_train_error = 0.0
             for idx in range(data.num_train_data):
-                train_input_data = data.training_input[idx]
-                train_target_data = data.training_target[idx]
+                train_input_data = data.train_input[idx]
+                train_target_data = data.train_target[idx]
 
                 sum_train_error += self.session.run(self.error,
                                                     {

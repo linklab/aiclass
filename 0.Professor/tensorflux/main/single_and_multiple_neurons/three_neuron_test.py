@@ -3,6 +3,7 @@ import tensorflux.graph as tfg
 import tensorflux.networks as tfn
 import tensorflux.enums as tfe
 import datasource.simple as simple_data
+import time
 
 n = tfn.Three_Neurons_Network(input_size=2, output_size=1)
 
@@ -30,13 +31,15 @@ data = simple_data.Xor_Gate_Data()
 
 n.print_feed_forward(
     num_data=data.num_train_data,
-    input_data=data.training_input,
-    target_data=data.training_target,
+    input_data=data.train_input,
+    target_data=data.train_target,
     verbose=False
 )
 
+start_time = time.clock()
 #n.learning(max_epoch=1500, data=data, bp=False, print_period=10, verbose=False)
 n.learning(max_epoch=1500, data=data, bp=True, print_period=10, verbose=False)
+print(time.clock() - start_time, "seconds")
 
 n.print_feed_forward(
     num_data=data.num_test_data,
