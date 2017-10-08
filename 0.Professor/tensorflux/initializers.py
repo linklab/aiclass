@@ -51,7 +51,7 @@ class Random_Normal_Initializer(Initializer):
     size : tuple of ints -- Output shape.
     """
     def initialize_param(self):
-        self.param = tfg.Variable(np.random.normal(loc=0.0, scale=0.1, size=self.shape))
+        self.param = tfg.Variable(np.random.normal(loc=0.0, scale=0.1, size=self.shape), name=self.name)
 
 
 class Random_Uniform_Initializer(Initializer):
@@ -60,7 +60,7 @@ class Random_Uniform_Initializer(Initializer):
     size : tuple of ints -- Output shape.
     """
     def initialize_param(self):
-        self.param = tfg.Variable(np.random.random(size=self.shape))
+        self.param = tfg.Variable(np.random.random(size=self.shape), name=self.name)
 
 
 class Truncated_Normal_Initializer(Initializer):

@@ -21,9 +21,6 @@ class Session:
         nodes_postorder = self.traverse_postorder(operation)
         if verbose:
             print("[nodes_postorder]")
-            for node in nodes_postorder:
-                print(node)
-            print
 
         # Iterate all nodes to determine their value
         for node in nodes_postorder:
@@ -32,6 +29,9 @@ class Session:
                 node.output = feed_dict[node]
             elif type(node) == tfg.Variable:
                 # Set the node value to the variable's value attribute
+                node.output = node.value
+            elif type(node) == tfg.Constant:
+                # Set the node value to the constant's value attribute
                 node.output = node.value
             else: # Operation
                 # Get the input values for this operation from node_values

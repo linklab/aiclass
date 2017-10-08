@@ -2,7 +2,7 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 from scipy.stats import truncnorm
-
+import sys
 
 def get_truncated_normal(shape, mean=0, sd=1, low=0, upp=10):
     x = truncnorm(a=(low - mean) / sd, b=(upp - mean) / sd, loc=mean, scale=sd)
