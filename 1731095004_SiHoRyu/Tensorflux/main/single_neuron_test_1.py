@@ -22,7 +22,7 @@ n.set_optimizer(optimizer=tfe.Optimizer.SGD.value, learning_rate=0.01)
 data = simple_data.Simple_Function_Data()
 #x에 값을 집어 넣어서 ReLu에서 값을 뽑음
 
-n.print_feed_forward(num_data=data.num_train_data, input_data=data.training_input, target_data=data.training_target, x=x)
+n.print_feed_forward(num_data=data.num_train_data, input_data=data.train_input, target_data=data.train_target, x=x)
 #Feed forward output 값을 target값과 더 가깝게 하려면
 #epoch 횟수를 늘리거나
 #simple 데이터에서 데이터 갯수를 늘려준다(training data)

@@ -38,14 +38,30 @@ class One_Initializer(Initializer):
         self.param = tfg.Variable(np.ones(shape=self.shape), name=self.name)
 
 
-class Random_Initializer(Initializer):
-    def initialize_param(self):
-        self.param = tfg.Variable(np.random.randn(self.shape[0], self.shape[1]), name=self.name)
-
-
 class Point_One_Initializer(Initializer):
     def initialize_param(self):
         self.param = tfg.Variable(np.ones(shape=self.shape) * 0.1, name=self.name)
+
+
+class Random_Normal_Initializer(Initializer):
+    """
+    Parameters :
+    loc : float -- Mean (“centre”) of the distribution.
+    scale : float -- Standard deviation (spread or “width”) of the distribution.
+    size : tuple of ints -- Output shape.
+    """
+    def initialize_param(self):
+        self.param = tfg.Variable(np.random.normal(loc=0.0, scale=0.1, size=self.shape), name=self.name)
+
+
+class Random_Uniform_Initializer(Initializer):
+    """
+    Parameters :
+    size : tuple of ints -- Output shape.
+    """
+    def initialize_param(self):
+        self.param = tfg.Variable(np.random.random(size=self.shape), name=self.name)
+
 
 class Truncated_Normal_Initializer(Initializer):
     def __init__(self, shape, name, mean=0.0, sd=1.0, low=-1.0, upp=1.0):
@@ -61,3 +77,4 @@ class Truncated_Normal_Initializer(Initializer):
                                                            sd=self.sd,
                                                            low=self.low,
                                                            upp=self.upp), name=self.name)
+
