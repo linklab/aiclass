@@ -31,8 +31,8 @@ data = simple_data.Xor_Gate_Data()
 
 n.print_feed_forward(
     num_data=data.num_train_data,
-    input_data=data.train_input,
-    target_data=data.train_target,
+    input_data=data.training_input,
+    target_data=data.training_target,
     verbose=False
 )
 
