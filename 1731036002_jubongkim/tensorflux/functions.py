@@ -23,7 +23,7 @@ def squared_error(output_value, target_value):
 
 
 if __name__ == "__main__":
-    x1 = get_truncated_normal(shape=(1, 10000), mean=2, sd=3, low=-8, upp=10)
+    x1 = get_truncated_normal(shape=(1, 10000), mean=2, sd=1, low=1, upp=10)
     x2 = get_truncated_normal(shape=(1, 10000), mean=5.5, sd=1, low=1, upp=10)
     x3 = get_truncated_normal(shape=(1, 10000), mean=8, sd=1, low=1, upp=10)
 
