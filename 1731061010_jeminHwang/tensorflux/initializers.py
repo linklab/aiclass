@@ -41,7 +41,7 @@ class One_Initializer(Initializer):
 
 class Random_Initializer(Initializer):
     def initialize_param(self):
-        self.param = tfg.Variable(np.random.randn(self.shape[0],self.shape[1]), name=self.name)
+        self.param = tfg.Variable(np.random.uniform(-1.0, 1.0, self.shape), name=self.name)
 
 
 class Point_One_Initializer(Initializer):

@@ -232,13 +232,15 @@ class Three_Neurons_Network(Neural_Network):
 
     def initialize_param(self, initializer=tfe.Initializer.Zero.value):
         self.params['W0'] = initializer(shape=(self.input_size, self.output_size), name='W0').get_variable()
-        self.params['b0'] = initializer(shape=(self.output_size,), name='b0').get_variable()
+        self.params['b0'] = tfe.Initializer.Point_One.value(shape=(self.output_size,), name='b0').get_variable()
 
         self.params['W1'] = initializer(shape=(self.input_size, self.output_size), name='W1').get_variable()
-        self.params['b1'] = initializer(shape=(self.output_size,), name='b1').get_variable()
+        self.params['b1'] = tfe.Initializer.Point_One.value(shape=(self.output_size,), name='b1').get_variable()
 
         self.params['W2'] = initializer(shape=(self.input_size, self.output_size), name='W2').get_variable()
-        self.params['b2'] = initializer(shape=(self.output_size,), name='b2').get_variable()
+        self.params['b2'] = tfe.Initializer.Point_One.value(shape=(self.output_size,), name='b2').get_variable()
+        print(self.get_params_str())
+
 
     def layering(self, activator=tfe.Activator.ReLU.value):
         self.activator = activator
@@ -317,7 +319,7 @@ class Multi_Layer_Network(Neural_Network):
         )
         self.output = activator(self.layers['affine' + str(idx)], name='output', graph=self)
 
-        self.last_layer = SoftmaxWithCrossEntropyLoss()
+        #self.last_layer = SoftmaxWithCrossEntropyLoss()
 
 
         self.error = tfl.SquaredError(self.output, self.target_node, name="SE", graph=self)

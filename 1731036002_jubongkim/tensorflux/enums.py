@@ -17,5 +17,5 @@ class Optimizer(Enum):
 
 
 class Activator(Enum):
-    Sigmoid = tfl.Sigmoid,
+    Sigmoid = tfl.Sigmoid
     ReLU = tfl.ReLU

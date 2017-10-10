@@ -51,7 +51,7 @@ def sum(arr):
 #     return result
 
 
-a = arange(900000000).reshape(3000, 3000)
+a = arange(900000000).reshape(30000, 30000)
 print(a)
 
 print()
