@@ -10,9 +10,9 @@ x = tfg.Placeholder(name="x")
 target = tfg.Placeholder(name="target")
 
 n.set_data(x, target)
-n.initialize_param(initializer=tfe.Initializer.Truncated_Normal.value)
-n.layering(activator=tfe.Activator.Sigmoid.value)
-n.set_optimizer(optimizer=tfe.Optimizer.SGD.value, learning_rate=0.05)
+n.initialize_param(initializer=tfe.Initializer.Randn.value)
+n.layering(activator=tfe.Activator.ReLU.value)
+n.set_optimizer(optimizer=tfe.Optimizer.SGD.value, learning_rate=0.01)
 
 #n.draw_and_show()
 
@@ -26,7 +26,7 @@ n.print_feed_forward(
     verbose=False
 )
 
-n.learning(max_epoch=1000, data=data, x=x, target=target)
+n.learning(max_epoch=5000, data=data, x=x, target=target)
 
 n.print_feed_forward(
     num_data=data.num_test_data,

@@ -82,9 +82,9 @@ class Neural_Network(tfg.Graph):
                 validation_target_data = data.validation_target[idx]
                 sum_validation_error += self.session.run(self.error,
                                                          {x: validation_input_data, target: validation_target_data}, verbose)
-
-            print("Epoch {:3d} Completed - Average Train Error: {:7.6f} - Average Validation Error: {:7.6f} - [Params] {:20}".format(
-                epoch, sum_train_error / data.num_train_data, sum_validation_error / data.num_validation_data, self.get_params_str()))
+            if (epoch % 100 == 0):
+                print("Epoch {:3d} Completed - Average Train Error: {:7.6f} - Average Validation Error: {:7.6f}".format(
+                    epoch, sum_train_error / data.num_train_data, sum_validation_error / data.num_validation_data))
 
     def get_params_str(self):
         params_str = ""
@@ -169,13 +169,15 @@ class Three_Neurons_Network(Neural_Network):
 
     def initialize_param(self, initializer=tfe.Initializer.Zero.value):
         self.params['W0'] = initializer(shape=(self.input_size, self.output_size), name='W0').get_variable()
-        self.params['b0'] = initializer(shape=(self.output_size,), name='b0').get_variable()
+        self.params['b0'] = tfe.Initializer.Point_One.value(shape=(self.output_size,), name='b0').get_variable()
 
         self.params['W1'] = initializer(shape=(self.input_size, self.output_size), name='W1').get_variable()
-        self.params['b1'] = initializer(shape=(self.output_size,), name='b1').get_variable()
+        self.params['b1'] = tfe.Initializer.Point_One.value(shape=(self.output_size,), name='b1').get_variable()
 
         self.params['W2'] = initializer(shape=(self.input_size, self.output_size), name='W2').get_variable()
-        self.params['b2'] = initializer(shape=(self.output_size,), name='b2').get_variable()
+        self.params['b2'] = tfe.Initializer.Point_One.value(shape=(self.output_size,), name='b2').get_variable()
+        print(self.get_params_str())
+
 
     def layering(self, activator=tfe.Activator.ReLU.value):
         self.activator = activator
