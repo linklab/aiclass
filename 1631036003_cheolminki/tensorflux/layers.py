@@ -1,9 +1,8 @@
 # -*- coding:utf-8 -*-
 import tensorflux.graph as tfg
-import math
+import sys
 import numpy as np
 import tensorflux.functions as tff
-import random
 
 
 class Affine(tfg.Operation):
@@ -16,10 +15,9 @@ class Affine(tfg.Operation):
           x: Weight node, y: Input node, b: Bias node
         """
         self.inputs = None
-        graph.add_edge(w, self)
-        graph.add_edge(x, self)
-        graph.add_edge(b, self)
-        super().__init__([w, x, b], name)
+        self.dw = None
+        self.db = None
+        super().__init__([w, x, b], name, graph)
 
     def forward(self, w_value, x_value, b_value):
         """Compute the output of the add operation
@@ -29,10 +27,22 @@ class Affine(tfg.Operation):
         """
         self.inputs = [w_value, x_value, b_value]
         # return np.matmul(x_value, w_value) + b_value # [Note] Matmul Order
-        return x_value.dot(w_value) + b_value  # [Note] Matmul Order
+        return np.dot(x_value, w_value) + b_value  # [Note] Matmul Order
 
-    def backward(self):
-        pass
+    def backward(self, din):
+        if type(din) == np.ndarray and self.inputs[1].size == 2 and din.size == 1:
+            self.dw = np.dot(self.inputs[1].T, np.asscalar(din))
+        else:
+            self.dw = np.dot(self.inputs[1].T, din)
+
+        dx = np.dot(din, self.inputs[0].T)
+        self.db = din
+
+        self.dw = np.reshape(self.dw, self.inputs[0].shape) #dw shape convert to input[0].shape
+        dx = np.reshape(dx, self.inputs[1].shape)
+        self.db = np.reshape(self.db, self.inputs[2].shape)
+
+        return dx
 
     def __str__(self):
         return "Affine: " + self.name
@@ -48,11 +58,9 @@ class Affine2(tfg.Operation):
           x: Weight node, y: Input node, b: Bias node
         """
         self.inputs = None
-        graph.add_edge(w, self)
-        graph.add_edge(x1, self)
-        graph.add_edge(x2, self)
-        graph.add_edge(b, self)
-        super().__init__([w, x1, x2, b], name)
+        self.dw = None
+        self.db = None
+        super().__init__([w, x1, x2, b], name, graph)
 
     def forward(self, w_value, x1_value, x2_value, b_value):
         """Compute the output of the add operation
@@ -66,11 +74,21 @@ class Affine2(tfg.Operation):
         # return np.matmul(x_value, w_value) + b_value # [Note] Matmul Order
         return x_input.dot(w_value) + b_value  # [Note] Matmul Order
 
-    def backward(self):
-        pass
+    def backward(self, din):
+        inputs = np.array([self.inputs[1], self.inputs[2]])
+        self.dw = np.dot(inputs, np.asscalar(din))
+        dx = np.dot(din, self.inputs[0].T)
+        self.db = din
+
+        self.dw = np.reshape(self.dw, self.inputs[0].shape)
+        dx = np.reshape(dx, (1, 2))
+        self.db = np.reshape(self.db, self.inputs[3].shape)
+
+        return dx
 
     def __str__(self):
-        return "Affine: " + self.name
+        return "Affine2: " + self.name
+
 
 class ReLU(tfg.Operation):
     def __init__(self, u, name=None, graph=None):
@@ -80,18 +98,17 @@ class ReLU(tfg.Operation):
           u: affine node
         """
         self.inputs = None
-        graph.add_edge(u, self)
 
         self.mask = None
-        super().__init__([u], name)
+        super().__init__([u], name, graph)
 
     def forward(self, u_value):
         self.inputs = [u_value]
 
         if type(u_value) == np.ndarray:
-            self.mask = (u_value <= 0)
+            self.mask = (u_value <= 0.0)
             out = u_value.copy()
-            out[self.mask] = 0
+            out[self.mask] = 0.0
         else:
             if u_value <= 0:
                 out = 0.0
@@ -100,7 +117,15 @@ class ReLU(tfg.Operation):
         return out
 
     def backward(self, din):
-        pass
+        if type(din) == np.ndarray:
+            dx = din.copy()
+            dx[self.mask] = 0.0
+        else:
+            if self.inputs[0] <= 0.0:
+                dx = 0.0
+            else:
+                dx = din
+        return dx
 
     def __str__(self):
         return "ReLU: " + self.name
@@ -114,10 +139,9 @@ class Sigmoid(tfg.Operation):
           u: affine node
         """
         self.inputs = None
-        graph.add_edge(u, self)
 
         self.out = None
-        super().__init__([u], name)
+        super().__init__([u], name, graph)
 
     def forward(self, u_value):
         self.inputs = [u_value]
@@ -139,16 +163,54 @@ class SquaredError(tfg.Operation):
           output: output node
         """
         self.inputs = None
-        graph.add_edge(forward_final_output, self)
-        graph.add_edge(target, self)
-        super().__init__([forward_final_output, target], name)
+        super().__init__([forward_final_output, target], name, graph)
 
     def forward(self, forward_final_output_value, target_value):
         self.inputs = [forward_final_output_value, target_value]
         return tff.squared_error(forward_final_output_value, target_value)
 
     def backward(self, din):
+        dx = (self.inputs[0] - self.inputs[1]) * din
+        return dx
+
+    def __str__(self):
+        return "SquaredError: " + self.name
+
+
+class Softmax(tfg.Operation):
+    def __init__(self, u, name=None, graph=None):
+        """Construct Softmax
+
+        Args:
+          u: softmax node
+        """
+        self.inputs = None
+        self.out = None
+        super().__init__([u], name, graph)
+
+    def forward(self, u_value):
+        self.inputs = [u_value]
+        self.out = tff.sigmoid(u_value)
+        return self.out
+
+    def backward(self, din):
         pass
 
     def __str__(self):
-        return "SquaredError:" + self.name
+        return "Sigmoid: " + self.name
+
+
+class Softmax:
+    def __init__(self):
+        self.loss = None
+        self.y = None
+        self.t = None
+
+    def forward(self, x):
+        self.y = softmax(x)
+
+
+    def backward(self, din=1):
+        batch_size = self.t.shape[0]
+        dx = (self.y - self.t) / float(batch_size)
+        return dx
