@@ -35,10 +35,10 @@ class Session:
                 node.output = node.value
             else: # Operation
                 # Get the input values for this operation from node_values
-                node.inputs = [input_node.output for input_node in node.input_nodes]
+                node_inputs = [input_node.output for input_node in node.input_nodes]
 
                 # Compute the output of this operation
-                node.output = node.forward(*node.inputs)
+                node.output = node.forward(*node_inputs)
 
             # Convert lists to numpy arrays
             if type(node.output) is not np.ndarray:

@@ -20,6 +20,7 @@ def sigmoid(x):
 def squared_error(output_value, target_value):
     return 0.5 * math.pow(output_value - target_value, 2)
 
+
 def softmax(x):
     if x.ndim == 2:
         x = x.T
@@ -29,6 +30,15 @@ def softmax(x):
 
     x = x - np.max(x)
     return np.exp(x) / np.sum(np.exp(x))
+
+
+def cross_entropy_error(y, t):
+    if y.ndim == 1 and t.ndim == 1:
+        t = t.reshape(1, t.size)
+        y = y.reshape(1, y.size)
+
+    batch_size = y.shape[0]
+    return -np.sum(t * np.log(y)) / batch_size
 
 
 if __name__ == "__main__":

@@ -2,9 +2,8 @@ import datasource.mnist as mnist
 import matplotlib.pyplot as plt
 from random import randint
 
-
-data = mnist.MNIST_Data()
-#data = mnist.Fashion_MNIST_Data()
+#data = mnist.MNIST_Data()
+data = mnist.Fashion_MNIST_Data()
 
 print("data.train_input.shape:", data.train_input.shape)
 print("data.train_target.shape:", data.train_target.shape)

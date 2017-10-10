@@ -323,12 +323,8 @@ class Multi_Layer_Network(Neural_Network):
             self.layers['activation' + str(idx)] = activator(self.layers['affine' + str(idx)], name='activation' + str(idx), graph=self)
 
         idx = self.hidden_layer_num
-        self.layers['affine' + str(idx)] = tfl.Affine(
+        self.output = tfl.Affine(
             self.params['W' + str(idx)], self.input_node, self.params['b' + str(idx)], name='affine' + str(idx), graph=self
         )
-        self.output = activator(self.layers['affine' + str(idx)], name='output', graph=self)
 
-        #self.last_layer = SoftmaxWithCrossEntropyLoss()
-
-
-        self.error = tfl.SquaredError(self.output, self.target_node, name="SE", graph=self)
+        self.error = tfl.SoftmaxWithCrossEntropyLoss(self.output, self.target_node, name="SCEL", graph=self)
