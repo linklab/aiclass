@@ -20,9 +20,7 @@ data = simple_data.Simple_Function_Data()
 n.print_feed_forward(
     num_data=data.num_train_data,
     input_data=data.train_input,
-    target_data=data.train_target,
-    verbose=False
-)
+    target_data=data.train_target)
 
 #n.learning(max_epoch=500, data=data, bp=False, print_period=10, verbose=False)
 n.learning(max_epoch=500, data=data, bp=True, print_period=10, verbose=False)
@@ -30,8 +28,7 @@ n.learning(max_epoch=500, data=data, bp=True, print_period=10, verbose=False)
 n.print_feed_forward(
     num_data=data.num_test_data,
     input_data=data.test_input,
-    target_data=data.test_target,
-    verbose=False
+    target_data=data.test_target
 )
 
 #n.draw_and_show()
