@@ -5,7 +5,6 @@ import tensorflux.layers as tfl
 
 
 class Initializer(Enum):
-
     Zero = tfi.Zero_Initializer
     One = tfi.One_Initializer
     Point_One = tfi.Point_One_Initializer
@@ -18,5 +17,5 @@ class Optimizer(Enum):
 
 
 class Activator(Enum):
-    Sigmoid = tfl.Sigmoid,
+    Sigmoid = tfl.Sigmoid
     ReLU = tfl.ReLU
