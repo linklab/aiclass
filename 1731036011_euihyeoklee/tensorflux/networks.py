@@ -164,11 +164,11 @@ class Three_Neurons_Network(Neural_Network):
 
     def initialize_param(self, initializer=tfe.Initializer.Zero.value):
         self.params['W0'] = initializer(shape=(self.input_size, self.output_size), name='W0').get_variable()
-        self.params['b0'] = initializer(shape=(self.output_size,), name='b0').get_variable()
+        self.params['b0'] = tfe.Initializer.Point_One.value(shape=(self.output_size,), name='b0').get_variable()
         self.params['W1'] = initializer(shape=(self.input_size, self.output_size), name='W1').get_variable()
-        self.params['b1'] = initializer(shape=(self.output_size,), name='b1').get_variable()
+        self.params['b1'] = tfe.Initializer.Point_One.value(shape=(self.output_size,), name='b1').get_variable()
         self.params['W2'] = initializer(shape=(self.input_size, self.output_size), name='W2').get_variable()
-        self.params['b2'] = initializer(shape=(self.output_size,), name='b2').get_variable()
+        self.params['b2'] = tfe.Initializer.Point_One.value(shape=(self.output_size,), name='b2').get_variable()
 
     def layering(self, activator=tfe.Activator.ReLU.value):
         self.activator = activator
@@ -182,3 +182,22 @@ class Three_Neurons_Network(Neural_Network):
 
         self.output = activator(u2, name="O2")
         self.error = tfl.SquaredError(self.output, self.target_node, name="SE")
+
+        if isinstance(self, nx.Graph):
+            self.add_edge(self.params['W0'], u0)
+            self.add_edge(self.input_node, u0)
+            self.add_edge(self.params['b0'], u0)
+            self.add_edge(u0, o0)
+
+            self.add_edge(self.params['W1'], u1)
+            self.add_edge(self.input_node, u1)
+            self.add_edge(self.params['b1'], u1)
+            self.add_edge(u1, o1)
+
+            self.add_edge(self.params['W2'], u2)
+            self.add_edge(o0, u2)
+            self.add_edge(o1, u2)
+            self.add_edge(self.params['b2'], u2)
+            self.add_edge(u2, self.output)
+            self.add_edge(self.output, self.error)
+            self.add_edge(self.error, self.target_node)
