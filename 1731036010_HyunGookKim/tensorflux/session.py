@@ -9,7 +9,7 @@ class Session:
     """Represents a particular execution of a computational graph.
     """
 
-    def run(self, operation, feed_dict={}, vervose=True):
+    def run(self, operation, feed_dict={}, verbose=True):
         """Computes the output of an operation
 
         Args:
@@ -35,13 +35,13 @@ class Session:
                 # Compute the output of this operation
                 node.output = node.forward(*node.inputs)
 
-            #print(node.output)
+            # print(node.output)
 
             # Convert lists to numpy arrays
             if type(node.output) is not np.ndarray:
                 node.output = np.asarray(node.output)
 
-            if vervose:
+            if verbose:
                 print("Node: {:>10} - Output Value: {:>5}".format(str(node), str(node.output)))
 
         # Return the requested node value
