@@ -11,6 +11,13 @@ target = tfg.Placeholder(name="target")
 
 n.set_data(x, target)
 n.initialize_param(initializer=tfe.Initializer.Random.value)
+#start_param_description = n.get_param_describe()
+
+#while not (start_param_description.variance > 0.15 and 0.0 < start_param_description.mean - 0.5 < 0.05):
+#    print("Current Start Param Variance: {:f} --> Re-initialize".format(start_param_description.variance))
+#    n.initialize_param(initializer=tfe.Initializer.Uniform.value)
+#    start_param_description = n.get_param_describe()
+
 n.layering(activator=tfe.Activator.Sigmoid.value)
 n.set_optimizer(optimizer=tfe.Optimizer.SGD.value, learning_rate=5)
 
@@ -26,7 +33,7 @@ n.print_feed_forward(
     verbose=False
 )
 
-n.learning(max_epoch=100000, data=data, x=x, target=target)
+n.learning(max_epoch=5000, data=data, x=x, target=target)
 
 n.print_feed_forward(
     num_data=data.num_test_data,

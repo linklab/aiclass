@@ -9,13 +9,16 @@ import random
 class Affine(tfg.Operation):
     """Returns w * x + b.
     """
-    def __init__(self, w, x, b, name=None):
+    def __init__(self, w, x, b, name=None, graph=None): # graph=None 추가됨
         """Construct Affine
 
         Args:
           x: Weight node, y: Input node, b: Bias node
         """
         self.inputs = None
+        # graph.add_edge(w, self) # networks.py에서 networkx 그래프 그려주는 대신에 이렇게 함
+        # graph.add_edge(x, self)
+        # graph.add_edge(b, self)
         super().__init__([w, x, b], name)
 
     def forward(self, w_value, x_value, b_value):
@@ -27,6 +30,41 @@ class Affine(tfg.Operation):
         self.inputs = [w_value, x_value, b_value]
         # return np.matmul(x_value, w_value) + b_value # [Note] Matmax Order
         return x_value.dot(w_value) + b_value  # [Note] Matmax Order
+
+    def backward(self):
+        pass
+
+    def __str__(self):
+        return "Affine: " + self.name
+
+class Affine2(tfg.Operation):
+    """Returns w * (x1, x2) + b.
+    """
+    def __init__(self, w, x1, x2, b, name=None, graph=None):
+        """Construct Affine
+
+        Args:
+          x: Weight node, y: Input node, b: Bias node
+        """
+        self.inputs = None
+        # graph.add_edge(w, self) #self:Affine객체에 노드 연결
+        # graph.add_edge(x1, self)
+        # graph.add_edge(x2, self)
+        # graph.add_edge(b, self)
+        super().__init__([w, x1, x2, b], name)
+
+    def forward(self, w_value, x1_value, x2_value, b_value):
+        """Compute the output of the add operation
+
+        Args:
+          x_value: Weight value, y_value: Input value, b_value: Bias value
+        """
+        self.inputs = [w_value, x1_value, x2_value, b_value]
+
+        x_input = np.asarray([x1_value, x2_value]).T # scalar값을 묶어서 array화 시킨다. T를 붙인 이유는
+        # (2,1):x_input과 (2,1):input_node이 계산되지 않으므로..
+        # return np.matmul(x_value, w_value) + b_value # [Note] Matmul Order
+        return x_input.dot(w_value) + b_value  # [Note] Matmul Order
 
     def backward(self):
         pass

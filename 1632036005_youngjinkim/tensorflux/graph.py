@@ -1,4 +1,9 @@
+# -*- coding:utf-8 -*-
+
+# Reference: http://www.deepideas.net/deep-learning-from-scratch-i-computational-graphs/
 import networkx as nx
+import numpy as np
+
 
 class Graph(nx.Graph):
     """Represents a computational graph (a neural network)
@@ -19,12 +24,12 @@ class Placeholder:
         """Construct placeholder
         """
         self.output = None
-
         self.consumers = []
         self.name = name
 
     def __str__(self):
         return self.name
+
 
 class Variable:
     """Represents a variable (i.e. an intrinsic, changeable parameter of a computational graph).
@@ -75,7 +80,7 @@ class Operation:
         pass
 
     def __str__(self):
-        return self.name
+        return "O: " + self.name
 
 
 class Add(Operation):

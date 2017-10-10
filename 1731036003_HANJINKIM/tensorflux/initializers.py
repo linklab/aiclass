@@ -37,7 +37,7 @@ class One_Initializer(Initializer):
     def initialize_param(self):
         self.param = tfg.Variable(np.ones(shape=self.shape), name=self.name)
 
-
+# add Random Initializer
 class Random_Initializer(Initializer):
     def initialize_param(self):
         self.param = tfg.Variable(np.random.randn(self.shape[0], self.shape[1]), name=self.name)

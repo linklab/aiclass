@@ -95,6 +95,7 @@ class ReLU(tfg.Operation):
                 out = u_value
         return out
 
+    ##백워드 프로파게이션 구현 위치
     def backward(self, din):
         pass
 
@@ -117,6 +118,7 @@ class Sigmoid(tfg.Operation):
         self.out = tff.sigmoid(u_value)
         return self.out
 
+    ##백워드 프로파게이션 구현 위치
     def backward(self, din):
         pass
 
@@ -138,6 +140,7 @@ class SquaredError(tfg.Operation):
         self.inputs = [forward_final_output_value, target_value]
         return tff.squared_error(forward_final_output_value, target_value)
 
+    ##백워드 프로파게이션 구현 위치
     def backward(self, din):
         pass
 
