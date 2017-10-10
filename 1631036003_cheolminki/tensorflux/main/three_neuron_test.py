@@ -12,7 +12,7 @@ target = tfg.Placeholder(name="target")
 
 n.set_data(x, target)
 
-n.initialize_param(initializer=tfe.Initializer.Random.value)
+n.initialize_param(initializer=tfe.Initializer.Random_uniform.value)
 n.layering(activator=tfe.Activator.Sigmoid.value)
 n.set_optimizer(optimizer=tfe.Optimizer.SGD.value, learning_rate=0.1)
 
@@ -22,8 +22,8 @@ data = simple_data.Xor_Gate_Data()
 
 n.print_feed_forward(
     num_data=data.num_train_data,
-    input_data=data.training_input,
-    target_data=data.training_target,
+    input_data=data.train_input,
+    target_data=data.train_target,
     x=x,
     verbose=False
 )
