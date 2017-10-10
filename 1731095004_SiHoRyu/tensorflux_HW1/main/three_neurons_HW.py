@@ -14,7 +14,7 @@ target = tfg.Placeholder(name="target")
 
 n.set_data(x, target)
 
-n.initialize_param(initializer=tfe.Initializer.Point_One.value)
+n.initialize_param(initializer=tfe.Initializer.Random_Value.value)
 
 n.layering(activator=tfe.Activator.ReLU.value)
 n.set_optimizer(optimizer=tfe.Optimizer.SGD.value, learning_rate=0.01)
@@ -27,7 +27,7 @@ n.print_feed_forward(num_data=data.num_train_data, input_data=data.training_inpu
 #print(data.num_train_data)
 #print(data.training_input)
 
-n.learning(max_epoch=1000, data=data, x=x, target=target)
+n.learning(max_epoch=5000, data=data, x=x, target=target)
 
 n.print_feed_forward(num_data=data.num_test_data, input_data=data.test_input, target_data=data.test_target, x=x)
 

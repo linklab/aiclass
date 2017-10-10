@@ -155,3 +155,40 @@ class Two_Neurons_Network(Neural_Network):
             self.add_edge(u1, self.output)
             self.add_edge(self.output, self.error)
             self.add_edge(self.error, self.target_node)
+
+class Three_Neurons_Network(Neural_Network):
+    def __init__(self, input_size, output_size):
+        super().__init__(input_size, output_size)
+
+    def initialize_param(self, initializer=tfe.Initializer.Zero.value):
+        self.params['W01'] = initializer(shape=(self.input_size, self.output_size), name='W01').get_variable()
+        self.params['b01'] = initializer(shape=(self.output_size,), name='b01').get_variable()
+        self.params['W02'] = initializer(shape=(self.input_size, self.output_size), name='W02').get_variable()
+        self.params['b02'] = initializer(shape=(self.output_size,), name='b02').get_variable()
+        self.params['W1'] = initializer(shape=(self.input_size, self.output_size), name='W1').get_variable()
+        self.params['b1'] = initializer(shape=(self.output_size,), name='b1').get_variable()
+
+    def layering(self, activator=tfe.Activator.ReLU.value):
+        self.activator = activator
+        u01 = tfl.Affine(self.params['W01'], self.input_node, self.params['b01'], name="A01")
+        u02 = tfl.Affine(self.params['W02'], self.input_node, self.params['b02'], name="A02")
+        o01 = activator(u01, name="O01")
+        o02 = activator(u02, name="O02")
+        u1 = tfl.Affine(self.params['W1'], o01, self.params['b1'], name="A1")
+        self.output = activator(u1, name="O1")
+        self.error = tfl.SquaredError(self.output, self.target_node, name="SE")
+        if isinstance(self, nx.Graph):
+            self.add_edge(self.params['W01'], u01)
+            self.add_edge(self.input_node, u01)
+            self.add_edge(self.params['b01'], u01)
+            self.add_edge(u01, o01)
+            self.add_edge(self.params['W02'], u02)
+            self.add_edge(self.input_node, u02)
+            self.add_edge(self.params['b02'], u02)
+            self.add_edge(u02, o02)
+            self.add_edge(self.params['W1'], u1)
+            self.add_edge(o0, u1)
+            self.add_edge(self.params['b1'], u1)
+            self.add_edge(u1, self.output)
+            self.add_edge(self.output, self.error)
+            self.add_edge(self.error, self.target_node)

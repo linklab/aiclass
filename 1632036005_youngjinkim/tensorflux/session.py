@@ -9,7 +9,7 @@ class Session:
     """Represents a particular execution of a computational graph.
     """
 
-    def run(self, operation, feed_dict={}, vervose=True):
+    def run(self, operation, feed_dict={}, verbose=True):
         """Computes the output of an operation
 
         Args:
@@ -19,6 +19,11 @@ class Session:
 
         # Perform a post-order traversal of the graph to bring the nodes into the right order
         nodes_postorder = self.traverse_postorder(operation)
+        if verbose:
+            print("[nodes_postorder]")
+            for node in nodes_postorder:
+                print(node)
+            print
 
         # Iterate all nodes to determine their value
         for node in nodes_postorder:
@@ -35,13 +40,11 @@ class Session:
                 # Compute the output of this operation
                 node.output = node.forward(*node.inputs)
 
-            #print(node.output)
-
             # Convert lists to numpy arrays
             if type(node.output) is not np.ndarray:
                 node.output = np.asarray(node.output)
 
-            if vervose:
+            if verbose:
                 print("Node: {:>10} - Output Value: {:>5}".format(str(node), str(node.output)))
 
         # Return the requested node value

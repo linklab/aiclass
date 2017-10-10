@@ -33,6 +33,10 @@ class Zero_Initializer(Initializer):
     def initialize_param(self):
         self.param = tfg.Variable(np.zeros(shape=self.shape), name=self.name)
 
+class Random_Initializer(Initializer):
+    def initialize_param(self):
+        self.param = tfg.Variable(np.random.randn(self.shape[0], self.shape[1]), name=self.name)
+
 # [[1,1,1], [1,1,1], [1,1,1]] 가 생성됨
 class One_Initializer(Initializer):
     def initialize_param(self):

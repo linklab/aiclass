@@ -51,14 +51,20 @@ class AffineSL(tfg.Operation):
 
     def forward(self, w, x1, x2, b):
 
-        val_x1 = np.dot(x1, w) + b
-        val_x2 = np.dot(x2, w) + b
+        self.inputs = [w, x1, x2, b]
 
-        val_Result = np.greater(val_x1, val_x2)
-        if val_Result == True:
-            return val_x1
-        elif val_Result == False:
-            return val_x2
+        x_input = np.asarray([x1, x2]).T
+        #
+        # val_x1 = np.dot(x1, w) + b
+        # val_x2 = np.dot(x2, w) + b
+        #
+        # val_Result = np.greater(val_x1, val_x2)
+        # if val_Result == True:
+        #     return val_x1
+        # elif val_Result == False:
+        #     return val_x2
+
+        return x_input.dot(w) + b
 
     def backward(self):
         pass
@@ -89,6 +95,7 @@ class ReLU(tfg.Operation):
                 out = u_value
         return out
 
+    ##백워드 프로파게이션 구현 위치
     def backward(self, din):
         pass
 
@@ -111,6 +118,7 @@ class Sigmoid(tfg.Operation):
         self.out = tff.sigmoid(u_value)
         return self.out
 
+    ##백워드 프로파게이션 구현 위치
     def backward(self, din):
         pass
 
@@ -132,6 +140,7 @@ class SquaredError(tfg.Operation):
         self.inputs = [forward_final_output_value, target_value]
         return tff.squared_error(forward_final_output_value, target_value)
 
+    ##백워드 프로파게이션 구현 위치
     def backward(self, din):
         pass
 

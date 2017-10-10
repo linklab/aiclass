@@ -9,7 +9,9 @@ class Initializer(Enum):
     One = tfi.One_Initializer
     Point_One = tfi.Point_One_Initializer
     Truncated_Normal=tfi.Truncated_Normal_Initializer
+    Random = tfi.Random_Initializer
     Value_Assignment=tfi.Value_Assignment_Initializer
+
 
 
 class Optimizer(Enum):
@@ -17,5 +19,5 @@ class Optimizer(Enum):
 
 
 class Activator(Enum):
-    Sigmoid = tfl.Sigmoid,
+    Sigmoid = tfl.Sigmoid
     ReLU = tfl.ReLU

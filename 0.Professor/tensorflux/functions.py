@@ -3,7 +3,6 @@ import math
 import matplotlib.pyplot as plt
 from scipy.stats import truncnorm
 
-
 def get_truncated_normal(shape, mean=0, sd=1, low=0, upp=10):
     x = truncnorm(a=(low - mean) / sd, b=(upp - mean) / sd, loc=mean, scale=sd)
     num_elements = 1
@@ -20,6 +19,16 @@ def sigmoid(x):
 
 def squared_error(output_value, target_value):
     return 0.5 * math.pow(output_value - target_value, 2)
+
+def softmax(x):
+    if x.ndim == 2:
+        x = x.T
+        x = x - np.max(x, axis=0)
+        y = np.exp(x) / np.sum(np.exp(x), axis=0)
+        return y.T
+
+    x = x - np.max(x)
+    return np.exp(x) / np.sum(np.exp(x))
 
 
 if __name__ == "__main__":
