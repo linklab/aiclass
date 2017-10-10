@@ -275,3 +275,49 @@ class Three_Neurons_Network(Neural_Network):
         grads['b2'] = self.affine2.db
 
         return grads
+
+
+class Multi_Layer_Network(Neural_Network):
+    def __init__(self, input_size, hidden_size_list, output_size):
+        self.input_size = input_size
+        self.output_size = output_size
+        self.hidden_size_list = hidden_size_list
+        self.hidden_layer_num = len(hidden_size_list)
+
+        self.params_size_list = None
+        self.layers = OrderedDict()
+
+        self.affine0 = None
+        self.activation0 = None
+        self.affine1 = None
+        self.activation1 = None
+        self.affine2 = None
+
+        super().__init__(input_size, output_size)
+
+    def initialize_param(self, initializer=tfe.Initializer.Zero.value):
+        self.params_size_list = [self.input_size] + self.hidden_size_list + [self.output_size]
+
+        for idx in range(len(self.params_size_list) - 1):
+            self.params['W' + str(idx)] = initializer(shape=(self.params_size_list[idx], self.params_size_list[idx + 1]))
+            self.params['b' + str(idx)] = np.zeros(self.params_size_list[idx + 1])
+
+    def layering(self, activator=tfe.Activator.ReLU.value):
+        self.activator = activator
+
+        for idx in range(self.hidden_layer_num):
+            self.layers['affine' + str(idx)] = tfl.Affine(
+                self.params['W' + str(idx)], self.input_node, self.params['b' + str(idx)], name='affine' + str(idx), graph=self
+            )
+            self.layers['activation' + str(idx)] = activator(self.layers['affine' + str(idx)], name='activation' + str(idx), graph=self)
+
+        idx = self.hidden_layer_num
+        self.layers['affine' + str(idx)] = tfl.Affine(
+            self.params['W' + str(idx)], self.input_node, self.params['b' + str(idx)], name='affine' + str(idx), graph=self
+        )
+        self.output = activator(self.layers['affine' + str(idx)], name='output', graph=self)
+
+        self.last_layer = SoftmaxWithCrossEntropyLoss()
+
+
+        self.error = tfl.SquaredError(self.output, self.target_node, name="SE", graph=self)

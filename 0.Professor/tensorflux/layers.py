@@ -174,4 +174,43 @@ class SquaredError(tfg.Operation):
         return dx
 
     def __str__(self):
-        return "SquaredError:" + self.name
+        return "SquaredError: " + self.name
+
+
+class Softmax(tfg.Operation):
+    def __init__(self, u, name=None, graph=None):
+        """Construct Softmax
+
+        Args:
+          u: softmax node
+        """
+        self.inputs = None
+        self.out = None
+        super().__init__([u], name, graph)
+
+    def forward(self, u_value):
+        self.inputs = [u_value]
+        self.out = tff.sigmoid(u_value)
+        return self.out
+
+    def backward(self, din):
+        pass
+
+    def __str__(self):
+        return "Sigmoid: " + self.name
+
+
+class Softmax:
+    def __init__(self):
+        self.loss = None
+        self.y = None
+        self.t = None
+
+    def forward(self, x):
+        self.y = softmax(x)
+
+
+    def backward(self, din=1):
+        batch_size = self.t.shape[0]
+        dx = (self.y - self.t) / float(batch_size)
+        return dx
