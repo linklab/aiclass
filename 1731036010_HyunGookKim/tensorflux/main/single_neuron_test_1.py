@@ -13,10 +13,25 @@ n.initialize_scalar_param(5.0, -1.0)
 n.layering(activator=tfe.Activator.ReLU.value)
 n.set_optimizer(optimizer=tfe.Optimizer.SGD.value, learning_rate=0.01)
 
+#n.draw_and_show()
+
 data = simple_data.Simple_Function_Data()
 
-n.print_feed_forward(num_data=data.num_train_data, input_data=data.training_input, target_data=data.training_target, x=x)
-n.learning(max_epoch=3000, data=data, x=x, target=target)
-n.print_feed_forward(num_data=data.num_test_data, input_data=data.test_input, target_data=data.test_target, x=x)
+n.print_feed_forward(
+    num_data=data.num_train_data,
+    input_data=data.train_input,
+    target_data=data.train_target,
+    verbose=False
+)
+
+#n.learning(max_epoch=500, data=data, bp=False, print_period=10, verbose=False)
+n.learning(max_epoch=500, data=data, bp=True, print_period=10, verbose=False)
+
+n.print_feed_forward(
+    num_data=data.num_test_data,
+    input_data=data.test_input,
+    target_data=data.test_target,
+    verbose=False
+)
 
 #n.draw_and_show()
