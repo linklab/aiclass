@@ -188,6 +188,9 @@ class Two_Neurons_Network(Neural_Network):
         self.affine0 = None
         self.activation0 = None
         self.affine1 = None
+
+        self.layers = OrderedDict()
+
         super().__init__(input_size, output_size)
 
     def initialize_param(self, initializer=tfe.Initializer.Zero.value):
@@ -198,6 +201,12 @@ class Two_Neurons_Network(Neural_Network):
 
     def layering(self, activator=tfe.Activator.ReLU.value):
         self.activator = activator
+        self.affine0 = tfl.Affine(self.params['W0'], self.input_node, self.params['b0'], name="A0", graph=self)
+        self.activation0 = activator(self.affine0, name="O0", graph=self)
+        self.affine1 = tfl.Affine(self.params['W1'], self.activation0, self.params['b1'], name="A1", graph=self)
+        self.output = activator(self.affine1, name="O1", graph=self)
+        self.error = tfl.SquaredError(self.output, self.target_node, name="SE", graph=self)
+
         self.affine0 = tfl.Affine(self.params['W0'], self.input_node, self.params['b0'], name="A0", graph=self)
         self.activation0 = activator(self.affine0, name="O0", graph=self)
         self.affine1 = tfl.Affine(self.params['W1'], self.activation0, self.params['b1'], name="A1", graph=self)
