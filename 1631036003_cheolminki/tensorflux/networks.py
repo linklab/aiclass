@@ -52,20 +52,21 @@ class Neural_Network(tfg.Graph):
 
             # f(x + delta) 계산
             param.value = param.value + delta
-            fxh1 = session.run(self.error, feed_dict=feed_data, vervose=False)
+            fxh1 = session.run(self.error, feed_dict=feed_data, verbose=False)
 
             param.value = temp_val
 
             # f(x - delta) 계산
             param.value = param.value - delta
-            fxh2 = session.run(self.error, feed_dict=feed_data, vervose=False)
+            fxh2 = session.run(self.error, feed_dict=feed_data, verbose=False)
 
             # f(x + delta) - f(x - delta) / 2 * delta 계산
             grads[param_key] = (fxh1 - fxh2) / (2 * delta)
             param.value = temp_val
         return grads
 
-    def learning(self, max_epoch, data, x, target):
+    def learning(self, max_epoch, data, x, target, verbose=False):
+        print_epoch = 1000
         for epoch in range(max_epoch):
             sum_train_error = 0.0
             for idx in range(data.num_train_data):
@@ -74,25 +75,31 @@ class Neural_Network(tfg.Graph):
 
                 grads = self.numerical_derivative(self.session, {x: train_input_data, target: train_target_data})
                 self.optimizer.update(grads=grads)
-                sum_train_error += self.session.run(self.error, {x: train_input_data, target: train_target_data}, vervose=False)
+                sum_train_error += self.session.run(self.error, {x: train_input_data, target: train_target_data}, verbose)
 
             sum_validation_error = 0.0
             for idx in range(data.num_validation_data):
                 validation_input_data = data.validation_input[idx]
                 validation_target_data = data.validation_target[idx]
                 sum_validation_error += self.session.run(self.error,
-                                                         {x: validation_input_data, target: validation_target_data},
-                                                        vervose=False)
+                                                         {x: validation_input_data, target: validation_target_data}, verbose)
+            if epoch%print_epoch == 0:
+                print("Epoch {:3d} Completed - Average Train Error: {:7.6f} - Average Validation Error: {:7.6f}".format(
+                  epoch, sum_train_error / data.num_train_data, sum_validation_error / data.num_validation_data))
 
-            print("Epoch {:3d} Completed - Average Train Error: {:7.6f} - Average Validation Error: {:7.6f}".format(
-                epoch, sum_train_error / data.num_train_data, sum_validation_error / data.num_validation_data))
+    def get_params_str(self):
+        params_str = ""
+        for param_key, param in self.params.items():
+            params_str = params_str + param_key + ": " + str(param.value) + ", "
+        params_str = params_str[0:-2]
+        return params_str
 
-    def print_feed_forward(self, num_data, input_data, target_data, x):
+    def print_feed_forward(self, num_data, input_data, target_data, x, verbose=False):
         for idx in range(num_data):
             train_input_data = input_data[idx]
             train_target_data = target_data[idx]
 
-            output = self.session.run(self.output, {x: train_input_data}, vervose=False)
+            output = self.session.run(self.output, {x: train_input_data}, verbose)
             print("Input Data: {:>5}, Feed Forward Output: {:>6}, Target: {:>6}".format(
                 str(train_input_data), np.array2string(output), str(train_target_data)))
 
@@ -156,57 +163,31 @@ class Two_Neurons_Network(Neural_Network):
             self.add_edge(self.output, self.error)
             self.add_edge(self.error, self.target_node)
 
+
 class Three_Neurons_Network(Neural_Network):
     def __init__(self, input_size, output_size):
         super().__init__(input_size, output_size)
 
     def initialize_param(self, initializer=tfe.Initializer.Zero.value):
-        self.params['W11'] = initializer(shape=(self.input_size, self.output_size), name='W11').get_variable()
-        self.params['b11'] = initializer(shape=(self.output_size,), name='b11').get_variable()
-        self.params['W12'] = initializer(shape=(self.input_size, self.output_size), name='W12').get_variable()
-        self.params['b12'] = initializer(shape=(self.output_size,), name='b12').get_variable()
+        self.params['W0'] = initializer(shape=(self.input_size, self.output_size), name='W0').get_variable()
+        self.params['b0'] = initializer(shape=(self.output_size,), name='b0').get_variable()
 
-        self.params['W21'] = initializer(shape=(self.output_size, self.output_size), name='W21').get_variable()
-        self.params['W22'] = initializer(shape=(self.output_size, self.output_size), name='W22').get_variable()
+        self.params['W1'] = initializer(shape=(self.input_size, self.output_size), name='W1').get_variable()
+        self.params['b1'] = initializer(shape=(self.output_size,), name='b1').get_variable()
+
+        self.params['W2'] = initializer(shape=(self.input_size, self.output_size), name='W2').get_variable()
         self.params['b2'] = initializer(shape=(self.output_size,), name='b2').get_variable()
 
     def layering(self, activator=tfe.Activator.ReLU.value):
         self.activator = activator
 
-        u11 = tfl.Affine(self.params['W11'], self.input_node, self.params['b11'], name="A11")
-        o11 = activator(u11, name="O11")
+        u0 = tfl.Affine(self.params['W0'], self.input_node, self.params['b0'], name="A0", graph=self)
+        o0 = activator(u0, name="O0", graph=self)
 
-        u12 = tfl.Affine(self.params['W12'], self.input_node, self.params['b12'], name="A12")
-        o12 = activator(u12, name="O12")
+        u1 = tfl.Affine(self.params['W1'], self.input_node, self.params['b1'], name="A1", graph=self)
+        o1 = activator(u1, name="O1", graph=self)
 
-        u21 = tfl.Affine(self.params['W21'], o11, self.params['b2'], name="A21")
-        u22 = tfl.Affine(self.params['W22'], o12, self.params['b2'], name="A22")
-        u2 = u21 + u22
-        self.output = activator(u2, name="O2")
-        self.error = tfl.SquaredError(self.output, self.target_node, name="SE")
-        if isinstance(self, nx.Graph):
-            self.add_edge(self.params['W11'], u11)
-            self.add_edge(self.input_node, u11)
-            self.add_edge(self.params['b11'], u11)
-            self.add_edge(u11, o11)
+        u2 = tfl.Affine2(self.params['W2'], o0, o1, self.params['b2'], name="A2", graph=self)
+        self.output = activator(u2, name="O2", graph=self)
 
-            self.add_edge(self.params['W12'], u12)
-            self.add_edge(self.input_node, u12)
-            self.add_edge(self.params['b12'], u12)
-            self.add_edge(u12, o12)
-
-            self.add_edge(self.params['b2'], u21)
-            self.add_edge(o11, u21)
-            self.add_edge(self.params['W21'], u21)
-
-            self.add_edge(self.params['b2'], u22)
-            self.add_edge(o12, u22)
-            self.add_edge(self.params['W22'], u22)
-
-            self.add_edge(u21, u2)
-            self.add_edge(u22, u2)
-
-            self.add_edge(u2, self.output)
-            self.add_edge(self.output, self.error)
-            self.add_edge(self.error, self.target_node)
-
+        self.error = tfl.SquaredError(self.output, self.target_node, name="SE", graph=self)

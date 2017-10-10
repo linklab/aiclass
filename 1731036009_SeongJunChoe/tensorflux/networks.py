@@ -72,7 +72,7 @@ class Neural_Network(tfg.Graph):
             param.value = temp_val
         return grads
 
-    def learning(self, max_epoch, data, x, target):
+    def learning(self, max_epoch, data, x, target, verbose=False):
         for epoch in range(max_epoch):
             sum_train_error = 0.0
             for idx in range(data.num_train_data):
@@ -83,7 +83,7 @@ class Neural_Network(tfg.Graph):
                 # print(train_target_data)
                 grads = self.numerical_derivative(self.session, {x: train_input_data, target: train_target_data})
                 self.optimizer.update(grads=grads)
-                sum_train_error += self.session.run(self.error, {x: train_input_data, target: train_target_data}, vervose=False)
+                sum_train_error += self.session.run(self.error, {x: train_input_data, target: train_target_data}, verbose)
 
             sum_validation_error = 0.0
             for idx in range(data.num_validation_data):
@@ -93,8 +93,9 @@ class Neural_Network(tfg.Graph):
                                                          {x: validation_input_data, target: validation_target_data},
                                                         vervose=False)
 
-            print("Epoch {:3d} Completed - Average Train Error: {:7.6f} - Average Validation Error: {:7.6f}".format(
-                epoch, sum_train_error / data.num_train_data, sum_validation_error / data.num_validation_data))
+            if epoch % 1000 == 0:
+                print("Epoch {:3d} Completed - Average Train Error: {:7.6f} - Average Validation Error: {:7.6f}".format(
+                    epoch, sum_train_error / data.num_train_data, sum_validation_error / data.num_validation_data))
 
     def print_feed_forward(self, num_data, input_data, target_data, x):
         for idx in range(num_data):
@@ -181,12 +182,19 @@ class Three_Neurons_Network(Neural_Network):
         super().__init__(input_size, output_size)
 
     def initialize_param(self, initializer=tfe.Initializer.Zero.value):
-        self.params['W0'] = initializer(shape=(self.input_size, self.input_size), name='W0').get_variable()
-        self.params['b0'] = initializer(shape=(self.output_size,), name='b0').get_variable()
-        self.params['W1'] = initializer(shape=(self.input_size, self.input_size), name='W1').get_variable()
-        self.params['b1'] = initializer(shape=(self.output_size,), name='b1').get_variable()
+        self.params['W0'] = initializer(shape=(self.input_size, self.output_size), name='W0').get_variable()
+        self.params['b0'] = tfe.Initializer.Point_One.value(shape=(self.output_size,), name='b0').get_variable()
+        self.params['W1'] = initializer(shape=(self.input_size, self.output_size), name='W1').get_variable()
+        self.params['b1'] = tfe.Initializer.Point_One.value(shape=(self.output_size,), name='b1').get_variable()
         self.params['W2'] = initializer(shape=(self.input_size, self.output_size), name='W2').get_variable()
-        self.params['b2'] = initializer(shape=(self.output_size,), name='b2').get_variable()
+        self.params['b2'] = tfe.Initializer.Point_One.value(shape=(self.output_size,), name='b2').get_variable()
+
+        # self.params['W0'] = initializer(shape=(self.input_size, self.output_size), name='W0').get_variable()
+        # self.params['b0'] = tfe.Initializer.Point_One.value(shape=(self.output_size,), name='b0').get_variable()
+        # self.params['W1'] = initializer(shape=(self.input_size, self.output_size), name='W1').get_variable()
+        # self.params['b1'] = tfe.Initializer.Point_One.value(shape=(self.output_size,), name='b1').get_variable()
+        # self.params['W2'] = initializer(shape=(self.input_size, self.output_size), name='W2').get_variable()
+        # self.params['b2'] = tfe.Initializer.Point_One.value(shape=(self.output_size,), name='b2').get_variable()
 
     def layering(self, activator=tfe.Activator.ReLU.value):
         self.activator = activator

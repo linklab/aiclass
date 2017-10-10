@@ -109,3 +109,22 @@ class SquaredError(tfg.Operation):
 
     def __str__(self):
         return "SquaredError:" + self.name
+
+class Affine2(tfg.Operation):
+    def __init__(self, w, x1, x2, b, name=None):
+        self.inputs = None
+        super().__init__([w, x1, x2, b], name)
+
+    def forward(self, w_value, x1_value, x2_value, b_value):
+        self.inputs = [w_value, x1_value, x2_value, b_value]
+        x_input = np.asarray([x1_value, x2_value, ]).T
+
+        # return (w_value[0]*x1_value+w_value[1]*x2_value)+b_value
+        return x_input.dot(w_value) + b_value
+
+    def backward(self, w_value, x1_value, x2_value, b_value, error):
+        pass
+
+    def __str__(self):
+        return "Affine2: " + self.name
+
