@@ -2,6 +2,7 @@
 
 # Reference: http://www.deepideas.net/deep-learning-from-scratch-i-computational-graphs/
 import networkx as nx
+import numpy as np
 
 
 class Graph(nx.Graph):
@@ -50,6 +51,26 @@ class Variable:
         return self.name
 
 
+class Constant:
+    """Represents a constant.
+    """
+
+    def __init__(self, value=None, name=None):
+        """Construct Constant
+
+        Args:
+          value: this constant's value
+        """
+        self.value = value
+        self.output = None
+
+        self.consumers = []
+        self.name = name
+
+    def __str__(self):
+        return self.name
+
+
 class Operation:
     """Represents a graph node that performs a computation (forwaring operation).
 
@@ -58,7 +79,7 @@ class Operation:
     as output.
     """
 
-    def __init__(self, input_nodes=[], name=None):
+    def __init__(self, input_nodes=[], name=None, graph=None):
         """Construct Forwarding Operation
         """
         self.input_nodes = input_nodes
@@ -71,11 +92,17 @@ class Operation:
         # Append this operation to the list of consumers of all input nodes
         for input_node in input_nodes:
             input_node.consumers.append(self)
+            graph.add_edge(input_node, self)
+            graph.add_edge(input_node, self)
+            graph.add_edge(input_node, self)
 
     def forward(self):
         """Computes the output of this operation.
         "" Must be implemented by the particular operation.
         """
+        pass
+
+    def backward(self):
         pass
 
     def __str__(self):
@@ -106,6 +133,11 @@ class Add(Operation):
         self.inputs = [x_value, y_value]
         return x_value + y_value
 
+    def backward(self, d_in):
+        d_x_value = d_in * 1
+        d_y_value = d_in * 1
+        return d_x_value, d_y_value
+
 
 class Mul(Operation):
     """Returns x * y.
@@ -131,6 +163,11 @@ class Mul(Operation):
         self.inputs = [x_value, y_value]
         return x_value * y_value
 
+    def backward(self, d_in):
+        d_x_value = d_in * self.inputs[1]
+        d_y_value = d_in * self.inputs[0]
+        return d_x_value, d_y_value
+
 
 class Matmul(Operation):
     """Multiplies matrix x by matrix y, producing x * y.
@@ -155,3 +192,8 @@ class Matmul(Operation):
         """
         self.inputs = [x_value, y_value]
         return x_value.dot(y_value)
+
+    def backward(self, d_in):
+        d_x_value = np.dot(self.inputs[1].T, d_in)
+        d_y_value = np.dot(d_in, self.inputs[0].T)
+        return d_x_value, d_y_value
