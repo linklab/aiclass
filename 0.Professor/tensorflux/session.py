@@ -9,7 +9,7 @@ class Session:
     """Represents a particular execution of a computational graph.
     """
 
-    def run(self, operation, feed_dict={}, verbose=True):
+    def run(self, operation, feed_dict={}, verbose=False):
         """Computes the output of an operation
         
         Args:

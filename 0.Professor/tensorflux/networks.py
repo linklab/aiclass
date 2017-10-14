@@ -3,10 +3,12 @@ import tensorflux.graph as tfg
 import tensorflux.enums as tfe
 import tensorflux.layers as tfl
 import tensorflux.session as tfs
+import tensorflux.functions as tff
 import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
+import math
 
 
 class Neural_Network(tfg.Graph):
@@ -304,27 +306,127 @@ class Multi_Layer_Network(Neural_Network):
         self.activation1 = None
         self.affine2 = None
 
+        self.train_error_list = []
+        self.validation_error_list = []
+        self.test_accuracy_list = []
+
+
         super().__init__(input_size, output_size)
 
     def initialize_param(self, initializer=tfe.Initializer.Zero.value):
         self.params_size_list = [self.input_size] + self.hidden_size_list + [self.output_size]
 
-        for idx in range(len(self.params_size_list) - 1):
-            self.params['W' + str(idx)] = initializer(shape=(self.params_size_list[idx], self.params_size_list[idx + 1]))
-            self.params['b' + str(idx)] = np.zeros(self.params_size_list[idx + 1])
+        for idx in range(self.hidden_layer_num + 1):
+            self.params['W' + str(idx)] = initializer(
+                shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
+                name="W" + str(idx)
+            ).get_variable()
+
+            self.params['b' + str(idx)] = initializer(
+                shape=self.params_size_list[idx + 1],
+                name="b" + str(idx)
+            ).get_variable()
 
     def layering(self, activator=tfe.Activator.ReLU.value):
         self.activator = activator
 
+        input_node = self.input_node
         for idx in range(self.hidden_layer_num):
             self.layers['affine' + str(idx)] = tfl.Affine(
-                self.params['W' + str(idx)], self.input_node, self.params['b' + str(idx)], name='affine' + str(idx), graph=self
+                self.params['W' + str(idx)],
+                input_node,
+                self.params['b' + str(idx)],
+                name='affine' + str(idx),
+                graph=self
             )
-            self.layers['activation' + str(idx)] = activator(self.layers['affine' + str(idx)], name='activation' + str(idx), graph=self)
+            self.layers['activation' + str(idx)] = activator(
+                self.layers['affine' + str(idx)],
+                name='activation' + str(idx),
+                graph=self
+            )
+            input_node = self.layers['activation' + str(idx)]
 
         idx = self.hidden_layer_num
-        self.output = tfl.Affine(
-            self.params['W' + str(idx)], self.input_node, self.params['b' + str(idx)], name='affine' + str(idx), graph=self
+        self.layers['affine' + str(idx)] = tfl.Affine(
+            self.params['W' + str(idx)],
+            self.layers['activation' + str(idx - 1)],
+            self.params['b' + str(idx)],
+            name='affine' + str(idx),
+            graph=self
         )
+        self.output = self.layers['affine' + str(idx)]
 
         self.error = tfl.SoftmaxWithCrossEntropyLoss(self.output, self.target_node, name="SCEL", graph=self)
+
+    def feed_forward(self, input_data):
+        return self.session.run(self.output, {self.input_node: input_data}, verbose=False)
+
+    def backward_propagation(self):
+        grads = {}
+
+        d_error = self.error.backward(1.0)
+        din = d_error
+
+        layers = list(self.layers.values())
+        layers.reverse()
+        for layer in layers:
+            din = layer.backward(din)
+
+        for idx in range(self.hidden_layer_num + 1):
+            grads['W' + str(idx)] = self.layers['affine' + str(idx)].dw
+            grads['b' + str(idx)] = self.layers['affine' + str(idx)].db
+
+        return grads
+
+    def learning(self, max_epoch, data, batch_size=1000, print_period=10, verbose=False):
+        num_batch = math.ceil(data.num_train_data / batch_size)
+
+        for epoch in range(max_epoch):
+            for i in range(num_batch):
+                i_batch = data.train_input[i * batch_size: i * batch_size + batch_size]
+                t_batch = data.train_target[i * batch_size: i * batch_size + batch_size]
+
+                #forward
+                self.session.run(self.error,
+                                {
+                                    self.input_node: i_batch,
+                                    self.target_node: t_batch
+                                }, False)
+
+                #backward
+                grads = self.backward_propagation()
+
+                self.optimizer.update(grads=grads)
+
+            batch_mask = np.random.choice(data.num_train_data, batch_size)
+            i_batch = data.train_input[batch_mask]
+            t_batch = data.train_target[batch_mask]
+
+            train_error = self.session.run(self.error,
+                                         {
+                                             self.input_node: i_batch,
+                                             self.target_node: t_batch
+                                         }, False)
+            self.train_error_list.append(train_error)
+
+            validation_error = self.session.run(self.error,
+                                         {
+                                             self.input_node: data.validation_input,
+                                             self.target_node: data.validation_target
+                                         }, False)
+            self.validation_error_list.append(validation_error)
+
+            forward_final_output = self.feed_forward(
+                input_data=data.test_input
+            )
+
+            test_accuracy = tff.accuracy(forward_final_output, data.test_target)
+            self.test_accuracy_list.append(test_accuracy)
+
+            if epoch % print_period == 0:
+                print("Epoch {:3d} Completed - Train Error: {:7.6f} - Validation Error: {:7.6f} - Test Accuracy: {:7.6f}".format(
+                    epoch,
+                    float(train_error),
+                    float(validation_error),
+                    float(test_accuracy)
+                ))

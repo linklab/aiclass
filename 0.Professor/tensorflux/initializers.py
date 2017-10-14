@@ -58,10 +58,6 @@ class Random_Normal_Initializer(Initializer):
 
 
 class Random_Uniform_Initializer(Initializer):
-    """
-    Parameters :
-    size : tuple of ints -- Output shape.
-    """
     def initialize_param(self):
         self.param = tfg.Variable(np.random.random(size=self.shape), name=self.name)
 

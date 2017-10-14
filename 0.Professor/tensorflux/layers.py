@@ -40,7 +40,11 @@ class Affine(tfg.Operation):
             self.dw = np.dot(self.x_value.T, din)
 
         dx = np.dot(din, self.w_value.T)
-        self.db = din
+
+        if din.ndim > 1:
+            self.db = np.sum(din, axis=0)
+        else:
+            self.db = din
 
         self.dw = np.reshape(self.dw, self.w_value.shape)
         dx = np.reshape(dx, self.x_value.shape)
