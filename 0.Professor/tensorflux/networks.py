@@ -132,7 +132,7 @@ class Neural_Network(tfg.Graph):
         params_str = params_str[0:-2]
         return params_str
 
-    def get_all_param_describe(self):
+    def get_param_describe(self):
         """
         :return: starts.description
         skewness - https://ko.wikipedia.org/wiki/%EB%B9%84%EB%8C%80%EC%B9%AD%EB%8F%84
@@ -157,28 +157,6 @@ class Neural_Network(tfg.Graph):
         plt.figure(figsize=figsize)
         nx.draw_networkx(self, pos=pos, with_labels=True)
         plt.show(block=True)
-
-    def draw_error_values_and_accuracy(self, figsize=(20, 5)):
-        # Draw Error Values and Accuracy
-        plt.figure(figsize=figsize)
-
-        epoch_list = np.arange(self.max_epoch)
-
-        plt.subplot(121)
-        plt.plot(epoch_list, self.train_error_list, 'r', label='Train')
-        plt.plot(epoch_list, self.validation_error_list, 'g', label='Validation')
-        plt.ylabel('Error')
-        plt.xlabel('Epochs')
-        plt.grid(True)
-        plt.legend(loc='upper right')
-
-        plt.subplot(122)
-        plt.plot(epoch_list, self.test_accuracy_list, 'b', label='Test')
-        plt.ylabel('Accuracy')
-        plt.xlabel('Epochs')
-        plt.grid(True)
-        plt.legend(loc='lower right')
-        plt.show()
 
 
 class Single_Neuron_Network(Neural_Network):
@@ -279,7 +257,6 @@ class Three_Neurons_Network(Neural_Network):
         self.params['W2'] = initializer(shape=(self.input_size, self.output_size), name='W2').get_variable()
         self.params['b2'] = tfe.Initializer.Point_One.value(shape=(self.output_size,), name='b2').get_variable()
         print(self.get_params_str())
-
 
     def layering(self, activator=tfe.Activator.ReLU.value):
         self.activator = activator

@@ -84,28 +84,6 @@ class Deep_Neural_Network(tfg.Graph):
         nx.draw_networkx(self, pos=pos, with_labels=True)
         plt.show(block=True)
 
-    def draw_error_values_and_accuracy(self, figsize=(20, 5)):
-        # Draw Error Values and Accuracy
-        plt.figure(figsize=figsize)
-
-        epoch_list = np.arange(self.max_epoch)
-
-        plt.subplot(121)
-        plt.plot(epoch_list, self.train_error_list, 'r', label='Train')
-        plt.plot(epoch_list, self.validation_error_list, 'g', label='Validation')
-        plt.ylabel('Error')
-        plt.xlabel('Epochs')
-        plt.grid(True)
-        plt.legend(loc='upper right')
-
-        plt.subplot(122)
-        plt.plot(epoch_list, self.test_accuracy_list, 'b', label='Test')
-        plt.ylabel('Accuracy')
-        plt.xlabel('Epochs')
-        plt.grid(True)
-        plt.legend(loc='lower right')
-        plt.show()
-
 
 class Multi_Layer_Network(Deep_Neural_Network):
     def __init__(self,
@@ -126,11 +104,16 @@ class Multi_Layer_Network(Deep_Neural_Network):
         self.params_size_list = None
         self.layers = OrderedDict()
 
+        super().__init__(input_size, output_size)
+
         self.train_error_list = []
         self.validation_error_list = []
         self.test_accuracy_list = []
 
-        super().__init__(input_size, output_size)
+        self.param_mean_list = {}
+        self.param_variance_list = {}
+        self.param_skewness_list = {}
+        self.param_kurtosis_list = {}
 
         self.set_data_node(input_node, target_node)
         self.initialize_normal_random_param(mean=init_mean, sd=init_sd)
@@ -150,6 +133,16 @@ class Multi_Layer_Network(Deep_Neural_Network):
                 name="b" + str(idx)
             ).get_variable()
 
+            self.param_mean_list['W' + str(idx)] = []
+            self.param_variance_list['W' + str(idx)] = []
+            self.param_skewness_list['W' + str(idx)] = []
+            self.param_kurtosis_list['W' + str(idx)] = []
+
+            self.param_mean_list['b' + str(idx)] = []
+            self.param_variance_list['b' + str(idx)] = []
+            self.param_skewness_list['b' + str(idx)] = []
+            self.param_kurtosis_list['b' + str(idx)] = []
+
     def initialize_normal_random_param(self, mean=0.0, sd=0.1):
         self.params_size_list = [self.input_size] + self.hidden_size_list + [self.output_size]
         for idx in range(self.hidden_layer_num + 1):
@@ -166,6 +159,16 @@ class Multi_Layer_Network(Deep_Neural_Network):
                 mean=mean,
                 sd=sd
             ).get_variable()
+
+            self.param_mean_list['W' + str(idx)] = []
+            self.param_variance_list['W' + str(idx)] = []
+            self.param_skewness_list['W' + str(idx)] = []
+            self.param_kurtosis_list['W' + str(idx)] = []
+
+            self.param_mean_list['b' + str(idx)] = []
+            self.param_variance_list['b' + str(idx)] = []
+            self.param_skewness_list['b' + str(idx)] = []
+            self.param_kurtosis_list['b' + str(idx)] = []
 
     def layering(self, activator=tfe.Activator.ReLU.value):
         self.activator = activator
@@ -223,6 +226,11 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
         if verbose:
             self.draw_params_histogram()
+            for idx in range(self.hidden_layer_num + 1):
+                print('W' + str(idx) + ':', self.get_param_describe(layer_num=idx, kind="W"))
+            for idx in range(self.hidden_layer_num + 1):
+                print('b' + str(idx) + ':', self.get_param_describe(layer_num=idx, kind="b"))
+            print()
 
         num_batch = math.ceil(data.num_train_data / batch_size)
 
@@ -266,6 +274,19 @@ class Multi_Layer_Network(Deep_Neural_Network):
             test_accuracy = tff.accuracy(forward_final_output, data.test_target)
             self.test_accuracy_list.append(test_accuracy)
 
+            for idx in range(self.hidden_layer_num + 1):
+                d = self.get_param_describe(layer_num=idx, kind="W")
+                self.param_mean_list['W' + str(idx)].append(d.mean)
+                self.param_variance_list['W' + str(idx)].append(d.variance)
+                self.param_skewness_list['W' + str(idx)].append(d.skewness)
+                self.param_kurtosis_list['W' + str(idx)].append(d.kurtosis)
+
+                d = self.get_param_describe(layer_num=idx, kind="b")
+                self.param_mean_list['b' + str(idx)].append(d.mean)
+                self.param_variance_list['b' + str(idx)].append(d.variance)
+                self.param_skewness_list['b' + str(idx)].append(d.skewness)
+                self.param_kurtosis_list['b' + str(idx)].append(d.kurtosis)
+
             if epoch % print_period == 0:
                 print("Epoch {:3d} Completed - Train Error: {:7.6f} - Validation Error: {:7.6f} - Test Accuracy: {:7.6f}".format(
                     epoch,
@@ -276,6 +297,10 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
                 if verbose:
                     self.draw_params_histogram()
+                    for idx in range(self.hidden_layer_num + 1):
+                        print('W' + str(idx) + ':', self.get_param_describe(layer_num=idx, kind="W"))
+                    for idx in range(self.hidden_layer_num + 1):
+                        print('b' + str(idx) + ':', self.get_param_describe(layer_num=idx, kind="b"))
                     print()
 
     def draw_params_histogram(self):
@@ -294,30 +319,132 @@ class Multi_Layer_Network(Deep_Neural_Network):
         f.subplots_adjust(wspace=0.5)
         plt.show()
 
-    def draw_false_prediction(self, test_input, test_target, num=5, figsize=(20, 5)):
+    def draw_error_values_and_accuracy(self, figsize=(20, 5)):
+        # Draw Error Values and Accuracy
+        plt.figure(figsize=figsize)
+
+        epoch_list = np.arange(self.max_epoch)
+
+        plt.subplot(121)
+        plt.plot(epoch_list, self.train_error_list, 'r', label='Train')
+        plt.plot(epoch_list, self.validation_error_list, 'g', label='Validation')
+        plt.ylabel('Error')
+        plt.xlabel('Epochs')
+        plt.grid(True)
+        plt.legend(loc='lower left')
+
+        plt.subplot(122)
+        plt.plot(epoch_list, self.test_accuracy_list, 'b', label='Test')
+        plt.ylabel('Accuracy')
+        plt.xlabel('Epochs')
+        plt.grid(True)
+        plt.legend(loc='lower left')
+        plt.show()
+
+    def draw_param_description(self, figsize=(20, 5)):
+        # Draw Error Values and Accuracy
+        plt.figure(figsize=figsize)
+
+        epoch_list = np.arange(self.max_epoch)
+
+        color_dic = {
+            0: 'r',
+            1: 'b',
+            2: 'g',
+        }
+
+        plt.subplot(241)
+        for idx in range(self.hidden_layer_num + 1):
+            plt.plot(epoch_list, self.param_mean_list['W' + str(idx)], color_dic[idx], label='W' + str(idx))
+        plt.ylabel('Mean')
+        plt.xlabel('Epochs')
+        plt.grid(True)
+        plt.legend(loc='lower left')
+
+        plt.subplot(242)
+        for idx in range(self.hidden_layer_num + 1):
+            plt.plot(epoch_list, self.param_variance_list['W' + str(idx)], color_dic[idx], label='W' + str(idx))
+        plt.ylabel('Variance')
+        plt.xlabel('Epochs')
+        plt.grid(True)
+        plt.legend(loc='lower left')
+        
+        plt.subplot(243)
+        for idx in range(self.hidden_layer_num + 1):
+            plt.plot(epoch_list, self.param_skewness_list['W' + str(idx)], color_dic[idx], label='W' + str(idx))
+        plt.ylabel('Skewness')
+        plt.xlabel('Epochs')
+        plt.grid(True)
+        plt.legend(loc='lower left')
+        
+        plt.subplot(244)
+        for idx in range(self.hidden_layer_num + 1):
+            plt.plot(epoch_list, self.param_kurtosis_list['W' + str(idx)], color_dic[idx], label='W' + str(idx))
+        plt.ylabel('Kurtosis')
+        plt.xlabel('Epochs')
+        plt.grid(True)
+        plt.legend(loc='lower left')
+
+        plt.subplot(245)
+        for idx in range(self.hidden_layer_num + 1):
+            plt.plot(epoch_list, self.param_mean_list['b' + str(idx)], color_dic[idx], label='b' + str(idx))
+        plt.ylabel('Mean')
+        plt.xlabel('Epochs')
+        plt.grid(True)
+        plt.legend(loc='lower left')
+
+        plt.subplot(246)
+        for idx in range(self.hidden_layer_num + 1):
+            plt.plot(epoch_list, self.param_variance_list['b' + str(idx)], color_dic[idx], label='b' + str(idx))
+        plt.ylabel('Variance')
+        plt.xlabel('Epochs')
+        plt.grid(True)
+        plt.legend(loc='lower left')
+
+        plt.subplot(247)
+        for idx in range(self.hidden_layer_num + 1):
+            plt.plot(epoch_list, self.param_skewness_list['b' + str(idx)], color_dic[idx], label='b' + str(idx))
+        plt.ylabel('Skewness')
+        plt.xlabel('Epochs')
+        plt.grid(True)
+        plt.legend(loc='lower left')
+
+        plt.subplot(248)
+        for idx in range(self.hidden_layer_num + 1):
+            plt.plot(epoch_list, self.param_kurtosis_list['b' + str(idx)], color_dic[idx], label='b' + str(idx))
+        plt.ylabel('Kurtosis')
+        plt.xlabel('Epochs')
+        plt.grid(True)
+        plt.legend(loc='lower left')
+
+        plt.show()
+
+    def draw_false_prediction(self, test_input, test_target, labels, num=5, figsize=(20, 5)):
         forward_final_output = self.feed_forward(input_data=test_input)
         y = np.argmax(forward_final_output, axis=1)
         target = np.argmax(test_target, axis=1)
 
         diff_index_list = []
-        for i in range(test_input):
+        for i in range(len(test_input)):
             if y[i] != target[i]:
                 diff_index_list.append(i)
         plt.figure(figsize=figsize)
 
         for i in range(num):
             j = diff_index_list[i]
-            print("False Prediction Index: %s, Prediction: %s, Ground Truth: %s" % (j, y[j], target[j]))
+            print("False Prediction Index: {:d}, Prediction: {:s}, Ground Truth: {:s}".format(j, labels[y[j]], labels[target[j]]))
             img = np.array(test_input[j])
             img.shape = (28, 28)
             plt.subplot(150 + (i + 1))
             plt.imshow(img, cmap='gray')
 
+        plt.show()
+
     def get_param_describe(self, layer_num=0, kind="W"):
         assert layer_num <= self.hidden_layer_num
 
         if kind == "W":
-            param_flatten_list = self.params['affine' + str(layer_num)].w_value.flatten()
+            param_flatten_list = self.params['W' + str(layer_num)].value.flatten()
         else:
-            param_flatten_list = self.params['affine' + str(layer_num)].b_value.flatten()
+            param_flatten_list = self.params['b' + str(layer_num)].value.flatten()
         return stats.describe(np.array(param_flatten_list))

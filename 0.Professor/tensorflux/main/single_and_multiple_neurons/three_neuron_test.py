@@ -12,7 +12,7 @@ target = tfg.Placeholder(name="target")
 
 n.set_data(x, target)
 n.initialize_param(initializer=tfe.Initializer.Uniform.value)
-start_param_description = n.get_all_param_describe()
+start_param_description = n.get_param_describe()
 
 while not (start_param_description.variance > 0.17 and 0.0 < start_param_description.mean - 0.5 < 0.05):
     print("Start Param Variance: {:f}, Start Param Mean: {:f} --> Re-initialize".format(
@@ -20,7 +20,7 @@ while not (start_param_description.variance > 0.17 and 0.0 < start_param_descrip
         start_param_description.mean
     ))
     n.initialize_param(initializer=tfe.Initializer.Uniform.value)
-    start_param_description = n.get_all_param_describe()
+    start_param_description = n.get_param_describe()
 
 n.layering(activator=tfe.Activator.ReLU.value)
 n.set_optimizer(optimizer=tfe.Optimizer.SGD.value, learning_rate=0.05)
