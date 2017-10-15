@@ -4,11 +4,13 @@ import tensorflux.enums as tfe
 import tensorflux.layers as tfl
 import tensorflux.session as tfs
 import tensorflux.functions as tff
+import tensorflux.initializers as tfi
 import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
 import math
+from networkx.drawing.nx_agraph import graphviz_layout
 
 
 class Neural_Network(tfg.Graph):
@@ -27,6 +29,7 @@ class Neural_Network(tfg.Graph):
 
         self.output = None
         self.error = None
+        self.max_epoch = None
 
         self.session = tfs.Session()
         super().__init__()
@@ -69,6 +72,7 @@ class Neural_Network(tfg.Graph):
         return grads
 
     def learning(self, max_epoch, data, bp=True, print_period=10, verbose=False):
+        self.max_epoch = max_epoch
         for epoch in range(max_epoch):
             if verbose and epoch % print_period == 0:
                 print()
@@ -128,16 +132,16 @@ class Neural_Network(tfg.Graph):
         params_str = params_str[0:-2]
         return params_str
 
-    def get_param_describe(self):
+    def get_all_param_describe(self):
         """
         :return: starts.description
         skewness - https://ko.wikipedia.org/wiki/%EB%B9%84%EB%8C%80%EC%B9%AD%EB%8F%84
         kurtosis - https://ko.wikipedia.org/wiki/%EC%B2%A8%EB%8F%84
         """
-        param_flatten_list = []
+        all_param_flatten_list = []
         for param in self.params.values():
-            param_flatten_list.extend([item for item in param.value.flatten()])
-        return stats.describe(np.array(param_flatten_list))
+            all_param_flatten_list.extend([item for item in param.value.flatten()])
+        return stats.describe(np.array(all_param_flatten_list))
 
     def print_feed_forward(self, num_data, input_data, target_data, verbose=False):
         for idx in range(num_data):
@@ -148,9 +152,33 @@ class Neural_Network(tfg.Graph):
             print("Input Data: {:>5}, Feed Forward Output: {:>6}, Target: {:>6}".format(
                 str(train_input_data), np.array2string(output), str(train_target_data)))
 
-    def draw_and_show(self):
-        nx.draw_networkx(self, with_labels=True)
+    def draw_and_show(self, figsize=(8, 8)):
+        pos = graphviz_layout(self)
+        plt.figure(figsize=figsize)
+        nx.draw_networkx(self, pos=pos, with_labels=True)
         plt.show(block=True)
+
+    def draw_error_values_and_accuracy(self, figsize=(20, 5)):
+        # Draw Error Values and Accuracy
+        plt.figure(figsize=figsize)
+
+        epoch_list = np.arange(self.max_epoch)
+
+        plt.subplot(121)
+        plt.plot(epoch_list, self.train_error_list, 'r', label='Train')
+        plt.plot(epoch_list, self.validation_error_list, 'g', label='Validation')
+        plt.ylabel('Error')
+        plt.xlabel('Epochs')
+        plt.grid(True)
+        plt.legend(loc='upper right')
+
+        plt.subplot(122)
+        plt.plot(epoch_list, self.test_accuracy_list, 'b', label='Test')
+        plt.ylabel('Accuracy')
+        plt.xlabel('Epochs')
+        plt.grid(True)
+        plt.legend(loc='lower right')
+        plt.show()
 
 
 class Single_Neuron_Network(Neural_Network):
@@ -288,145 +316,3 @@ class Three_Neurons_Network(Neural_Network):
         grads['b2'] = self.affine2.db
 
         return grads
-
-
-class Multi_Layer_Network(Neural_Network):
-    def __init__(self, input_size, hidden_size_list, output_size):
-        self.input_size = input_size
-        self.output_size = output_size
-        self.hidden_size_list = hidden_size_list
-        self.hidden_layer_num = len(hidden_size_list)
-
-        self.params_size_list = None
-        self.layers = OrderedDict()
-
-        self.affine0 = None
-        self.activation0 = None
-        self.affine1 = None
-        self.activation1 = None
-        self.affine2 = None
-
-        self.train_error_list = []
-        self.validation_error_list = []
-        self.test_accuracy_list = []
-
-
-        super().__init__(input_size, output_size)
-
-    def initialize_param(self, initializer=tfe.Initializer.Zero.value):
-        self.params_size_list = [self.input_size] + self.hidden_size_list + [self.output_size]
-
-        for idx in range(self.hidden_layer_num + 1):
-            self.params['W' + str(idx)] = initializer(
-                shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
-                name="W" + str(idx)
-            ).get_variable()
-
-            self.params['b' + str(idx)] = initializer(
-                shape=self.params_size_list[idx + 1],
-                name="b" + str(idx)
-            ).get_variable()
-
-    def layering(self, activator=tfe.Activator.ReLU.value):
-        self.activator = activator
-
-        input_node = self.input_node
-        for idx in range(self.hidden_layer_num):
-            self.layers['affine' + str(idx)] = tfl.Affine(
-                self.params['W' + str(idx)],
-                input_node,
-                self.params['b' + str(idx)],
-                name='affine' + str(idx),
-                graph=self
-            )
-            self.layers['activation' + str(idx)] = activator(
-                self.layers['affine' + str(idx)],
-                name='activation' + str(idx),
-                graph=self
-            )
-            input_node = self.layers['activation' + str(idx)]
-
-        idx = self.hidden_layer_num
-        self.layers['affine' + str(idx)] = tfl.Affine(
-            self.params['W' + str(idx)],
-            self.layers['activation' + str(idx - 1)],
-            self.params['b' + str(idx)],
-            name='affine' + str(idx),
-            graph=self
-        )
-        self.output = self.layers['affine' + str(idx)]
-
-        self.error = tfl.SoftmaxWithCrossEntropyLoss(self.output, self.target_node, name="SCEL", graph=self)
-
-    def feed_forward(self, input_data):
-        return self.session.run(self.output, {self.input_node: input_data}, verbose=False)
-
-    def backward_propagation(self):
-        grads = {}
-
-        d_error = self.error.backward(1.0)
-        din = d_error
-
-        layers = list(self.layers.values())
-        layers.reverse()
-        for layer in layers:
-            din = layer.backward(din)
-
-        for idx in range(self.hidden_layer_num + 1):
-            grads['W' + str(idx)] = self.layers['affine' + str(idx)].dw
-            grads['b' + str(idx)] = self.layers['affine' + str(idx)].db
-
-        return grads
-
-    def learning(self, max_epoch, data, batch_size=1000, print_period=10, verbose=False):
-        num_batch = math.ceil(data.num_train_data / batch_size)
-
-        for epoch in range(max_epoch):
-            for i in range(num_batch):
-                i_batch = data.train_input[i * batch_size: i * batch_size + batch_size]
-                t_batch = data.train_target[i * batch_size: i * batch_size + batch_size]
-
-                #forward
-                self.session.run(self.error,
-                                {
-                                    self.input_node: i_batch,
-                                    self.target_node: t_batch
-                                }, False)
-
-                #backward
-                grads = self.backward_propagation()
-
-                self.optimizer.update(grads=grads)
-
-            batch_mask = np.random.choice(data.num_train_data, batch_size)
-            i_batch = data.train_input[batch_mask]
-            t_batch = data.train_target[batch_mask]
-
-            train_error = self.session.run(self.error,
-                                         {
-                                             self.input_node: i_batch,
-                                             self.target_node: t_batch
-                                         }, False)
-            self.train_error_list.append(train_error)
-
-            validation_error = self.session.run(self.error,
-                                         {
-                                             self.input_node: data.validation_input,
-                                             self.target_node: data.validation_target
-                                         }, False)
-            self.validation_error_list.append(validation_error)
-
-            forward_final_output = self.feed_forward(
-                input_data=data.test_input
-            )
-
-            test_accuracy = tff.accuracy(forward_final_output, data.test_target)
-            self.test_accuracy_list.append(test_accuracy)
-
-            if epoch % print_period == 0:
-                print("Epoch {:3d} Completed - Train Error: {:7.6f} - Validation Error: {:7.6f} - Test Accuracy: {:7.6f}".format(
-                    epoch,
-                    float(train_error),
-                    float(validation_error),
-                    float(test_accuracy)
-                ))

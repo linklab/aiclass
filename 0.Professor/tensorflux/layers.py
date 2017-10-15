@@ -34,21 +34,25 @@ class Affine(tfg.Operation):
         return np.dot(x_value, w_value) + b_value  # [Note] Matmul Order
 
     def backward(self, din):
-        if type(din) == np.ndarray and self.x_value.size == 2 and din.size == 1:
-            self.dw = np.dot(self.x_value.T, np.asscalar(din))
-        else:
-            self.dw = np.dot(self.x_value.T, din)
-
         dx = np.dot(din, self.w_value.T)
+        self.dw = np.dot(self.x_value.T, din)
+        self.db = np.sum(din, axis=0)
 
-        if din.ndim > 1:
-            self.db = np.sum(din, axis=0)
-        else:
-            self.db = din
-
-        self.dw = np.reshape(self.dw, self.w_value.shape)
-        dx = np.reshape(dx, self.x_value.shape)
-        self.db = np.reshape(self.db, self.b_value.shape)
+        # if type(din) == np.ndarray and self.x_value.size == 2 and din.size == 1:
+        #     self.dw = np.dot(self.x_value.T, np.asscalar(din))
+        # else:
+        #     self.dw = np.dot(self.x_value.T, din)
+        #
+        # dx = np.dot(din, self.w_value.T)
+        #
+        # if din.ndim > 1:
+        #     self.db = np.sum(din, axis=0)
+        # else:
+        #     self.db = din
+        #
+        # self.dw = np.reshape(self.dw, self.w_value.shape)
+        # dx = np.reshape(dx, self.x_value.shape)
+        # self.db = np.reshape(self.db, self.b_value.shape)
 
         return dx
 
@@ -199,13 +203,11 @@ class SoftmaxWithCrossEntropyLoss(tfg.Operation):
         Args:
           output: output node
         """
-        self.forward_final_output_value = None  # forward_final_output_value
         self.target_value = None  # target_value
         self.y = None
         super().__init__([forward_final_output, target], name, graph)
 
     def forward(self, forward_final_output_value, target_value):
-        self.forward_final_output_value = forward_final_output_value
         self.target_value = target_value
         self.y = tff.softmax(forward_final_output_value)
         loss = tff.cross_entropy_error(self.y, self.target_value)

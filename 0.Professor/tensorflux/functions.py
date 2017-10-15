@@ -33,6 +33,7 @@ def softmax(x):
 
 
 def cross_entropy_error(y, t):
+    y[y == 0] = 1e-15
     if y.ndim == 1 and t.ndim == 1:
         t = t.reshape(1, t.size)
         y = y.reshape(1, y.size)
