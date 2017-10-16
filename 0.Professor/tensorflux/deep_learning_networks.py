@@ -224,17 +224,11 @@ class Multi_Layer_Network(Deep_Neural_Network):
     def learning(self, max_epoch, data, batch_size=1000, print_period=10, verbose=False):
         self.max_epoch = max_epoch
 
-        if verbose:
-            self.draw_params_histogram()
-            for idx in range(self.hidden_layer_num + 1):
-                print('W' + str(idx) + ':', self.get_param_describe(layer_num=idx, kind="W"))
-            for idx in range(self.hidden_layer_num + 1):
-                print('b' + str(idx) + ':', self.get_param_describe(layer_num=idx, kind="b"))
-            print()
+        self.set_learning_process_parameters(data, batch_size, 0, print_period, verbose)
 
         num_batch = math.ceil(data.num_train_data / batch_size)
 
-        for epoch in range(max_epoch):
+        for epoch in range(1, max_epoch + 1):
             for i in range(num_batch):
                 i_batch = data.train_input[i * batch_size: i * batch_size + batch_size]
                 t_batch = data.train_target[i * batch_size: i * batch_size + batch_size]
@@ -251,57 +245,89 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
                 self.optimizer.update(grads=grads)
 
-            batch_mask = np.random.choice(data.num_train_data, batch_size)
-            i_batch = data.train_input[batch_mask]
-            t_batch = data.train_target[batch_mask]
+            self.set_learning_process_parameters(data, batch_size, epoch, print_period, verbose)
 
-            train_error = self.session.run(self.error,
-                                         {
-                                             self.input_node: i_batch,
-                                             self.target_node: t_batch
-                                         }, False)
-            self.train_error_list.append(train_error)
+    def set_learning_process_parameters(self, data, batch_size, epoch, print_period, verbose):
+        batch_mask = np.random.choice(data.num_train_data, batch_size)
+        i_batch = data.train_input[batch_mask]
+        t_batch = data.train_target[batch_mask]
 
-            validation_error = self.session.run(self.error,
-                                         {
-                                             self.input_node: data.validation_input,
-                                             self.target_node: data.validation_target
-                                         }, False)
-            self.validation_error_list.append(validation_error)
+        train_error = self.session.run(self.error,
+                                       {
+                                           self.input_node: i_batch,
+                                           self.target_node: t_batch
+                                       }, False)
+        self.train_error_list.append(train_error)
 
-            forward_final_output = self.feed_forward(input_data=data.test_input)
+        validation_error = self.session.run(self.error,
+                                            {
+                                                self.input_node: data.validation_input,
+                                                self.target_node: data.validation_target
+                                            }, False)
+        self.validation_error_list.append(validation_error)
 
-            test_accuracy = tff.accuracy(forward_final_output, data.test_target)
-            self.test_accuracy_list.append(test_accuracy)
+        forward_final_output = self.feed_forward(input_data=data.test_input)
 
-            for idx in range(self.hidden_layer_num + 1):
-                d = self.get_param_describe(layer_num=idx, kind="W")
-                self.param_mean_list['W' + str(idx)].append(d.mean)
-                self.param_variance_list['W' + str(idx)].append(d.variance)
-                self.param_skewness_list['W' + str(idx)].append(d.skewness)
-                self.param_kurtosis_list['W' + str(idx)].append(d.kurtosis)
+        test_accuracy = tff.accuracy(forward_final_output, data.test_target)
+        self.test_accuracy_list.append(test_accuracy)
 
-                d = self.get_param_describe(layer_num=idx, kind="b")
-                self.param_mean_list['b' + str(idx)].append(d.mean)
-                self.param_variance_list['b' + str(idx)].append(d.variance)
-                self.param_skewness_list['b' + str(idx)].append(d.skewness)
-                self.param_kurtosis_list['b' + str(idx)].append(d.kurtosis)
+        for idx in range(self.hidden_layer_num + 1):
+            d = self.get_param_describe(layer_num=idx, kind="W")
+            self.param_mean_list['W' + str(idx)].append(d.mean)
+            self.param_variance_list['W' + str(idx)].append(d.variance)
+            self.param_skewness_list['W' + str(idx)].append(d.skewness)
+            self.param_kurtosis_list['W' + str(idx)].append(d.kurtosis)
 
-            if epoch % print_period == 0:
-                print("Epoch {:3d} Completed - Train Error: {:7.6f} - Validation Error: {:7.6f} - Test Accuracy: {:7.6f}".format(
+            d = self.get_param_describe(layer_num=idx, kind="b")
+            self.param_mean_list['b' + str(idx)].append(d.mean)
+            self.param_variance_list['b' + str(idx)].append(d.variance)
+            self.param_skewness_list['b' + str(idx)].append(d.skewness)
+            self.param_kurtosis_list['b' + str(idx)].append(d.kurtosis)
+
+        if epoch % print_period == 0:
+            print(
+                "Epoch {:3d} Completed - Train Error: {:7.6f} - Validation Error: {:7.6f} - Test Accuracy: {:7.6f}".format(
                     epoch,
                     float(train_error),
                     float(validation_error),
                     float(test_accuracy)
                 ))
 
-                if verbose:
-                    self.draw_params_histogram()
-                    for idx in range(self.hidden_layer_num + 1):
-                        print('W' + str(idx) + ':', self.get_param_describe(layer_num=idx, kind="W"))
-                    for idx in range(self.hidden_layer_num + 1):
-                        print('b' + str(idx) + ':', self.get_param_describe(layer_num=idx, kind="b"))
-                    print()
+            if verbose:
+                self.draw_params_histogram()
+                for idx in range(self.hidden_layer_num + 1):
+                    desc_obj = self.get_param_describe(layer_num=idx, kind="W")
+                    num = "{:10d}".format(desc_obj.nobs)
+                    min = "{:5.4f}".format(desc_obj.minmax[0])
+                    max = "{:5.4f}".format(desc_obj.minmax[1])
+                    mean = "{:5.4f}".format(desc_obj.mean)
+                    variance = "{:5.4f}".format(desc_obj.variance)
+                    skewness = "{:5.4f}".format(desc_obj.skewness)
+                    kurtosis = "{:5.4f}".format(desc_obj.kurtosis)
+
+                    print('W' + str(idx) + '-',
+                          "num:{:10s}, min:{:5s}, max:{:5s}, mean:{:5s}, variance:{:5s}, skewness:{:5s}, kurtosis:{:5s}".format(
+                              num, min, max, mean, variance, skewness, kurtosis
+                          )
+                    )
+
+                for idx in range(self.hidden_layer_num + 1):
+                    desc_obj = self.get_param_describe(layer_num=idx, kind="b")
+                    num = "{:10d}".format(desc_obj.nobs)
+                    min = "{:5.4f}".format(desc_obj.minmax[0])
+                    max = "{:5.4f}".format(desc_obj.minmax[1])
+                    mean = "{:5.4f}".format(desc_obj.mean)
+                    variance = "{:5.4f}".format(desc_obj.variance)
+                    skewness = "{:5.4f}".format(desc_obj.skewness)
+                    kurtosis = "{:5.4f}".format(desc_obj.kurtosis)
+
+                    print('b' + str(idx) + '-',
+                          "num:{:10s}, min:{:5s}, max:{:5s}, mean:{:5s}, variance:{:5s}, skewness:{:5s}, kurtosis:{:5s}".format(
+                              num, min, max, mean, variance, skewness, kurtosis
+                          )
+                    )
+
+                print()
 
     def draw_params_histogram(self):
         f, axarr = plt.subplots(1, (self.hidden_layer_num + 1) * 2, figsize=(10 * (self.hidden_layer_num + 1), 5))
@@ -323,7 +349,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
         # Draw Error Values and Accuracy
         plt.figure(figsize=figsize)
 
-        epoch_list = np.arange(self.max_epoch)
+        epoch_list = np.arange(self.max_epoch + 1)
 
         plt.subplot(121)
         plt.plot(epoch_list, self.train_error_list, 'r', label='Train')
@@ -345,7 +371,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
         # Draw Error Values and Accuracy
         plt.figure(figsize=figsize)
 
-        epoch_list = np.arange(self.max_epoch)
+        epoch_list = np.arange(self.max_epoch + 1)
 
         color_dic = {
             0: 'r',
@@ -447,4 +473,5 @@ class Multi_Layer_Network(Deep_Neural_Network):
             param_flatten_list = self.params['W' + str(layer_num)].value.flatten()
         else:
             param_flatten_list = self.params['b' + str(layer_num)].value.flatten()
+
         return stats.describe(np.array(param_flatten_list))
