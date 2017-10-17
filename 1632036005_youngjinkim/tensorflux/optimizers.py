@@ -1,6 +1,9 @@
 # -*- coding:utf-8 -*-
-import math
+import sys
 import numpy as np
+
+import numba
+from numba import jit, float32, int32, void, cuda
 
 
 class SGD:
@@ -8,6 +11,7 @@ class SGD:
         self.learning_rate = learning_rate
         self.params = None
 
+    @jit
     def update(self, grads):
         for key in self.params.keys():
             self.params[key].value = self.params[key].value - self.learning_rate * grads[key]
