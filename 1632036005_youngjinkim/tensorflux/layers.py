@@ -4,6 +4,9 @@ import sys
 import numpy as np
 import tensorflux.functions as tff
 
+import numba
+from numba import jit, float32, int32, void, cuda
+
 
 class Affine(tfg.Operation):
     """Returns w * x + b.
@@ -14,33 +17,47 @@ class Affine(tfg.Operation):
         Args:
           x: Weight node, y: Input node, b: Bias node
         """
-        self.inputs = None
+        self.w_value = None
+        self.x_value = None
+        self.b_value = None
         self.dw = None
         self.db = None
         super().__init__([w, x, b], name, graph)
 
+    @jit
     def forward(self, w_value, x_value, b_value):
         """Compute the output of the add operation
 
         Args:
           x_value: Weight value, y_value: Input value, b_value: Bias value
         """
-        self.inputs = [w_value, x_value, b_value]
+        self.w_value = w_value
+        self.x_value = x_value
+        self.b_value = b_value
         # return np.matmul(x_value, w_value) + b_value # [Note] Matmul Order
         return np.dot(x_value, w_value) + b_value  # [Note] Matmul Order
 
+    @jit
     def backward(self, din):
-        if type(din) == np.ndarray and self.inputs[1].size == 2 and din.size == 1:
-            self.dw = np.dot(self.inputs[1].T, np.asscalar(din))
-        else:
-            self.dw = np.dot(self.inputs[1].T, din)
+        dx = np.dot(din, self.w_value.T)
+        self.dw = np.dot(self.x_value.T, din)
+        self.db = np.sum(din, axis=0)
 
-        dx = np.dot(din, self.inputs[0].T)
-        self.db = din
-
-        self.dw = np.reshape(self.dw, self.inputs[0].shape)
-        dx = np.reshape(dx, self.inputs[1].shape)
-        self.db = np.reshape(self.db, self.inputs[2].shape)
+        # if type(din) == np.ndarray and self.x_value.size == 2 and din.size == 1:
+        #     self.dw = np.dot(self.x_value.T, np.asscalar(din))
+        # else:
+        #     self.dw = np.dot(self.x_value.T, din)
+        #
+        # dx = np.dot(din, self.w_value.T)
+        #
+        # if din.ndim > 1:
+        #     self.db = np.sum(din, axis=0)
+        # else:
+        #     self.db = din
+        #
+        # self.dw = np.reshape(self.dw, self.w_value.shape)
+        # dx = np.reshape(dx, self.x_value.shape)
+        # self.db = np.reshape(self.db, self.b_value.shape)
 
         return dx
 
@@ -57,32 +74,38 @@ class Affine2(tfg.Operation):
         Args:
           x: Weight node, y: Input node, b: Bias node
         """
-        self.inputs = None
+        self.w_value = None
+        self.x_value = None
+        self.b_value = None
+
         self.dw = None
         self.db = None
         super().__init__([w, x1, x2, b], name, graph)
 
+    @jit
     def forward(self, w_value, x1_value, x2_value, b_value):
         """Compute the output of the add operation
 
         Args:
           x_value: Weight value, y_value: Input value, b_value: Bias value
         """
-        self.inputs = [w_value, x1_value, x2_value, b_value]
 
-        x_input = np.asarray([x1_value, x2_value]).T
+        self.w_value = w_value
+        self.x_value = np.asarray([x1_value, x2_value]).T
+        self.b_value = b_value
+
         # return np.matmul(x_value, w_value) + b_value # [Note] Matmul Order
-        return x_input.dot(w_value) + b_value  # [Note] Matmul Order
+        return np.dot(self.x_value, self.w_value) + self.b_value  # [Note] Matmul Order
 
+    @jit
     def backward(self, din):
-        inputs = np.array([self.inputs[1], self.inputs[2]])
-        self.dw = np.dot(inputs, np.asscalar(din))
-        dx = np.dot(din, self.inputs[0].T)
+        self.dw = np.dot(self.x_value, np.asscalar(din))
+        dx = np.dot(din, self.w_value.T)
         self.db = din
 
-        self.dw = np.reshape(self.dw, self.inputs[0].shape)
-        dx = np.reshape(dx, (1, 2))
-        self.db = np.reshape(self.db, self.inputs[3].shape)
+        self.dw = np.reshape(self.dw, self.w_value.shape)
+        dx = np.reshape(dx, self.x_value.shape)
+        self.db = np.reshape(self.db, self.b_value.shape)
 
         return dx
 
@@ -97,13 +120,14 @@ class ReLU(tfg.Operation):
         Args:
           u: affine node
         """
-        self.inputs = None
+        self.u_value = None
 
         self.mask = None
         super().__init__([u], name, graph)
 
+    @jit
     def forward(self, u_value):
-        self.inputs = [u_value]
+        self.u_value = u_value
 
         if type(u_value) == np.ndarray:
             self.mask = (u_value <= 0.0)
@@ -116,12 +140,13 @@ class ReLU(tfg.Operation):
                 out = u_value
         return out
 
+    @jit
     def backward(self, din):
         if type(din) == np.ndarray:
             dx = din.copy()
             dx[self.mask] = 0.0
         else:
-            if self.inputs[0] <= 0.0:
+            if self.u_value <= 0.0:
                 dx = 0.0
             else:
                 dx = din
@@ -138,18 +163,21 @@ class Sigmoid(tfg.Operation):
         Args:
           u: affine node
         """
-        self.inputs = None
+        self.u_value = None
 
         self.out = None
         super().__init__([u], name, graph)
 
+    @jit
     def forward(self, u_value):
-        self.inputs = [u_value]
+        self.u_value = u_value
         self.out = tff.sigmoid(u_value)
         return self.out
 
+    @jit
     def backward(self, din):
-        pass
+        dx = din * self.out * (1.0 - self.out)
+        return dx
 
     def __str__(self):
         return "Sigmoid: " + self.name
@@ -162,55 +190,48 @@ class SquaredError(tfg.Operation):
         Args:
           output: output node
         """
-        self.inputs = None
+        self.forward_final_output_value = None  # forward_final_output_value
+        self.target_value = None  # target_value
         super().__init__([forward_final_output, target], name, graph)
 
+    @jit
     def forward(self, forward_final_output_value, target_value):
-        self.inputs = [forward_final_output_value, target_value]
+        self.forward_final_output_value = forward_final_output_value
+        self.target_value = target_value
         return tff.squared_error(forward_final_output_value, target_value)
 
+    @jit
     def backward(self, din):
-        dx = (self.inputs[0] - self.inputs[1]) * din
+        dx = (self.forward_final_output_value - self.target_value) * din
         return dx
 
     def __str__(self):
         return "SquaredError: " + self.name
 
 
-class Softmax(tfg.Operation):
-    def __init__(self, u, name=None, graph=None):
-        """Construct Softmax
+class SoftmaxWithCrossEntropyLoss(tfg.Operation):
+    def __init__(self, forward_final_output, target, name=None, graph=None):
+        """Construct SquaredError
 
         Args:
-          u: softmax node
+          output: output node
         """
-        self.inputs = None
-        self.out = None
-        super().__init__([u], name, graph)
+        self.target_value = None  # target_value
+        self.y = None
+        super().__init__([forward_final_output, target], name, graph)
 
-    def forward(self, u_value):
-        self.inputs = [u_value]
-        self.out = tff.sigmoid(u_value)
-        return self.out
+    @jit
+    def forward(self, forward_final_output_value, target_value):
+        self.target_value = target_value
+        self.y = tff.softmax(forward_final_output_value)
+        loss = tff.cross_entropy_error(self.y, self.target_value)
+        return loss
 
-    def backward(self, din):
-        pass
+    @jit
+    def backward(self, din=1):
+        batch_size = self.target_value.shape[0]
+        dx = (self.y - self.target_value) / float(batch_size)
+        return dx
 
     def __str__(self):
-        return "Sigmoid: " + self.name
-
-
-class Softmax:
-    def __init__(self):
-        self.loss = None
-        self.y = None
-        self.t = None
-
-    def forward(self, x):
-        self.y = softmax(x)
-
-
-    def backward(self, din=1):
-        batch_size = self.t.shape[0]
-        dx = (self.y - self.t) / float(batch_size)
-        return dx
+        return "SoftmaxWithCrossEntropyLoss: " + self.name
