@@ -53,15 +53,16 @@ class Random_Normal_Initializer(Initializer):
     scale : float -- Standard deviation (spread or “width”) of the distribution.
     size : tuple of ints -- Output shape.
     """
+    def __init__(self, shape, name, mean=0.0, sd=0.1):
+        self.mean = mean
+        self.sd = sd
+        super().__init__(shape, name)
+
     def initialize_param(self):
-        self.param = tfg.Variable(np.random.normal(loc=0.0, scale=0.1, size=self.shape), name=self.name)
+        self.param = tfg.Variable(np.random.normal(loc=self.mean, scale=self.sd, size=self.shape), name=self.name)
 
 
 class Random_Uniform_Initializer(Initializer):
-    """
-    Parameters :
-    size : tuple of ints -- Output shape.
-    """
     def initialize_param(self):
         self.param = tfg.Variable(np.random.random(size=self.shape), name=self.name)
 
