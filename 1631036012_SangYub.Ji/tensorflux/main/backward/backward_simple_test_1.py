@@ -19,13 +19,12 @@ d = tfg.Mul(a, b, name="d")
 e = tfg.Mul(d, c, name="e")
 
 session = tfs.Session()
-
-
 # forward
-total_apple_price = session.run(d, verbose=False) #ctrl + B
+total_apple_price = session.run(d, verbose=False)
 print("total_apple_price: {:f}".format(float(total_apple_price)))
 final_price = session.run(e, verbose=False)
 print("final_price: {:f}".format(float(final_price)))
+
 print()
 
 #backward
