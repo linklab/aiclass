@@ -51,6 +51,26 @@ class Variable:
         return self.name
 
 
+class Constant:
+    """Represents a constant.
+    """
+
+    def __init__(self, value=None, name=None):
+        """Construct Constant
+
+        Args:
+          value: this constant's value
+        """
+        self.value = value
+        self.output = None
+
+        self.consumers = []
+        self.name = name
+
+    def __str__(self):
+        return self.name
+
+
 class Operation:
     """Represents a graph node that performs a computation (forwaring operation).
 
@@ -59,7 +79,7 @@ class Operation:
     as output.
     """
 
-    def __init__(self, input_nodes=[], name=None):
+    def __init__(self, input_nodes=[], name=None, graph=None):
         """Construct Forwarding Operation
         """
         self.input_nodes = input_nodes
@@ -72,6 +92,7 @@ class Operation:
         # Append this operation to the list of consumers of all input nodes
         for input_node in input_nodes:
             input_node.consumers.append(self)
+            graph.add_edge(input_node, self)
 
     def forward(self):
         """Computes the output of this operation.
@@ -79,80 +100,55 @@ class Operation:
         """
         pass
 
+    def backward(self):
+        pass
+
     def __str__(self):
         return "O: " + self.name
 
 
 class Add(Operation):
-    """Returns x + y element-wise.
-    """
-
     def __init__(self, x, y, name=None):
-        """Construct add
-
-        Args:
-          x: First summand node
-          y: Second summand node
-        """
-        self.inputs = None
         super().__init__([x, y], name)
 
     def forward(self, x_value, y_value):
-        """Compute the output of the add operation
-
-        Args:
-          x_value: First summand value
-          y_value: Second summand value
-        """
-        self.inputs = [x_value, y_value]
         return x_value + y_value
+
+    def backward(self, d_in):
+        d_x_value = d_in * 1
+        d_y_value = d_in * 1
+        return d_x_value, d_y_value
 
 
 class Mul(Operation):
-    """Returns x * y.
-    """
-
     def __init__(self, x, y, name=None):
-        """Construct add
-
-        Args:
-          x: First summand node
-          y: Second summand node
-        """
-        self.inputs = None
+        self.x_value = None
+        self.y_value = None
         super().__init__([x, y], name)
 
     def forward(self, x_value, y_value):
-        """Compute the output of the add operation
-
-        Args:
-          x_value: First summand value
-          y_value: Second summand value
-        """
-        self.inputs = [x_value, y_value]
+        self.x_value = x_value
+        self.y_value = y_value
         return x_value * y_value
+
+    def backward(self, d_in):
+        d_x_value = d_in * self.y_value
+        d_y_value = d_in * self.x_value
+        return d_x_value, d_y_value
 
 
 class Matmul(Operation):
-    """Multiplies matrix x by matrix y, producing x * y.
-    """
-
     def __init__(self, x, y, name=None):
-        """Construct matmul
-
-        Args:
-          x: First matrix
-          y: Second matrix
-        """
-        self.inputs = None
+        self.x_value = None
+        self.y_value = None
         super().__init__([x, y], name)
 
     def forward(self, x_value, y_value):
-        """Compute the output of the matmul operation
-
-        Args:
-          x_value: First matrix value
-          y_value: Second matrix value
-        """
-        self.inputs = [x_value, y_value]
+        self.x_value = x_value
+        self.y_value = y_value
         return x_value.dot(y_value)
+
+    def backward(self, d_in):
+        d_x_value = np.dot(self.y_value.T, d_in)
+        d_y_value = np.dot(d_in, self.x_value.T)
+        return d_x_value, d_y_value
