@@ -1,7 +1,6 @@
 # -*- coding:utf-8 -*-
-import math
+import sys
 import numpy as np
-
 
 class SGD:
     def __init__(self, learning_rate=0.01):
