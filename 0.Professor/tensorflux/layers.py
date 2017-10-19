@@ -3,7 +3,7 @@ import tensorflux.graph as tfg
 import sys
 import numpy as np
 import tensorflux.functions as tff
-
+from numba import jit, float32, int32, void, cuda
 
 class Affine(tfg.Operation):
     """Returns w * x + b.
@@ -21,6 +21,7 @@ class Affine(tfg.Operation):
         self.db = None
         super().__init__([w, x, b], name, graph)
 
+    @jit(nopython=True)
     def forward(self, w_value, x_value, b_value):
         """Compute the output of the add operation
 
@@ -33,6 +34,7 @@ class Affine(tfg.Operation):
         # return np.matmul(x_value, w_value) + b_value # [Note] Matmul Order
         return np.dot(x_value, w_value) + b_value  # [Note] Matmul Order
 
+    #@jit
     def backward(self, din):
         dx = np.dot(din, self.w_value.T)
         self.dw = np.dot(self.x_value.T, din)
@@ -207,12 +209,14 @@ class SoftmaxWithCrossEntropyLoss(tfg.Operation):
         self.y = None
         super().__init__([forward_final_output, target], name, graph)
 
+    #@jit
     def forward(self, forward_final_output_value, target_value):
         self.target_value = target_value
         self.y = tff.softmax(forward_final_output_value)
         loss = tff.cross_entropy_error(self.y, self.target_value)
         return loss
 
+    #@jit
     def backward(self, din=1):
         batch_size = self.target_value.shape[0]
         dx = (self.y - self.target_value) / float(batch_size)
