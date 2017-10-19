@@ -11,18 +11,22 @@ import numpy as np
 from scipy import stats
 import math
 from networkx.drawing.nx_agraph import graphviz_layout
+import random
+import string
+import os
+import pickle
 
 
 class Deep_Neural_Network(tfg.Graph):
-    def __init__(self, input_size, output_size):
+    def __init__(self, input_size, output_size, model_params_dir, activator, initializer):
         self.input_size = input_size
         self.output_size = output_size
 
         self.input_node = None
         self.target_node = None
 
-        self.activator = None
-        self.initializer = None
+        self.activator = activator
+        self.initializer = initializer
         self.optimizer = None
 
         self.params = {}
@@ -30,6 +34,7 @@ class Deep_Neural_Network(tfg.Graph):
         self.output = None
         self.error = None
         self.max_epoch = None
+        self.model_params_dir = model_params_dir
 
         self.session = tfs.Session()
         super().__init__()
@@ -96,7 +101,12 @@ class Multi_Layer_Network(Deep_Neural_Network):
                  init_sd=0.01,
                  activator=tfe.Activator.ReLU.value,
                  optimizer=tfe.Optimizer.SGD.value,
-                 learning_rate=0.01):
+                 learning_rate=0.01,
+                 model_params_dir=None):
+
+        self.mode_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+
+        print("Multi Layer Network Model - ID:", self.mode_id)
 
         self.hidden_size_list = hidden_size_list
         self.hidden_layer_num = len(hidden_size_list)
@@ -104,7 +114,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
         self.params_size_list = None
         self.layers = OrderedDict()
 
-        super().__init__(input_size, output_size)
+        super().__init__(input_size, output_size, model_params_dir, activator, tfe.Initializer.Normal.value)
 
         self.train_error_list = []
         self.validation_error_list = []
@@ -117,21 +127,21 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
         self.set_data_node(input_node, target_node)
         self.initialize_normal_random_param(mean=init_mean, sd=init_sd)
-        self.layering(activator)
+        self.layering()
         self.set_optimizer(optimizer, learning_rate)
 
     def initialize_param(self, initializer=tfe.Initializer.Zero.value):
         self.params_size_list = [self.input_size] + self.hidden_size_list + [self.output_size]
         for idx in range(self.hidden_layer_num + 1):
-            self.params['W' + str(idx)] = initializer(
+            self.params['W' + str(idx)] = self.initializer(
                 shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
                 name="W" + str(idx)
-            ).get_variable()
+            ).param
 
-            self.params['b' + str(idx)] = initializer(
+            self.params['b' + str(idx)] = self.initializer(
                 shape=(self.params_size_list[idx + 1],),
                 name="b" + str(idx)
-            ).get_variable()
+            ).param
 
             self.param_mean_list['W' + str(idx)] = []
             self.param_variance_list['W' + str(idx)] = []
@@ -146,19 +156,19 @@ class Multi_Layer_Network(Deep_Neural_Network):
     def initialize_normal_random_param(self, mean=0.0, sd=0.1):
         self.params_size_list = [self.input_size] + self.hidden_size_list + [self.output_size]
         for idx in range(self.hidden_layer_num + 1):
-            self.params['W' + str(idx)] = tfi.Random_Normal_Initializer(
+            self.params['W' + str(idx)] = self.initializer(
                 shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
                 name="W" + str(idx),
                 mean=mean,
                 sd=sd
-            ).get_variable()
+            ).param
 
-            self.params['b' + str(idx)] = tfi.Random_Normal_Initializer(
+            self.params['b' + str(idx)] = self.initializer(
                 shape=(self.params_size_list[idx + 1],),
                 name="b" + str(idx),
                 mean=mean,
                 sd=sd
-            ).get_variable()
+            ).param
 
             self.param_mean_list['W' + str(idx)] = []
             self.param_variance_list['W' + str(idx)] = []
@@ -170,9 +180,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
             self.param_skewness_list['b' + str(idx)] = []
             self.param_kurtosis_list['b' + str(idx)] = []
 
-    def layering(self, activator=tfe.Activator.ReLU.value):
-        self.activator = activator
-
+    def layering(self):
         input_node = self.input_node
         for idx in range(self.hidden_layer_num):
             self.layers['affine' + str(idx)] = tfl.Affine(
@@ -182,7 +190,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
                 name='affine' + str(idx),
                 graph=self
             )
-            self.layers['activation' + str(idx)] = activator(
+            self.layers['activation' + str(idx)] = self.activator(
                 self.layers['affine' + str(idx)],
                 name='activation' + str(idx),
                 graph=self
@@ -222,9 +230,13 @@ class Multi_Layer_Network(Deep_Neural_Network):
         return grads
 
     def learning(self, max_epoch, data, batch_size=1000, print_period=10, verbose=False):
+        print("-- Learning Started --")
+        os.makedirs(self.model_params_dir + "/" + self.mode_id, exist_ok=True)
         self.max_epoch = max_epoch
 
         self.set_learning_process_parameters(data, batch_size, 0, print_period, verbose)
+
+        self.save_params(0)
 
         num_batch = math.ceil(data.num_train_data / batch_size)
 
@@ -246,6 +258,22 @@ class Multi_Layer_Network(Deep_Neural_Network):
                 self.optimizer.update(grads=grads)
 
             self.set_learning_process_parameters(data, batch_size, epoch, print_period, verbose)
+
+            self.save_params(epoch)
+
+        min_validation_error_epoch = np.argmin(self.validation_error_list)
+        print()
+        print("[Best Epoch (based on Validation Error) and Its Performance]")
+        print("Epoch {:3d} Completed - Train Error: {:7.6f} - Validation Error: {:7.6f} - Test Accuracy: {:7.6f}".format(
+            min_validation_error_epoch,
+            float(self.train_error_list[min_validation_error_epoch]),
+            float(self.validation_error_list[min_validation_error_epoch]),
+            float(self.test_accuracy_list[min_validation_error_epoch])
+        ))
+        self.load_params(min_validation_error_epoch)
+        self.layering()
+        print("Params are set to the best model!!!")
+        print("-- Learning Finished --")
 
     def set_learning_process_parameters(self, data, batch_size, epoch, print_period, verbose):
         batch_mask = np.random.choice(data.num_train_data, batch_size)
@@ -328,6 +356,15 @@ class Multi_Layer_Network(Deep_Neural_Network):
                     )
 
                 print()
+
+    def save_params(self, epoch):
+        with open(self.model_params_dir + "/" + self.mode_id + "/epoch-" + str(epoch) + ".pickle", "wb") as pickle_out:
+            pickle.dump(self.params, pickle_out)
+
+    def load_params(self, epoch):
+        self.params = None
+        with open(self.model_params_dir + "/" + self.mode_id + "/epoch-" + str(epoch) + ".pickle", "rb") as pickle_in:
+            self.params = pickle.load(pickle_in)
 
     def draw_params_histogram(self):
         f, axarr = plt.subplots(1, (self.hidden_layer_num + 1) * 2, figsize=(10 * (self.hidden_layer_num + 1), 5))
