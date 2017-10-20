@@ -53,7 +53,7 @@ class Deep_Neural_Network(tfg.Graph):
         self.optimizer = optimizer(learning_rate=learning_rate)
         self.optimizer.params = self.params
 
-    def backward_propagation(self):
+    def backward_propagation(self, is_numba):
         pass
 
     def get_params_str(self):
@@ -74,12 +74,12 @@ class Deep_Neural_Network(tfg.Graph):
             all_param_flatten_list.extend([item for item in param.value.flatten()])
         return stats.describe(np.array(all_param_flatten_list))
 
-    def print_feed_forward(self, num_data, input_data, target_data, verbose=False):
+    def print_feed_forward(self, num_data, input_data, target_data, is_numba, verbose=False):
         for idx in range(num_data):
             train_input_data = input_data[idx]
             train_target_data = target_data[idx]
 
-            output = self.session.run(self.output, {self.input_node: train_input_data}, verbose)
+            output = self.session.run(self.output, {self.input_node: train_input_data}, is_numba, verbose)
             print("Input Data: {:>5}, Feed Forward Output: {:>6}, Target: {:>6}".format(
                 str(train_input_data), np.array2string(output), str(train_target_data)))
 
@@ -209,19 +209,19 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
         self.error = tfl.SoftmaxWithCrossEntropyLoss(self.output, self.target_node, name="SCEL", graph=self)
 
-    def feed_forward(self, input_data):
-        return self.session.run(self.output, {self.input_node: input_data}, verbose=False)
+    def feed_forward(self, input_data, is_numba):
+        return self.session.run(self.output, {self.input_node: input_data}, is_numba, verbose=False)
 
-    def backward_propagation(self):
+    def backward_propagation(self, is_numba):
         grads = {}
 
-        d_error = self.error.backward(1.0)
+        d_error = self.error.backward(1.0, is_numba)
         din = d_error
 
         layers = list(self.layers.values())
         layers.reverse()
         for layer in layers:
-            din = layer.backward(din)
+            din = layer.backward(din, is_numba)
 
         for idx in range(self.hidden_layer_num + 1):
             grads['W' + str(idx)] = self.layers['affine' + str(idx)].dw
@@ -229,12 +229,12 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
         return grads
 
-    def learning(self, max_epoch, data, batch_size=1000, print_period=10, verbose=False):
+    def learning(self, max_epoch, data, batch_size=1000, print_period=10, is_numba=False, verbose=False):
         print("-- Learning Started --")
         os.makedirs(self.model_params_dir + "/" + self.mode_id, exist_ok=True)
         self.max_epoch = max_epoch
 
-        self.set_learning_process_parameters(data, batch_size, 0, print_period, verbose)
+        self.set_learning_process_parameters(data, batch_size, 0, print_period, is_numba, verbose)
 
         self.save_params(0)
 
@@ -246,18 +246,21 @@ class Multi_Layer_Network(Deep_Neural_Network):
                 t_batch = data.train_target[i * batch_size: i * batch_size + batch_size]
 
                 #forward
-                self.session.run(self.error,
-                                {
-                                    self.input_node: i_batch,
-                                    self.target_node: t_batch
-                                }, False)
+                self.session.run(
+                    self.error,
+                    {
+                        self.input_node: i_batch,
+                        self.target_node: t_batch
+                    },
+                    is_numba=is_numba,
+                    verbose=False)
 
                 #backward
-                grads = self.backward_propagation()
+                grads = self.backward_propagation(is_numba)
 
                 self.optimizer.update(grads=grads)
 
-            self.set_learning_process_parameters(data, batch_size, epoch, print_period, verbose)
+            self.set_learning_process_parameters(data, batch_size, epoch, print_period, is_numba, verbose)
 
             self.save_params(epoch)
 
@@ -274,27 +277,34 @@ class Multi_Layer_Network(Deep_Neural_Network):
         self.layering()
         print("Params are set to the best model!!!")
         print("-- Learning Finished --")
+        print()
 
-    def set_learning_process_parameters(self, data, batch_size, epoch, print_period, verbose):
+    def set_learning_process_parameters(self, data, batch_size, epoch, print_period, is_numba, verbose):
         batch_mask = np.random.choice(data.num_train_data, batch_size)
         i_batch = data.train_input[batch_mask]
         t_batch = data.train_target[batch_mask]
 
-        train_error = self.session.run(self.error,
-                                       {
-                                           self.input_node: i_batch,
-                                           self.target_node: t_batch
-                                       }, False)
+        train_error = self.session.run(
+            self.error,
+            {
+                self.input_node: i_batch,
+                self.target_node: t_batch
+            },
+            is_numba=is_numba,
+            verbose=False)
         self.train_error_list.append(train_error)
 
-        validation_error = self.session.run(self.error,
-                                            {
-                                                self.input_node: data.validation_input,
-                                                self.target_node: data.validation_target
-                                            }, False)
+        validation_error = self.session.run(
+            self.error,
+            {
+                self.input_node: data.validation_input,
+                self.target_node: data.validation_target
+            },
+            is_numba=is_numba,
+            verbose=False)
         self.validation_error_list.append(validation_error)
 
-        forward_final_output = self.feed_forward(input_data=data.test_input)
+        forward_final_output = self.feed_forward(input_data=data.test_input, is_numba=is_numba)
 
         test_accuracy = tff.accuracy(forward_final_output, data.test_target)
         self.test_accuracy_list.append(test_accuracy)
@@ -483,7 +493,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
         plt.show()
 
     def draw_false_prediction(self, test_input, test_target, labels, num=5, figsize=(20, 5)):
-        forward_final_output = self.feed_forward(input_data=test_input)
+        forward_final_output = self.feed_forward(input_data=test_input, is_numba=False)
         y = np.argmax(forward_final_output, axis=1)
         target = np.argmax(test_target, axis=1)
 
