@@ -15,8 +15,12 @@ class Initializer(Enum):
 
 
 class Optimizer(Enum):
-    SGD = tfo.SGD
-
+    SGD         = tfo.SGD
+    Momentum    = tfo.Momentum
+    NAG         = tfo.NAG
+    AdaGrad     = tfo.AdaGrad
+    RMSProp     = tfo.RMSProp
+    Adam        = tfo.Adam
 
 class Activator(Enum):
     Sigmoid = tfl.Sigmoid

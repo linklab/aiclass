@@ -15,19 +15,20 @@ import random
 import string
 import os
 import pickle
+import copy
 
 
 class Deep_Neural_Network(tfg.Graph):
-    def __init__(self, input_size, output_size, model_params_dir, activator, initializer):
+    def __init__(self, input_size, output_size, input_node, target_node, initializer, activator, optimizer, learning_rate, model_params_dir):
         self.input_size = input_size
         self.output_size = output_size
 
-        self.input_node = None
-        self.target_node = None
+        self.input_node = input_node
+        self.target_node = target_node
 
         self.activator = activator
         self.initializer = initializer
-        self.optimizer = None
+        self.optimizer = optimizer(learning_rate=learning_rate)
 
         self.params = {}
 
@@ -37,21 +38,16 @@ class Deep_Neural_Network(tfg.Graph):
         self.model_params_dir = model_params_dir
 
         self.session = tfs.Session()
-        super().__init__()
 
-    def set_data_node(self, input_node, target_node):
-        self.input_node = input_node
-        self.target_node = target_node
+        self.mode_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+
+        super().__init__()
 
     def initialize_param(self, initializer=tfe.Initializer.Zero.value):
         pass
 
     def layering(self, activator=tfe.Activator.ReLU.value):
         pass
-
-    def set_optimizer(self, optimizer=tfe.Optimizer.SGD.value, learning_rate=0.01):
-        self.optimizer = optimizer(learning_rate=learning_rate)
-        self.optimizer.params = self.params
 
     def backward_propagation(self, is_numba):
         pass
@@ -104,7 +100,17 @@ class Multi_Layer_Network(Deep_Neural_Network):
                  learning_rate=0.01,
                  model_params_dir=None):
 
-        self.mode_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+        super().__init__(
+            input_size,
+            output_size,
+            input_node,
+            target_node,
+            tfe.Initializer.Normal.value,
+            activator,
+            optimizer,
+            learning_rate,
+            model_params_dir
+        )
 
         print("Multi Layer Network Model - ID:", self.mode_id)
 
@@ -113,8 +119,6 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
         self.params_size_list = None
         self.layers = OrderedDict()
-
-        super().__init__(input_size, output_size, model_params_dir, activator, tfe.Initializer.Normal.value)
 
         self.train_error_list = []
         self.validation_error_list = []
@@ -125,10 +129,8 @@ class Multi_Layer_Network(Deep_Neural_Network):
         self.param_skewness_list = {}
         self.param_kurtosis_list = {}
 
-        self.set_data_node(input_node, target_node)
         self.initialize_normal_random_param(mean=init_mean, sd=init_sd)
         self.layering()
-        self.set_optimizer(optimizer, learning_rate)
 
     def initialize_param(self, initializer=tfe.Initializer.Zero.value):
         self.params_size_list = [self.input_size] + self.hidden_size_list + [self.output_size]
@@ -256,9 +258,12 @@ class Multi_Layer_Network(Deep_Neural_Network):
                     verbose=False)
 
                 #backward
-                grads = self.backward_propagation(is_numba)
-
-                self.optimizer.update(grads=grads)
+                if isinstance(self.optimizer, tfe.Optimizer.NAG.value):
+                    cloned_network = copy.deepcopy(self)
+                    self.optimizer.update(params=self.params, cloned_network=cloned_network, is_numba=is_numba)
+                else:
+                    grads = self.backward_propagation(is_numba)
+                    self.optimizer.update(params=self.params, grads=grads)
 
             self.set_learning_process_parameters(data, batch_size, epoch, print_period, is_numba, verbose)
 
