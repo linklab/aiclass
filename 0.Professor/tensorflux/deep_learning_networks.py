@@ -104,7 +104,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
         self.params_size_list = None
         self.layers = OrderedDict()
 
-        super().__init__(input_size, output_size)
+        super().__init__(input_size, output_size) #부모의 생성자 호출
 
         self.train_error_list = []
         self.validation_error_list = []
@@ -114,6 +114,9 @@ class Multi_Layer_Network(Deep_Neural_Network):
         self.param_variance_list = {}
         self.param_skewness_list = {}
         self.param_kurtosis_list = {}
+        # 그래프를 그리기 위해 비어있는 것들
+        # w0, w1, w2가 키 값으로 쓰이게끔 딕셔터리를 씀
+        #
 
         self.set_data_node(input_node, target_node)
         self.initialize_normal_random_param(mean=init_mean, sd=init_sd)
@@ -175,7 +178,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
         input_node = self.input_node
         for idx in range(self.hidden_layer_num):
-            self.layers['affine' + str(idx)] = tfl.Affine(
+            self.layers['affine' + str(idx)] = tfl.Affine( # key, value의 한 쌍을 순서대로 넣는 효과가 있음 orderedDict이니까
                 self.params['W' + str(idx)],
                 input_node,
                 self.params['b' + str(idx)],
@@ -210,7 +213,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
         d_error = self.error.backward(1.0)
         din = d_error
 
-        layers = list(self.layers.values())
+        layers = list(self.layers.values()) #orderedDict객체의 값만 순서대로 갖고와서 리버스
         layers.reverse()
         for layer in layers:
             din = layer.backward(din)
