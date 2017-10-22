@@ -23,7 +23,7 @@ n = tfn.Multi_Layer_Network(
     init_mean=0.0,
     init_sd=0.01,
     activator=tfe.Activator.ReLU.value,
-    optimizer=tfe.Optimizer.Adam.value,
+    optimizer=tfe.Optimizer.RMSProp.value,
     learning_rate=0.01,
     model_params_dir=model_params_dir
 )

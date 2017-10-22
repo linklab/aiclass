@@ -63,14 +63,16 @@ class AdaGrad:
                 self.g[key] = np.zeros_like(param.value)
 
         for key in params.keys():
-            self.g[key] = self.g[key] + grads[key] * grads[key]
+            self.g[key] = self.g[key] + grads[key] ** 2
+            if np.isnan(grads[key]).any():
+                sys.exit(-1)
             params[key].value = params[key].value - (self.learning_rate / np.sqrt(self.g[key] + self.e)) * grads[key]
 
 
 class RMSProp:
-    def __init__(self, learning_rate=0.01, gamma=0.99):
+    def __init__(self, learning_rate=0.01):
         self.learning_rate = learning_rate
-        self.gamma = gamma
+        self.gamma = 0.99
         self.g = None
         self.e = 1.0e-7
 
@@ -78,11 +80,14 @@ class RMSProp:
         if self.g is None:
             self.g = {}
             for key, param in params.items():
-                self.g[key] = np.zeros_like(param.value)
+                self.g[key] = np.ones_like(param.value)
 
         for key in params.keys():
+            # if np.isnan(grads[key]).any():
+            #     print(key)
+            #     sys.exit(-1)
             self.g[key] = self.gamma * self.g[key] + (1.0 - self.gamma) * grads[key] ** 2
-            params[key].value = params[key].value - (self.learning_rate / np.sqrt(self.g[key] + self.e)) * grads[key]
+            params[key].value = params[key].value - self.learning_rate / np.sqrt(self.g[key] + self.e) * grads[key]
 
 
 class Adam:
