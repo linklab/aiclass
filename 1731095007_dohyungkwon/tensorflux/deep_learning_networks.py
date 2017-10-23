@@ -11,6 +11,7 @@ import numpy as np
 from scipy import stats
 import math
 from networkx.drawing.nx_agraph import graphviz_layout
+from numba import jit
 
 
 class Deep_Neural_Network(tfg.Graph):
@@ -120,6 +121,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
         self.layering(activator)
         self.set_optimizer(optimizer, learning_rate)
 
+
     def initialize_param(self, initializer=tfe.Initializer.Zero.value):
         self.params_size_list = [self.input_size] + self.hidden_size_list + [self.output_size]
         for idx in range(self.hidden_layer_num + 1):
@@ -201,8 +203,10 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
         self.error = tfl.SoftmaxWithCrossEntropyLoss(self.output, self.target_node, name="SCEL", graph=self)
 
+
     def feed_forward(self, input_data):
         return self.session.run(self.output, {self.input_node: input_data}, verbose=False)
+
 
     def backward_propagation(self):
         grads = {}
@@ -221,12 +225,14 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
         return grads
 
+    @jit
     def learning(self, max_epoch, data, batch_size=1000, print_period=10, verbose=False):
         self.max_epoch = max_epoch
 
         self.set_learning_process_parameters(data, batch_size, 0, print_period, verbose)
 
         num_batch = math.ceil(data.num_train_data / batch_size)
+
 
         for epoch in range(1, max_epoch + 1):
             for i in range(num_batch):
@@ -394,7 +400,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
         plt.xlabel('Epochs')
         plt.grid(True)
         plt.legend(loc='lower left')
-        
+
         plt.subplot(243)
         for idx in range(self.hidden_layer_num + 1):
             plt.plot(epoch_list, self.param_skewness_list['W' + str(idx)], color_dic[idx], label='W' + str(idx))
@@ -402,7 +408,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
         plt.xlabel('Epochs')
         plt.grid(True)
         plt.legend(loc='lower left')
-        
+
         plt.subplot(244)
         for idx in range(self.hidden_layer_num + 1):
             plt.plot(epoch_list, self.param_kurtosis_list['W' + str(idx)], color_dic[idx], label='W' + str(idx))
