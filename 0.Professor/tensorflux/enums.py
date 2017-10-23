@@ -19,7 +19,6 @@ class Optimizer(Enum):
     Momentum    = tfo.Momentum
     NAG         = tfo.NAG
     AdaGrad     = tfo.AdaGrad
-    RMSProp     = tfo.RMSProp
     Adam        = tfo.Adam
 
 class Activator(Enum):
