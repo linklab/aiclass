@@ -16,6 +16,7 @@ import string
 import os
 import pickle
 import copy
+import shutil
 
 
 class Deep_Neural_Network(tfg.Graph):
@@ -123,6 +124,11 @@ class Multi_Layer_Network(Deep_Neural_Network):
         self.train_error_list = []
         self.validation_error_list = []
         self.test_accuracy_list = []
+
+        self.min_validation_error_epoch = None
+        self.min_train_error = None
+        self.min_validation_error = None
+        self.max_test_accuracy = None
 
         self.param_mean_list = {}
         self.param_variance_list = {}
@@ -238,7 +244,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
         self.set_learning_process_parameters(data, batch_size, 0, print_period, is_numba, verbose)
 
-        self.save_params(0)
+        self.save_params_pickle(0)
 
         num_batch = math.ceil(data.num_train_data / batch_size)
 
@@ -267,19 +273,25 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
             self.set_learning_process_parameters(data, batch_size, epoch, print_period, is_numba, verbose)
 
-            self.save_params(epoch)
+            self.save_params_pickle(epoch)
 
-        min_validation_error_epoch = np.argmin(self.validation_error_list)
         print()
+
+        self.min_validation_error_epoch = np.argmin(self.validation_error_list)
+        self.min_train_error = float(self.train_error_list[self.min_validation_error_epoch])
+        self.min_validation_error = float(self.validation_error_list[self.min_validation_error_epoch])
+        self.max_test_accuracy = float(self.test_accuracy_list[self.min_validation_error_epoch])
+
         print("[Best Epoch (based on Validation Error) and Its Performance]")
         print("Epoch {:3d} Completed - Train Error: {:7.6f} - Validation Error: {:7.6f} - Test Accuracy: {:7.6f}".format(
-            min_validation_error_epoch,
-            float(self.train_error_list[min_validation_error_epoch]),
-            float(self.validation_error_list[min_validation_error_epoch]),
-            float(self.test_accuracy_list[min_validation_error_epoch])
+            self.min_validation_error_epoch,
+            self.min_train_error,
+            self.min_validation_error,
+            self.max_test_accuracy
         ))
-        self.load_params(min_validation_error_epoch)
+        self.load_params_pickle(self.min_validation_error_epoch)
         self.layering()
+        self.cleanup_params_pickle()
         print("Params are set to the best model!!!")
         print("-- Learning Finished --")
         print()
@@ -372,14 +384,17 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
                 print()
 
-    def save_params(self, epoch):
+    def save_params_pickle(self, epoch):
         with open(self.model_params_dir + "/" + self.mode_id + "/epoch-" + str(epoch) + ".pickle", "wb") as pickle_out:
             pickle.dump(self.params, pickle_out)
 
-    def load_params(self, epoch):
+    def load_params_pickle(self, epoch):
         self.params = None
         with open(self.model_params_dir + "/" + self.mode_id + "/epoch-" + str(epoch) + ".pickle", "rb") as pickle_in:
             self.params = pickle.load(pickle_in)
+
+    def cleanup_params_pickle(self):
+        shutil.rmtree(self.model_params_dir + "/" + self.mode_id)
 
     def draw_params_histogram(self):
         f, axarr = plt.subplots(1, (self.hidden_layer_num + 1) * 2, figsize=(10 * (self.hidden_layer_num + 1), 5))
