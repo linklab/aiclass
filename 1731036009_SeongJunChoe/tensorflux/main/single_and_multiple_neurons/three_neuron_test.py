@@ -25,14 +25,14 @@ while not (start_param_description.variance > 0.17 and 0.0 < start_param_descrip
 n.layering(activator=tfe.Activator.ReLU.value)
 n.set_optimizer(optimizer=tfe.Optimizer.SGD.value, learning_rate=0.05)
 
-#n.draw_and_show()
+n.draw_and_show()
 
 data = simple_data.Xor_Gate_Data()
 
 n.print_feed_forward(
     num_data=data.num_train_data,
-    input_data=data.training_input,
-    target_data=data.training_target,
+    input_data=data.train_input,
+    target_data=data.train_target,
     verbose=False
 )
 
