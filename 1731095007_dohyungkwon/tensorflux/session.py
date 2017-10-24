@@ -18,7 +18,7 @@ class Session:
         """
 
         # Perform a post-order traversal of the graph to bring the nodes into the right order
-        nodes_postorder = self.traverse_postorder(operation)
+        nodes_postorder = self.traverse_postorder(operation)  # ??????????????????????????
         if verbose:
             print("*** nodes in post-order ***")
 
@@ -26,7 +26,7 @@ class Session:
         for node in nodes_postorder:
             if type(node) == tfg.Placeholder:
                 # Set the node value to the placeholder value from feed_dict
-                node.output = feed_dict[node]
+                node.output = feed_dict[node]  # ??????????????????????????
             elif type(node) == tfg.Variable:
                 # Set the node value to the variable's value attribute
                 node.output = node.value

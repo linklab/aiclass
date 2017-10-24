@@ -2,6 +2,7 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 from scipy.stats import truncnorm
+from numba import jit
 
 def get_truncated_normal(shape, mean=0, sd=1, low=0, upp=10):
     x = truncnorm(a=(low - mean) / sd, b=(upp - mean) / sd, loc=mean, scale=sd)
@@ -12,15 +13,16 @@ def get_truncated_normal(shape, mean=0, sd=1, low=0, upp=10):
     x = x.reshape(shape)
     return x
 
-
+# from numba import jit
+@jit(nopython=True)
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
-
+@jit(nopython=True)
 def squared_error(output_value, target_value):
     return 0.5 * math.pow(output_value - target_value, 2)
 
-
+@jit(nopython=True)
 def softmax(x):
     if x.ndim == 2:
         x = x.T
@@ -31,7 +33,7 @@ def softmax(x):
     x = x - np.max(x)
     return np.exp(x) / np.sum(np.exp(x))
 
-
+@jit(nopython=True)
 def cross_entropy_error(y, t):
     y[y == 0] = 1e-15
     if y.ndim == 1 and t.ndim == 1:
@@ -41,7 +43,7 @@ def cross_entropy_error(y, t):
     batch_size = y.shape[0]
     return -np.sum(t * np.log(y)) / batch_size
 
-
+@jit(nopython=True)
 def accuracy(forward_final_output, target):
     y = np.argmax(forward_final_output, axis=1)
     if target.ndim != 1:

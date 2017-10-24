@@ -16,6 +16,8 @@ class Initializer(Enum):
 
 class Optimizer(Enum):
     SGD = tfo.SGD
+    Adam = tfo.Adam
+    op = tfo.op
 
 
 class Activator(Enum):

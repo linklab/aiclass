@@ -102,3 +102,4 @@ def load_mnist(path, kind='train'):
         images = np.frombuffer(imgpath.read(), dtype=np.uint8, offset=16).reshape(len(labels), 784)
 
     return images, labels
+
