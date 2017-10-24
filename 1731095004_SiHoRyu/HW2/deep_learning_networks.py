@@ -1,17 +1,19 @@
 from collections import OrderedDict
-import tensorflux.graph as tfg
-import tensorflux.enums as tfe
-import tensorflux.layers as tfl
-import tensorflux.session as tfs
-import tensorflux.functions as tff
-import tensorflux.initializers as tfi
+import HW2.graph as tfg
+import HW2.enums as tfe
+import HW2.layers as tfl
+import HW2.session as tfs
+import HW2.functions as tff
+import HW2.initializers as tfi
 import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
 import math
 from networkx.drawing.nx_agraph import graphviz_layout
-from numba import jit
+#
+from numba import jit, float32, int32, void, cuda
+from timeit import default_timer as timer
 
 
 class Deep_Neural_Network(tfg.Graph):
@@ -121,7 +123,6 @@ class Multi_Layer_Network(Deep_Neural_Network):
         self.layering(activator)
         self.set_optimizer(optimizer, learning_rate)
 
-
     def initialize_param(self, initializer=tfe.Initializer.Zero.value):
         self.params_size_list = [self.input_size] + self.hidden_size_list + [self.output_size]
         for idx in range(self.hidden_layer_num + 1):
@@ -203,10 +204,8 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
         self.error = tfl.SoftmaxWithCrossEntropyLoss(self.output, self.target_node, name="SCEL", graph=self)
 
-
     def feed_forward(self, input_data):
         return self.session.run(self.output, {self.input_node: input_data}, verbose=False)
-
 
     def backward_propagation(self):
         grads = {}
@@ -227,31 +226,33 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
     @jit
     def learning(self, max_epoch, data, batch_size=1000, print_period=10, verbose=False):
+        s = timer()
         self.max_epoch = max_epoch
 
         self.set_learning_process_parameters(data, batch_size, 0, print_period, verbose)
 
         num_batch = math.ceil(data.num_train_data / batch_size)
 
-
         for epoch in range(1, max_epoch + 1):
             for i in range(num_batch):
                 i_batch = data.train_input[i * batch_size: i * batch_size + batch_size]
                 t_batch = data.train_target[i * batch_size: i * batch_size + batch_size]
 
-                #forward
+                # forward
                 self.session.run(self.error,
-                                {
-                                    self.input_node: i_batch,
-                                    self.target_node: t_batch
-                                }, False)
+                                 {
+                                     self.input_node: i_batch,
+                                     self.target_node: t_batch
+                                 }, False)
 
-                #backward
+                # backward
                 grads = self.backward_propagation()
 
                 self.optimizer.update(grads=grads)
 
             self.set_learning_process_parameters(data, batch_size, epoch, print_period, verbose)
+        e = timer()
+        print("Learning time : {:7.6f} ms".format((e - s) * 1000))
 
     def set_learning_process_parameters(self, data, batch_size, epoch, print_period, verbose):
         batch_mask = np.random.choice(data.num_train_data, batch_size)
@@ -315,7 +316,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
                           "num:{:10s}, min:{:5s}, max:{:5s}, mean:{:5s}, variance:{:5s}, skewness:{:5s}, kurtosis:{:5s}".format(
                               num, min, max, mean, variance, skewness, kurtosis
                           )
-                    )
+                          )
 
                 for idx in range(self.hidden_layer_num + 1):
                     desc_obj = self.get_param_describe(layer_num=idx, kind="b")
@@ -331,7 +332,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
                           "num:{:10s}, min:{:5s}, max:{:5s}, mean:{:5s}, variance:{:5s}, skewness:{:5s}, kurtosis:{:5s}".format(
                               num, min, max, mean, variance, skewness, kurtosis
                           )
-                    )
+                          )
 
                 print()
 
@@ -346,7 +347,8 @@ class Multi_Layer_Network(Deep_Neural_Network):
             axarr[idx].set_title("W{:d}, mean: {:5.4f}, std: {:5.4f}".format(idx, np.mean(w_values), np.std(w_values)))
 
             axarr[idx + 3].hist(b_values, 20)
-            axarr[idx + 3].set_title("b{:d}, mean: {:5.4f}, std: {:5.4f}".format(idx, np.mean(b_values), np.std(b_values)))
+            axarr[idx + 3].set_title(
+                "b{:d}, mean: {:5.4f}, std: {:5.4f}".format(idx, np.mean(b_values), np.std(b_values)))
 
         f.subplots_adjust(wspace=0.5)
         plt.show()
@@ -464,7 +466,8 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
         for i in range(num):
             j = diff_index_list[i]
-            print("False Prediction Index: {:d}, Prediction: {:s}, Ground Truth: {:s}".format(j, labels[y[j]], labels[target[j]]))
+            print("False Prediction Index: {:d}, Prediction: {:s}, Ground Truth: {:s}".format(j, labels[y[j]],
+                                                                                              labels[target[j]]))
             img = np.array(test_input[j])
             img.shape = (28, 28)
             plt.subplot(150 + (i + 1))

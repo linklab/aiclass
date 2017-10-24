@@ -1,7 +1,7 @@
 from enum import Enum
-import tensorflux.initializers as tfi
-import tensorflux.optimizers as tfo
-import tensorflux.layers as tfl
+import HW2.initializers as tfi
+import HW2.optimizers as tfo
+import HW2.layers as tfl
 
 
 class Initializer(Enum):
@@ -15,10 +15,11 @@ class Initializer(Enum):
 
 
 class Optimizer(Enum):
-    SGD = tfo.SGD
-    Adam = tfo.Adam
-    op = tfo.op
-
+    SGD         = tfo.SGD
+    Momentum    = tfo.Momentum
+    NAG         = tfo.NAG
+    AdaGrad     = tfo.AdaGrad
+    Adam        = tfo.Adam
 
 class Activator(Enum):
     Sigmoid = tfl.Sigmoid
