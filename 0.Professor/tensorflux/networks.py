@@ -165,12 +165,12 @@ class Single_Neuron_Network(Neural_Network):
         super().__init__(input_size, output_size)
 
     def initialize_scalar_param(self, value1, value2, initializer=tfe.Initializer.Value_Assignment.value):
-        self.params['W0'] = initializer(value1, name='W0').get_variable()
-        self.params['b0'] = initializer(value2, name='b0').get_variable()
+        self.params['W0'] = initializer(value1, name='W0').param
+        self.params['b0'] = initializer(value2, name='b0').param
 
     def initialize_param(self, initializer=tfe.Initializer.Zero.value):
-        self.params['W0'] = initializer(shape=(self.input_size, self.output_size), name='W0').get_variable()
-        self.params['b0'] = initializer(shape=(self.output_size,), name='b0').get_variable()
+        self.params['W0'] = initializer(shape=(self.input_size, self.output_size), name='W0').param
+        self.params['b0'] = initializer(shape=(self.output_size,), name='b0').param
 
     def layering(self, activator=tfe.Activator.ReLU.value):
         self.activator = activator
@@ -202,10 +202,10 @@ class Two_Neurons_Network(Neural_Network):
         super().__init__(input_size, output_size)
 
     def initialize_param(self, initializer=tfe.Initializer.Zero.value):
-        self.params['W0'] = initializer(shape=(self.input_size, self.output_size), name='W0').get_variable()
-        self.params['b0'] = initializer(shape=(self.output_size,), name='b0').get_variable()
-        self.params['W1'] = initializer(shape=(self.output_size, self.output_size), name='W1').get_variable()
-        self.params['b1'] = initializer(shape=(self.output_size,), name='b1').get_variable()
+        self.params['W0'] = initializer(shape=(self.input_size, self.output_size), name='W0').param
+        self.params['b0'] = initializer(shape=(self.output_size,), name='b0').param
+        self.params['W1'] = initializer(shape=(self.output_size, self.output_size), name='W1').param
+        self.params['b1'] = initializer(shape=(self.output_size,), name='b1').param
 
     def layering(self, activator=tfe.Activator.ReLU.value):
         self.activator = activator
@@ -248,14 +248,14 @@ class Three_Neurons_Network(Neural_Network):
         super().__init__(input_size, output_size)
 
     def initialize_param(self, initializer=tfe.Initializer.Zero.value):
-        self.params['W0'] = initializer(shape=(self.input_size, self.output_size), name='W0').get_variable()
-        self.params['b0'] = tfe.Initializer.Point_One.value(shape=(self.output_size,), name='b0').get_variable()
+        self.params['W0'] = initializer(shape=(self.input_size, self.output_size), name='W0').param
+        self.params['b0'] = tfe.Initializer.Point_One.value(shape=(self.output_size,), name='b0').param
 
-        self.params['W1'] = initializer(shape=(self.input_size, self.output_size), name='W1').get_variable()
-        self.params['b1'] = tfe.Initializer.Point_One.value(shape=(self.output_size,), name='b1').get_variable()
+        self.params['W1'] = initializer(shape=(self.input_size, self.output_size), name='W1').param
+        self.params['b1'] = tfe.Initializer.Point_One.value(shape=(self.output_size,), name='b1').param
 
-        self.params['W2'] = initializer(shape=(self.input_size, self.output_size), name='W2').get_variable()
-        self.params['b2'] = tfe.Initializer.Point_One.value(shape=(self.output_size,), name='b2').get_variable()
+        self.params['W2'] = initializer(shape=(self.input_size, self.output_size), name='W2').param
+        self.params['b2'] = tfe.Initializer.Point_One.value(shape=(self.output_size,), name='b2').param
         print(self.get_params_str())
 
     def layering(self, activator=tfe.Activator.ReLU.value):

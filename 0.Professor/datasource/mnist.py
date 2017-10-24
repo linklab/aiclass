@@ -36,9 +36,9 @@ def convertToOneHot(vector, num_classes=None):
         assert num_classes > 0
         assert num_classes >= np.max(vector)
 
-    t = np.zeros((vector.size, num_classes))
+    t = np.zeros((vector.size, num_classes), dtype=np.float64)
     for idx, row in enumerate(t):
-        row[vector[idx]] = 1
+        row[int(vector[idx])] = 1.0
     return t
 
 
@@ -100,5 +100,8 @@ def load_mnist(path, kind='train'):
 
     with gzip.open(images_path, 'rb') as imgpath:
         images = np.frombuffer(imgpath.read(), dtype=np.uint8, offset=16).reshape(len(labels), 784)
+
+    labels = labels.astype(np.float64, copy=False)
+    images = images.astype(np.float64, copy=False)
 
     return images, labels

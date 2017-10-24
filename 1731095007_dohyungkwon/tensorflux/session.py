@@ -9,7 +9,7 @@ class Session:
     """Represents a particular execution of a computational graph.
     """
 
-    def run(self, operation, feed_dict={}, verbose=True):
+    def run(self, operation, feed_dict={}, verbose=False):
         """Computes the output of an operation
         
         Args:
@@ -18,24 +18,27 @@ class Session:
         """
 
         # Perform a post-order traversal of the graph to bring the nodes into the right order
-        nodes_postorder = self.traverse_postorder(operation)
+        nodes_postorder = self.traverse_postorder(operation)  # ??????????????????????????
+        if verbose:
+            print("*** nodes in post-order ***")
 
         # Iterate all nodes to determine their value
         for node in nodes_postorder:
             if type(node) == tfg.Placeholder:
                 # Set the node value to the placeholder value from feed_dict
-                node.output = feed_dict[node]
+                node.output = feed_dict[node]  # ??????????????????????????
             elif type(node) == tfg.Variable:
                 # Set the node value to the variable's value attribute
                 node.output = node.value
+            elif type(node) == tfg.Constant:
+                # Set the node value to the constant's value attribute
+                node.output = node.value
             else: # Operation
                 # Get the input values for this operation from node_values
-                node.inputs = [input_node.output for input_node in node.input_nodes]
+                node_inputs = [input_node.output for input_node in node.input_nodes]
 
                 # Compute the output of this operation
-                node.output = node.forward(*node.inputs)
-
-            # print(node.output) # 주석 풀던가 말던가!
+                node.output = node.forward(*node_inputs)
 
             # Convert lists to numpy arrays
             if type(node.output) is not np.ndarray:
@@ -43,6 +46,9 @@ class Session:
 
             if verbose:
                 print("Node: {:>10} - Output Value: {:>5}".format(str(node), str(node.output)))
+
+        if verbose:
+            print()
 
         # Return the requested node value
         return operation.output
