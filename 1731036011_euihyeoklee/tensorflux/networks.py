@@ -71,6 +71,7 @@ class Neural_Network(tfg.Graph):
             param.value = temp_val
         return grads
 
+    @jit
     def learning(self, max_epoch, data, bp=True, print_period=10, verbose=False):
         self.max_epoch = max_epoch
         for epoch in range(max_epoch):
