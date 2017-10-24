@@ -6,6 +6,7 @@ import os
 import gzip
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__)) + '/'  #현재 디렉토리의 경로를 가져옴
+print(ROOT_DIR)
 MNIST_DIR = ROOT_DIR + "mnist"
 FASHION_MNIST_DIR = ROOT_DIR + "fashion_mnist"
 
