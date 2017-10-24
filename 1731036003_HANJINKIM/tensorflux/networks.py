@@ -3,9 +3,14 @@ import tensorflux.graph as tfg
 import tensorflux.enums as tfe
 import tensorflux.layers as tfl
 import tensorflux.session as tfs
+import tensorflux.functions as tff
+import tensorflux.initializers as tfi
 import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy import stats
+import math
+from networkx.drawing.nx_agraph import graphviz_layout
 
 
 class Neural_Network(tfg.Graph):
@@ -20,10 +25,11 @@ class Neural_Network(tfg.Graph):
         self.initializer = None
         self.optimizer = None
 
-        self.params = OrderedDict()
+        self.params = {}
 
         self.output = None
         self.error = None
+        self.max_epoch = None
 
         self.session = tfs.Session()
         super().__init__()
@@ -45,7 +51,7 @@ class Neural_Network(tfg.Graph):
     def numerical_derivative(self, session, feed_data):
         delta = 1e-4  # 0.0001
 
-        grads = OrderedDict()
+        grads = {}
 
         for param_key, param in self.params.items():
             temp_val = param.value
@@ -65,27 +71,59 @@ class Neural_Network(tfg.Graph):
             param.value = temp_val
         return grads
 
-    def learning(self, max_epoch, data, x, target, verbose=False):
+    def learning(self, max_epoch, data, bp=True, print_period=10, verbose=False):
+        self.max_epoch = max_epoch
         for epoch in range(max_epoch):
+            if verbose and epoch % print_period == 0:
+                print()
+                print("--------------")
+                print("[Epoch {:d}]".format(epoch))
+                print()
+                verbose2 = True
+            else:
+                verbose2 = False
+
             sum_train_error = 0.0
             for idx in range(data.num_train_data):
-                train_input_data = data.training_input[idx]
-                train_target_data = data.training_target[idx]
+                train_input_data = data.train_input[idx]
+                train_target_data = data.train_target[idx]
 
-                grads = self.numerical_derivative(self.session, {x: train_input_data, target: train_target_data})
+                sum_train_error += self.session.run(self.error,
+                                                    {
+                                                        self.input_node: train_input_data,
+                                                        self.target_node: train_target_data
+                                                    }, verbose2)
+
+                if bp:
+                    grads = self.backward_propagation()
+                else:
+                    grads = self.numerical_derivative(self.session,
+                                                      {
+                                                          self.input_node: train_input_data,
+                                                          self.target_node: train_target_data
+                                                      })
+
                 self.optimizer.update(grads=grads)
-                sum_train_error += self.session.run(self.error, {x: train_input_data, target: train_target_data}, verbose)
 
             sum_validation_error = 0.0
             for idx in range(data.num_validation_data):
                 validation_input_data = data.validation_input[idx]
                 validation_target_data = data.validation_target[idx]
                 sum_validation_error += self.session.run(self.error,
-                                                         {x: validation_input_data, target: validation_target_data}, verbose)
+                                                         {
+                                                             self.input_node: validation_input_data,
+                                                             self.target_node: validation_target_data
+                                                         }, False)
 
-            if(epoch % 100 == 0):
-                print("Epoch {:3d} Completed - Average Train Error: {:7.6f} - Average Validation Error: {:7.6f} - [Params] {:20}".format(
-                    epoch, sum_train_error / data.num_train_data, sum_validation_error / data.num_validation_data, self.get_params_str()))
+            if epoch % print_period == 0:
+                print("Epoch {:3d} Completed - Average Train Error: {:7.6f} - Average Validation Error: {:7.6f}".format(
+                    epoch,
+                    sum_train_error / data.num_train_data,
+                    sum_validation_error / data.num_validation_data
+                ))
+
+    def backward_propagation(self):
+        pass
 
     def get_params_str(self):
         params_str = ""
@@ -94,22 +132,36 @@ class Neural_Network(tfg.Graph):
         params_str = params_str[0:-2]
         return params_str
 
-    def print_feed_forward(self, num_data, input_data, target_data, x, verbose=False):
+    def get_param_describe(self):
+        """
+        :return: starts.description
+        skewness - https://ko.wikipedia.org/wiki/%EB%B9%84%EB%8C%80%EC%B9%AD%EB%8F%84
+        kurtosis - https://ko.wikipedia.org/wiki/%EC%B2%A8%EB%8F%84
+        """
+        all_param_flatten_list = []
+        for param in self.params.values():
+            all_param_flatten_list.extend([item for item in param.value.flatten()])
+        return stats.describe(np.array(all_param_flatten_list))
+
+    def print_feed_forward(self, num_data, input_data, target_data, verbose=False):
         for idx in range(num_data):
             train_input_data = input_data[idx]
             train_target_data = target_data[idx]
 
-            output = self.session.run(self.output, {x: train_input_data}, verbose)
+            output = self.session.run(self.output, {self.input_node: train_input_data}, verbose)
             print("Input Data: {:>5}, Feed Forward Output: {:>6}, Target: {:>6}".format(
                 str(train_input_data), np.array2string(output), str(train_target_data)))
 
-    def draw_and_show(self):
-        nx.draw_networkx(self, with_labels=True)
+    def draw_and_show(self, figsize=(8, 8)):
+        pos = graphviz_layout(self)
+        plt.figure(figsize=figsize)
+        nx.draw_networkx(self, pos=pos, with_labels=True)
         plt.show(block=True)
 
 
 class Single_Neuron_Network(Neural_Network):
     def __init__(self, input_size, output_size):
+        self.affine = None
         super().__init__(input_size, output_size)
 
     def initialize_scalar_param(self, value1, value2, initializer=tfe.Initializer.Value_Assignment.value):
@@ -122,20 +174,31 @@ class Single_Neuron_Network(Neural_Network):
 
     def layering(self, activator=tfe.Activator.ReLU.value):
         self.activator = activator
-        u = tfl.Affine(self.params['W0'], self.input_node, self.params['b0'], name="A")
-        self.output = activator(u, name="O")
-        self.error = tfl.SquaredError(self.output, self.target_node, name="SE")
-        if isinstance(self, nx.Graph):
-            self.add_edge(self.params['W0'], u)
-            self.add_edge(self.input_node, u)
-            self.add_edge(self.params['b0'], u)
-            self.add_edge(u, self.output)
-            self.add_edge(self.output, self.error)
-            self.add_edge(self.error, self.target_node)
+        self.affine = tfl.Affine(self.params['W0'], self.input_node, self.params['b0'], name="A", graph=self)
+        self.output = activator(self.affine, name="O", graph=self)
+        self.error = tfl.SquaredError(self.output, self.target_node, name="SE", graph=self)
+
+    def backward_propagation(self):
+        grads = {}
+
+        d_error = self.error.backward(1.0)
+        d_output = self.output.backward(d_error)
+        _ = self.affine.backward(d_output)
+
+        grads['W0'] = self.affine.dw
+        grads['b0'] = self.affine.db
+
+        return grads
 
 
 class Two_Neurons_Network(Neural_Network):
     def __init__(self, input_size, output_size):
+        self.affine0 = None
+        self.activation0 = None
+        self.affine1 = None
+
+        self.layers = OrderedDict()
+
         super().__init__(input_size, output_size)
 
     def initialize_param(self, initializer=tfe.Initializer.Zero.value):
@@ -146,26 +209,42 @@ class Two_Neurons_Network(Neural_Network):
 
     def layering(self, activator=tfe.Activator.ReLU.value):
         self.activator = activator
-        u0 = tfl.Affine(self.params['W0'], self.input_node, self.params['b0'], name="A0")
-        o0 = activator(u0, name="O0")
-        u1 = tfl.Affine(self.params['W1'], o0, self.params['b1'], name="A1")
-        self.output = activator(u1, name="O1")
-        self.error = tfl.SquaredError(self.output, self.target_node, name="SE")
-        if isinstance(self, nx.Graph):
-            self.add_edge(self.params['W0'], u0)
-            self.add_edge(self.input_node, u0)
-            self.add_edge(self.params['b0'], u0)
-            self.add_edge(u0, o0)
-            self.add_edge(self.params['W1'], u1)
-            self.add_edge(o0, u1)
-            self.add_edge(self.params['b1'], u1)
-            self.add_edge(u1, self.output)
-            self.add_edge(self.output, self.error)
-            self.add_edge(self.error, self.target_node)
+        self.affine0 = tfl.Affine(self.params['W0'], self.input_node, self.params['b0'], name="A0", graph=self)
+        self.activation0 = activator(self.affine0, name="O0", graph=self)
+        self.affine1 = tfl.Affine(self.params['W1'], self.activation0, self.params['b1'], name="A1", graph=self)
+        self.output = activator(self.affine1, name="O1", graph=self)
+        self.error = tfl.SquaredError(self.output, self.target_node, name="SE", graph=self)
+
+        self.affine0 = tfl.Affine(self.params['W0'], self.input_node, self.params['b0'], name="A0", graph=self)
+        self.activation0 = activator(self.affine0, name="O0", graph=self)
+        self.affine1 = tfl.Affine(self.params['W1'], self.activation0, self.params['b1'], name="A1", graph=self)
+        self.output = activator(self.affine1, name="O1", graph=self)
+        self.error = tfl.SquaredError(self.output, self.target_node, name="SE", graph=self)
+
+    def backward_propagation(self):
+        grads = {}
+
+        d_error = self.error.backward(1.0)
+        d_output = self.output.backward(d_error)
+        d_affine1 = self.affine1.backward(d_output)
+        d_activation0 = self.activation0.backward(d_affine1)
+        _ = self.affine0.backward(d_activation0)
+
+        grads['W0'] = self.affine0.dw
+        grads['b0'] = self.affine0.db
+        grads['W1'] = self.affine1.dw
+        grads['b1'] = self.affine1.db
+
+        return grads
 
 
 class Three_Neurons_Network(Neural_Network):
     def __init__(self, input_size, output_size):
+        self.affine0 = None
+        self.activation0 = None
+        self.affine1 = None
+        self.activation1 = None
+        self.affine2 = None
         super().__init__(input_size, output_size)
 
     def initialize_param(self, initializer=tfe.Initializer.Zero.value):
@@ -177,17 +256,40 @@ class Three_Neurons_Network(Neural_Network):
 
         self.params['W2'] = initializer(shape=(self.input_size, self.output_size), name='W2').get_variable()
         self.params['b2'] = tfe.Initializer.Point_One.value(shape=(self.output_size,), name='b2').get_variable()
+        print(self.get_params_str())
 
     def layering(self, activator=tfe.Activator.ReLU.value):
         self.activator = activator
 
-        u0 = tfl.Affine(self.params['W0'], self.input_node, self.params['b0'], name="A0", graph=self)
-        o0 = activator(u0, name="O0", graph=self)
+        self.affine0 = tfl.Affine(self.params['W0'], self.input_node, self.params['b0'], name="A0", graph=self)
+        self.activation0 = activator(self.affine0, name="O0", graph=self)
 
-        u1 = tfl.Affine(self.params['W1'], self.input_node, self.params['b1'], name="A1", graph=self)
-        o1 = activator(u1, name="O1", graph=self)
+        self.affine1 = tfl.Affine(self.params['W1'], self.input_node, self.params['b1'], name="A1", graph=self)
+        self.activation1 = activator(self.affine1, name="O1", graph=self)
 
-        u2 = tfl.Affine2(self.params['W2'], o0, o1, self.params['b2'], name="A2", graph=self)
-        self.output = activator(u2, name="O2", graph=self)
+        self.affine2 = tfl.Affine2(self.params['W2'], self.activation0, self.activation1, self.params['b2'], name="A2", graph=self)
+        self.output = activator(self.affine2, name="O2", graph=self)
 
         self.error = tfl.SquaredError(self.output, self.target_node, name="SE", graph=self)
+
+    def backward_propagation(self):
+        grads = {}
+
+        d_error = self.error.backward(1.0)
+        d_output = self.output.backward(d_error)
+        d_affine2 = self.affine2.backward(d_output)
+
+        d_activation0 = self.activation0.backward(d_affine2[0][0])
+        _ = self.affine0.backward(d_activation0)
+
+        d_activation1 = self.activation1.backward(d_affine2[0][1])
+        _ = self.affine1.backward(d_activation1)
+
+        grads['W0'] = self.affine0.dw
+        grads['b0'] = self.affine0.db
+        grads['W1'] = self.affine1.dw
+        grads['b1'] = self.affine1.db
+        grads['W2'] = self.affine2.dw
+        grads['b2'] = self.affine2.db
+
+        return grads
