@@ -273,26 +273,27 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
             self.set_learning_process_parameters(data, batch_size, epoch, print_period, is_numba, verbose)
 
-            self.save_params_pickle(epoch)
+            # self.save_params_pickle(epoch)
+            self.save_params_pickle(0)
 
         print()
 
-        self.min_validation_error_epoch = np.argmin(self.validation_error_list)
-        self.min_train_error = float(self.train_error_list[self.min_validation_error_epoch])
-        self.min_validation_error = float(self.validation_error_list[self.min_validation_error_epoch])
-        self.max_test_accuracy = float(self.test_accuracy_list[self.min_validation_error_epoch])
-
-        print("[Best Epoch (based on Validation Error) and Its Performance]")
-        print("Epoch {:3d} Completed - Train Error: {:7.6f} - Validation Error: {:7.6f} - Test Accuracy: {:7.6f}".format(
-            self.min_validation_error_epoch,
-            self.min_train_error,
-            self.min_validation_error,
-            self.max_test_accuracy
-        ))
-        self.load_params_pickle(self.min_validation_error_epoch)
-        self.layering()
-        self.cleanup_params_pickle()
-        print("Params are set to the best model!!!")
+        # self.min_validation_error_epoch = np.argmin(self.validation_error_list)
+        # self.min_train_error = float(self.train_error_list[self.min_validation_error_epoch])
+        # self.min_validation_error = float(self.validation_error_list[self.min_validation_error_epoch])
+        # self.max_test_accuracy = float(self.test_accuracy_list[self.min_validation_error_epoch])
+        #
+        # print("[Best Epoch (based on Validation Error) and Its Performance]")
+        # print("Epoch {:3d} Completed - Train Error: {:7.6f} - Validation Error: {:7.6f} - Test Accuracy: {:7.6f}".format(
+        #     self.min_validation_error_epoch,
+        #     self.min_train_error,
+        #     self.min_validation_error,
+        #     self.max_test_accuracy
+        # ))
+        # self.load_params_pickle(self.min_validation_error_epoch)
+        # self.layering()
+        # self.cleanup_params_pickle()
+        # print("Params are set to the best model!!!")
         print("-- Learning Finished --")
         print()
 
@@ -396,7 +397,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
             self.params = pickle.load(pickle_in)
 
     def cleanup_params_pickle(self):
-        #shutil.rmtree(self.model_params_dir + "/" + self.mode_id)
+        shutil.rmtree(self.model_params_dir + "/" + self.mode_id)
         pass
 
     def draw_params_histogram(self):
