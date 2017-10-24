@@ -386,7 +386,9 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
     def save_params_pickle(self, epoch):
         with open(self.model_params_dir + "/" + self.mode_id + "/epoch-" + str(epoch) + ".pickle", "wb") as pickle_out:
-            pickle.dump(self.params, pickle_out)
+            for key, param in self.params.items():
+                print(key + ":" + str(param.value.shape) + ":" + str(param.value.nbytes))
+            pickle.dump(self.params, pickle_out, protocol=pickle.HIGHEST_PROTOCOL)
 
     def load_params_pickle(self, epoch):
         self.params = None
@@ -394,7 +396,8 @@ class Multi_Layer_Network(Deep_Neural_Network):
             self.params = pickle.load(pickle_in)
 
     def cleanup_params_pickle(self):
-        shutil.rmtree(self.model_params_dir + "/" + self.mode_id)
+        #shutil.rmtree(self.model_params_dir + "/" + self.mode_id)
+        pass
 
     def draw_params_histogram(self):
         f, axarr = plt.subplots(1, (self.hidden_layer_num + 1) * 2, figsize=(10 * (self.hidden_layer_num + 1), 5))
