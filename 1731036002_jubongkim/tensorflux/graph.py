@@ -3,7 +3,8 @@
 # Reference: http://www.deepideas.net/deep-learning-from-scratch-i-computational-graphs/
 import networkx as nx
 import numpy as np
-
+import numba
+from numba import jit, float32, int32, void, cuda
 
 class Graph(nx.Graph):
     """Represents a computational graph (a neural network)
@@ -93,8 +94,6 @@ class Operation:
         for input_node in input_nodes:
             input_node.consumers.append(self)
             graph.add_edge(input_node, self)
-            graph.add_edge(input_node, self)
-            graph.add_edge(input_node, self)
 
     def forward(self):
         """Computes the output of this operation.
@@ -110,29 +109,14 @@ class Operation:
 
 
 class Add(Operation):
-    """Returns x + y element-wise.
-    """
-
     def __init__(self, x, y, name=None):
-        """Construct add
-
-        Args:
-          x: First summand node
-          y: Second summand node
-        """
-        self.inputs = None
         super().__init__([x, y], name)
 
+    @jit
     def forward(self, x_value, y_value):
-        """Compute the output of the add operation
-
-        Args:
-          x_value: First summand value
-          y_value: Second summand value
-        """
-        self.inputs = [x_value, y_value]
         return x_value + y_value
 
+    @jit
     def backward(self, d_in):
         d_x_value = d_in * 1
         d_y_value = d_in * 1
@@ -140,60 +124,38 @@ class Add(Operation):
 
 
 class Mul(Operation):
-    """Returns x * y.
-    """
-
     def __init__(self, x, y, name=None):
-        """Construct add
-
-        Args:
-          x: First summand node
-          y: Second summand node
-        """
-        self.inputs = None
+        self.x_value = None
+        self.y_value = None
         super().__init__([x, y], name)
 
+    @jit
     def forward(self, x_value, y_value):
-        """Compute the output of the add operation
-
-        Args:
-          x_value: First summand value
-          y_value: Second summand value
-        """
-        self.inputs = [x_value, y_value]
+        self.x_value = x_value
+        self.y_value = y_value
         return x_value * y_value
 
+    @jit
     def backward(self, d_in):
-        d_x_value = d_in * self.inputs[1]
-        d_y_value = d_in * self.inputs[0]
+        d_x_value = d_in * self.y_value
+        d_y_value = d_in * self.x_value
         return d_x_value, d_y_value
 
 
 class Matmul(Operation):
-    """Multiplies matrix x by matrix y, producing x * y.
-    """
-
     def __init__(self, x, y, name=None):
-        """Construct matmul
-
-        Args:
-          x: First matrix
-          y: Second matrix
-        """
-        self.inputs = None
+        self.x_value = None
+        self.y_value = None
         super().__init__([x, y], name)
 
+    @jit
     def forward(self, x_value, y_value):
-        """Compute the output of the matmul operation
-
-        Args:
-          x_value: First matrix value
-          y_value: Second matrix value
-        """
-        self.inputs = [x_value, y_value]
+        self.x_value = x_value
+        self.y_value = y_value
         return x_value.dot(y_value)
 
+    @jit
     def backward(self, d_in):
-        d_x_value = np.dot(self.inputs[1].T, d_in)
-        d_y_value = np.dot(d_in, self.inputs[0].T)
+        d_x_value = np.dot(self.y_value.T, d_in)
+        d_y_value = np.dot(d_in, self.x_value.T)
         return d_x_value, d_y_value
