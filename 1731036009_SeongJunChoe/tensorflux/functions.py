@@ -1,52 +1,9 @@
-# import numpy as np
-# import math
-# import matplotlib.pyplot as plt
-# from scipy.stats import truncnorm
-#
-# # 자세한 내용은 각자 확인
-# def get_truncated_normal(shape, mean=0, sd=1, low=0, upp=10):
-#     x = truncnorm(a=(low - mean) / sd, b=(upp - mean) / sd, loc=mean, scale=sd)
-#     num_elements = 1
-#     for dim in shape:
-#         num_elements *= dim
-#     x = x.rvs(num_elements)
-#     x = x.reshape(shape)
-#     return x
-#
-#
-# def sigmoid(x):
-#     return 1 / (1 + np.exp(-x))
-#
-#
-# def squared_error(output_value, target_value):
-#     # ovA = np.ndarray(shape=(3,), dtype=float, order='F')
-#     # cnt = 0
-#     # for n in output_value:
-#     #     ovA[cnt] = 0.5 * math.pow(n-target_value, 2)
-#     #     # print(ovA[cnt])
-#     #     cnt = cnt + 1
-#     #
-#     # print(np.argmax(ovA))
-#     # return np.argmax(ovA)
-#     return 0.5 * math.pow(output_value - target_value, 2)
-#
-# # functions 파일을 테스트함
-# if __name__ == "__main__":
-#     # sd : standard nevigation => 값을 크게 하면 분포가 커짐
-#     x1 = get_truncated_normal(shape=(1, 10000), mean=2, sd=5, low=1, upp=10)
-#     x2 = get_truncated_normal(shape=(1, 10000), mean=5.5, sd=5, low=1, upp=10)
-#     x3 = get_truncated_normal(shape=(1, 10000), mean=8, sd=5, low=1, upp=10)
-#
-#     fig, ax = plt.subplots(3, sharex=True)
-#     # 히스토그램을 그림
-#     ax[0].hist(x1.flatten())    # flatten : 데이터를 풀어주는 것!!! 히스토그램을 그리지 위해서는 중요
-#     ax[1].hist(x2.flatten())
-#     ax[2].hist(x3.flatten())
-#     plt.show()
 import numpy as np
 import math
 import matplotlib.pyplot as plt
 from scipy.stats import truncnorm
+from numba import jit, float64, uint8, void, cuda
+
 
 def get_truncated_normal(shape, mean=0, sd=1, low=0, upp=10):
     x = truncnorm(a=(low - mean) / sd, b=(upp - mean) / sd, loc=mean, scale=sd)
@@ -58,31 +15,116 @@ def get_truncated_normal(shape, mean=0, sd=1, low=0, upp=10):
     return x
 
 
-def sigmoid(x):
+def sigmoid(x, is_numba):
+    if is_numba:
+        return _sigmoid(x)
+    else:
+        return 1 / (1 + np.exp(-x))
+
+
+@jit(nopython=True)
+def _sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
 
-def squared_error(output_value, target_value):
-    return 0.5 * math.pow(output_value - target_value, 2)
+def squared_error(output_value, target_value, is_numba):
+    if is_numba:
+        return _squared_error(output_value, target_value)
+    else:
+        return 0.5 * np.power(output_value - target_value, 2.0)
 
-def softmax(x):
+
+@jit(nopython=True)
+def _squared_error(output_value, target_value):
+    return 0.5 * np.power(output_value - target_value, 2.0)
+
+
+def softmax(x, is_numba):
+    if is_numba:
+        return _softmax(x)
+    else:
+        if x.ndim == 2:
+            x = x.T
+            x = x - x.max()
+            y = np.exp(x) / np.sum(np.exp(x), axis=0)
+            return y.T
+
+        x = x - x.max()
+        return np.exp(x) / np.sum(np.exp(x))
+
+
+@jit(nopython=True)
+def _softmax(x):
     if x.ndim == 2:
         x = x.T
-        x = x - np.max(x, axis=0)
+        x = x - x.max()
         y = np.exp(x) / np.sum(np.exp(x), axis=0)
         return y.T
 
-    x = x - np.max(x)
+    x = x - x.max()
     return np.exp(x) / np.sum(np.exp(x))
 
 
-if __name__ == "__main__":
-    x1 = get_truncated_normal(shape=(1, 10000), mean=2, sd=1, low=1, upp=10)
-    x2 = get_truncated_normal(shape=(1, 10000), mean=5.5, sd=1, low=1, upp=10)
-    x3 = get_truncated_normal(shape=(1, 10000), mean=8, sd=1, low=1, upp=10)
+def cross_entropy_error(y, t, is_numba):
+    if y.ndim == 1 and t.ndim == 1:
+        t = t.reshape(1, t.size)
+        y = y.reshape(1, y.size)
+    y[y == 0] = 1e-15
+    batch_size = y.shape[0]
 
-    fig, ax = plt.subplots(3, sharex=True)
-    ax[0].hist(x1.flatten())
-    ax[1].hist(x2.flatten())
-    ax[2].hist(x3.flatten())
-    plt.show()
+    if is_numba:
+        return _cross_entropy_error(y, t, batch_size)
+    else:
+        return -np.sum(t * np.log(y)) / batch_size
+
+
+@jit(nopython=True)
+def _cross_entropy_error(y, t, batch_size):
+    return -np.sum(t * np.log(y)) / batch_size
+
+
+def accuracy(forward_final_output, target):
+    y = np.argmax(forward_final_output, axis=1)
+    if target.ndim != 1:
+        target = np.argmax(target, axis=1)
+
+    accuracy = np.sum(y == target) / float(forward_final_output.shape[0])
+    return accuracy
+
+
+if __name__ == "__main__":
+    # x1 = get_truncated_normal(shape=(1, 10000), mean=2, sd=1, low=1, upp=10)
+    # x2 = get_truncated_normal(shape=(1, 10000), mean=5.5, sd=1, low=1, upp=10)
+    # x3 = get_truncated_normal(shape=(1, 10000), mean=8, sd=1, low=1, upp=10)
+    #
+    # fig, ax = plt.subplots(3, sharex=True)
+    # ax[0].hist(x1.flatten())
+    # ax[1].hist(x2.flatten())
+    # ax[2].hist(x3.flatten())
+    # plt.show()
+
+    a = np.array([1.0, 2.0, 3.0])
+    print(sigmoid(a, is_numba=True))
+    print()
+
+    b = np.array([1.0, 0.0, 1.0])
+    c = np.array([0.0, 1.0, 0.0])
+    print(squared_error(b, c, is_numba=True))
+    print()
+
+    print(cross_entropy_error(b, c, is_numba=True))
+    print()
+
+    d = np.array([[1.0, 2.0, 3.0], [3.0, 2.0, 1.0]])
+    print(softmax(d, is_numba=True))
+    print()
+
+
+
+    q = np.array([[3.3, 1.2, 9.4], [7.1, 2.2, 3.3], [1.9, 9.2, 2.3]])
+    t = np.array([[0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+    print(accuracy(q, t, is_numba=True))
+
+    q = np.array([[3.3, 1.2, 9.4], [7.1, 2.2, 3.3], [1.9, 9.2, 2.3]])
+    t = np.array([[1.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+    print(accuracy(q, t, is_numba=True))
