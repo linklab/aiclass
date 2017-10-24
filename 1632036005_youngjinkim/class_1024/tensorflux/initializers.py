@@ -15,6 +15,9 @@ class Initializer:
     def initialize_param(self):
         pass
 
+    def get_variable(self):
+        return self.param
+
 
 class Value_Assignment_Initializer(Initializer):
     def __init__(self, value, name):

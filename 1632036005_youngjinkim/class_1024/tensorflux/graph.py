@@ -3,7 +3,7 @@
 # Reference: http://www.deepideas.net/deep-learning-from-scratch-i-computational-graphs/
 import networkx as nx
 import numpy as np
-from numba import jit, float64, uint8, void, cuda
+
 
 class Graph(nx.Graph):
     """Represents a computational graph (a neural network)
@@ -94,7 +94,7 @@ class Operation:
             input_node.consumers.append(self)
             graph.add_edge(input_node, self)
 
-    def forward(self, is_numba):
+    def forward(self):
         """Computes the output of this operation.
         "" Must be implemented by the particular operation.
         """
@@ -111,21 +111,13 @@ class Add(Operation):
     def __init__(self, x, y, name=None):
         super().__init__([x, y], name)
 
-    def forward(self, x_value, y_value, is_numba):
-        if is_numba:
-            return self._forward(x_value, y_value)
-        else:
-            return x_value + y_value
+    def forward(self, x_value, y_value):
+        return x_value + y_value
 
     def backward(self, d_in):
         d_x_value = d_in * 1
         d_y_value = d_in * 1
         return d_x_value, d_y_value
-
-    @staticmethod
-    @jit(nopython=True)
-    def _forward(x_value, y_value):
-        return x_value + y_value
 
 
 class Mul(Operation):
@@ -134,23 +126,16 @@ class Mul(Operation):
         self.y_value = None
         super().__init__([x, y], name)
 
-    def forward(self, x_value, y_value, is_numba):
+    def forward(self, x_value, y_value):
         self.x_value = x_value
         self.y_value = y_value
-        if is_numba:
-            return self._forward(x_value, y_value)
-        else:
-            return x_value * y_value
+        return x_value * y_value
 
     def backward(self, d_in):
         d_x_value = d_in * self.y_value
         d_y_value = d_in * self.x_value
         return d_x_value, d_y_value
 
-    @staticmethod
-    @jit(nopython=True)
-    def _forward(x_value, y_value):
-        return x_value * y_value
 
 class Matmul(Operation):
     def __init__(self, x, y, name=None):
@@ -158,20 +143,12 @@ class Matmul(Operation):
         self.y_value = None
         super().__init__([x, y], name)
 
-    def forward(self, x_value, y_value, is_numba):
+    def forward(self, x_value, y_value):
         self.x_value = x_value
         self.y_value = y_value
-        if is_numba:
-            return self._forward(x_value, y_value)
-        else:
-            return x_value.dot(y_value)
+        return x_value.dot(y_value)
 
     def backward(self, d_in):
         d_x_value = np.dot(self.y_value.T, d_in)
         d_y_value = np.dot(d_in, self.x_value.T)
         return d_x_value, d_y_value
-
-    @staticmethod
-    @jit(nopython=True)
-    def _forward(x_value, y_value):
-        return x_value.dot(y_value)

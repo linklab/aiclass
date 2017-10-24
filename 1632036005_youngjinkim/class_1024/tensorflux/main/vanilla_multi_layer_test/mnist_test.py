@@ -14,21 +14,16 @@ print(t, end="\n\n")
 data = mnist.MNIST_Data()
 #data = mnist.Fashion_MNIST_Data()
 
-print("data.train_input.shape:", data.train_input.shape, data.train_input.dtype)
-print("data.train_target.shape:", data.train_target.shape, data.train_target.dtype)
+print("data.train_input.shape:", data.train_input.shape)
+print("data.train_target.shape:", data.train_target.shape)
 
-print("data.validation_input.shape:", data.validation_input.shape, data.validation_input.dtype)
-print("data.validation_target.shape:", data.validation_target.shape, data.validation_target.dtype)
+print("data.validation_input.shape:", data.validation_input.shape)
+print("data.validation_target.shape:", data.validation_target.shape)
 
-print("data.test_input.shape:", data.test_input.shape, data.test_input.dtype)
-print("data.test_target.shape:", data.test_target.shape, data.test_target.dtype)
+print("data.test_input.shape:", data.test_input.shape)
+print("data.test_target.shape:", data.test_target.shape)
 
 print()
-
-print(data.train_target[0])
-print(data.train_target[1])
-print(data.train_target[2])
-print(data.train_target[2])
 
 flatten_list = []
 for figure in data.train_input:
