@@ -32,6 +32,7 @@ class Deep_Neural_Network(tfg.Graph):
         self.optimizer = optimizer(learning_rate=learning_rate)
 
         self.params = {}
+        self.optimal_epoch_and_params = None
 
         self.output = None
         self.error = None
@@ -242,9 +243,9 @@ class Multi_Layer_Network(Deep_Neural_Network):
         os.makedirs(self.model_params_dir + "/" + self.mode_id, exist_ok=True)
         self.max_epoch = max_epoch
 
-        self.set_learning_process_parameters(data, batch_size, 0, print_period, is_numba, verbose)
+        self.set_learning_process_specification(data, batch_size, 0, print_period, is_numba, verbose)
 
-        self.save_params_pickle(0)
+        self.save_params(0)
 
         num_batch = math.ceil(data.num_train_data / batch_size)
 
@@ -271,9 +272,13 @@ class Multi_Layer_Network(Deep_Neural_Network):
                     grads = self.backward_propagation(is_numba)
                     self.optimizer.update(params=self.params, grads=grads)
 
-            self.set_learning_process_parameters(data, batch_size, epoch, print_period, is_numba, verbose)
+            self.set_learning_process_specification(data, batch_size, epoch, print_period, is_numba, verbose)
 
-            self.save_params_pickle(epoch)
+            #self.save_params_pickle(epoch)
+
+            min_validation_error_epoch = np.argmin(self.validation_error_list)
+            if min_validation_error_epoch == epoch:
+                self.save_params(epoch)
 
         print()
 
@@ -289,14 +294,17 @@ class Multi_Layer_Network(Deep_Neural_Network):
             self.min_validation_error,
             self.max_test_accuracy
         ))
-        self.load_params_pickle(self.min_validation_error_epoch)
+
+        #self.load_params_pickle(self.min_validation_error_epoch)
+        self.load_params()
         self.layering()
-        self.cleanup_params_pickle()
+        #self.cleanup_params_pickle()
+
         print("Params are set to the best model!!!")
         print("-- Learning Finished --")
         print()
 
-    def set_learning_process_parameters(self, data, batch_size, epoch, print_period, is_numba, verbose):
+    def set_learning_process_specification(self, data, batch_size, epoch, print_period, is_numba, verbose):
         batch_mask = np.random.choice(data.num_train_data, batch_size)
         i_batch = data.train_input[batch_mask]
         t_batch = data.train_target[batch_mask]
@@ -346,7 +354,8 @@ class Multi_Layer_Network(Deep_Neural_Network):
                     float(train_error),
                     float(validation_error),
                     float(test_accuracy)
-                ))
+                )
+            )
 
             if verbose:
                 self.draw_params_histogram()
@@ -384,6 +393,15 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
                 print()
 
+    def save_params(self, epoch):
+        print("Save Params at Epoch:", epoch)
+        optimal_params = copy.deepcopy(self.params)
+        self.optimal_epoch_and_params = [epoch, optimal_params]
+
+    def load_params(self):
+        print("Load Params from Epoch:", self.optimal_epoch_and_params[0])
+        self.params = self.optimal_epoch_and_params[1]
+
     def save_params_pickle(self, epoch):
         with open(self.model_params_dir + "/" + self.mode_id + "/epoch-" + str(epoch) + ".pickle", "wb") as pickle_out:
             for key, param in self.params.items():
@@ -396,7 +414,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
             self.params = pickle.load(pickle_in)
 
     def cleanup_params_pickle(self):
-        #shutil.rmtree(self.model_params_dir + "/" + self.mode_id)
+        shutil.rmtree(self.model_params_dir + "/" + self.mode_id)
         pass
 
     def draw_params_histogram(self):
