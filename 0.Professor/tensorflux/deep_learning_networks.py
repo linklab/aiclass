@@ -95,7 +95,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
                  output_size,
                  input_node=None,
                  target_node=None,
-                 init_mean=0.0,
+                 initializer=tfe.Initializer.Normal.value,
                  init_sd=0.01,
                  activator=tfe.Activator.ReLU.value,
                  optimizer=tfe.Optimizer.SGD.value,
@@ -107,7 +107,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
             output_size,
             input_node,
             target_node,
-            tfe.Initializer.Normal.value,
+            initializer,
             activator,
             optimizer,
             learning_rate,
@@ -136,48 +136,56 @@ class Multi_Layer_Network(Deep_Neural_Network):
         self.param_skewness_list = {}
         self.param_kurtosis_list = {}
 
-        self.initialize_normal_random_param(mean=init_mean, sd=init_sd)
+        self.initialize_param(sd=init_sd)
         self.layering()
 
-    def initialize_param(self, initializer=tfe.Initializer.Zero.value):
+    def initialize_param(self, mean=0.0, sd=1.0, low=-1.0, upp=1.0):
         self.params_size_list = [self.input_size] + self.hidden_size_list + [self.output_size]
         for idx in range(self.hidden_layer_num + 1):
-            self.params['W' + str(idx)] = self.initializer(
-                shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
-                name="W" + str(idx)
-            ).param
+            if self.initializer is tfe.Initializer.Normal.value:
+                self.params['W' + str(idx)] = self.initializer(
+                    shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
+                    name="W" + str(idx),
+                    mean=mean,
+                    sd=sd
+                ).param
 
-            self.params['b' + str(idx)] = self.initializer(
-                shape=(self.params_size_list[idx + 1],),
-                name="b" + str(idx)
-            ).param
+                self.params['b' + str(idx)] = self.initializer(
+                    shape=(self.params_size_list[idx + 1],),
+                    name="b" + str(idx),
+                    mean=mean,
+                    sd=sd
+                ).param
 
-            self.param_mean_list['W' + str(idx)] = []
-            self.param_variance_list['W' + str(idx)] = []
-            self.param_skewness_list['W' + str(idx)] = []
-            self.param_kurtosis_list['W' + str(idx)] = []
+            elif self.initializer is tfe.Initializer.Truncated_Normal.value:
+                self.params['W' + str(idx)] = self.initializer(
+                    shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
+                    name="W" + str(idx),
+                    mean=mean,
+                    sd=sd,
+                    low=low,
+                    upp=upp
+                ).param
 
-            self.param_mean_list['b' + str(idx)] = []
-            self.param_variance_list['b' + str(idx)] = []
-            self.param_skewness_list['b' + str(idx)] = []
-            self.param_kurtosis_list['b' + str(idx)] = []
+                self.params['b' + str(idx)] = self.initializer(
+                    shape=(self.params_size_list[idx + 1],),
+                    name="b" + str(idx),
+                    mean=mean,
+                    sd=sd,
+                    low=low,
+                    upp=upp
+                ).param
 
-    def initialize_normal_random_param(self, mean=0.0, sd=0.1):
-        self.params_size_list = [self.input_size] + self.hidden_size_list + [self.output_size]
-        for idx in range(self.hidden_layer_num + 1):
-            self.params['W' + str(idx)] = self.initializer(
-                shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
-                name="W" + str(idx),
-                mean=mean,
-                sd=sd
-            ).param
+            else:
+                self.params['W' + str(idx)] = self.initializer(
+                    shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
+                    name="W" + str(idx)
+                ).param
 
-            self.params['b' + str(idx)] = self.initializer(
-                shape=(self.params_size_list[idx + 1],),
-                name="b" + str(idx),
-                mean=mean,
-                sd=sd
-            ).param
+                self.params['b' + str(idx)] = self.initializer(
+                    shape=(self.params_size_list[idx + 1],),
+                    name="b" + str(idx)
+                ).param
 
             self.param_mean_list['W' + str(idx)] = []
             self.param_variance_list['W' + str(idx)] = []
@@ -218,7 +226,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
         self.error = tfl.SoftmaxWithCrossEntropyLoss(self.output, self.target_node, name="SCEL", graph=self)
 
-    def feed_forward(self, input_data, is_numba):
+    def feed_forward(self, input_data, is_numba=False):
         return self.session.run(self.output, {self.input_node: input_data}, is_numba, verbose=False)
 
     def backward_propagation(self, is_numba):
