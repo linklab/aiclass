@@ -12,6 +12,7 @@ class Initializer(Enum):
     Value_Assignment    = tfi.Value_Assignment_Initializer
     Normal              = tfi.Random_Normal_Initializer
     Uniform             = tfi.Random_Uniform_Initializer
+    Xavier              = tfi.Xavier_Initializer
 
 
 class Optimizer(Enum):
