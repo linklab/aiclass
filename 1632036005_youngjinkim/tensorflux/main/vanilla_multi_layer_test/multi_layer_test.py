@@ -9,7 +9,7 @@ input_size = 784
 hidden_layer1_size = 128
 hidden_layer2_size = 128
 output_size = 10
-model_params_dir = "/Users/yhhan/temp3"
+model_params_dir = "../../../tmp"
 
 x = tfg.Placeholder(name="x")
 target = tfg.Placeholder(name="target")

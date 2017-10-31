@@ -105,7 +105,8 @@ class Xavier(Initializer):
 class He(Initializer):
     def initialize_param(self):
         if len(self.shape) == 2:
-            sd = math.sqrt(3.0 / (self.shape[0] + self.shape[1]))
+            sd = math.sqrt(4.0 / (self.shape[0] + self.shape[1]))
         else:
             sd = math.sqrt(2.0 / self.shape[0])
+
         self.param = tfg.Variable(np.random.normal(loc=0.0, scale=sd, size=self.shape), name=self.name)
