@@ -9,16 +9,20 @@ class Session:
     """Represents a particular execution of a computational graph.
     """
 
-    def run(self, operation, feed_dict={}, verbose=False):
+    def run(self, operation, feed_dict, is_numba, verbose=False):
         """Computes the output of an operation
         
         Args:
           operation: The operation whose output we'd like to compute.
           feed_dict: A dictionary that maps placeholders to values for this session
+          verbose: verbose
         """
 
+        assert feed_dict is not None
+        assert is_numba is not None
+
         # Perform a post-order traversal of the graph to bring the nodes into the right order
-        nodes_postorder = self.traverse_postorder(operation)  # ??????????????????????????
+        nodes_postorder = self.traverse_postorder(operation)
         if verbose:
             print("*** nodes in post-order ***")
 
@@ -26,7 +30,7 @@ class Session:
         for node in nodes_postorder:
             if type(node) == tfg.Placeholder:
                 # Set the node value to the placeholder value from feed_dict
-                node.output = feed_dict[node]  # ??????????????????????????
+                node.output = feed_dict[node]
             elif type(node) == tfg.Variable:
                 # Set the node value to the variable's value attribute
                 node.output = node.value
@@ -38,7 +42,7 @@ class Session:
                 node_inputs = [input_node.output for input_node in node.input_nodes]
 
                 # Compute the output of this operation
-                node.output = node.forward(*node_inputs)
+                node.output = node.forward(*node_inputs, is_numba)
 
             # Convert lists to numpy arrays
             if type(node.output) is not np.ndarray:
