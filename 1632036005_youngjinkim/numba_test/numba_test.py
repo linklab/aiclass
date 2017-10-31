@@ -12,17 +12,13 @@ print("Numba Version", numba.__version__)
 
 # jit decorator tells Numba to compile this function.
 # The argument types will be inferred by Numba when function is called.
-
-
 @jit
 def jit_sum_1(arr):
     M, N = arr.shape
     result = 0.0
-    #for i in range(M):
-    #    for j in range(N):
-    #        result += arr[i,j]
-
-    result = sum(arr);
+    for i in range(M):
+        for j in range(N):
+            result += arr[i,j]
     return result
 
 
@@ -36,7 +32,6 @@ def jit_sum_2(arr):
     return result
 
 
-@jit
 def sum(arr):
     M, N = arr.shape
     result = 0.0
@@ -57,9 +52,9 @@ def sum(arr):
 
 
 a = arange(900000000).reshape(30000, 30000)
-# print(a)
+print(a)
 
-# print()
+print()
 
 s = timer()
 result = jit_sum_1(a)
@@ -77,13 +72,13 @@ print(result)
 
 print()
 
-# s = timer()
-# result = sum(a)
-# e = timer()
-# print("NORMAL_SUM: {:7.6f} ms".format((e - s) * 1000))
-# print(result)
+s = timer()
+result = sum(a)
+e = timer()
+print("NORMAL_SUM: {:7.6f} ms".format((e - s) * 1000))
+print(result)
 
-# print()
+print()
 
 # s = timer()
 # result = cuda_jit_sum(a)

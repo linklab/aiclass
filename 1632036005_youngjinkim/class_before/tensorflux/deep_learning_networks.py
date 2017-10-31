@@ -32,7 +32,6 @@ class Deep_Neural_Network(tfg.Graph):
         self.optimizer = optimizer(learning_rate=learning_rate)
 
         self.params = {}
-        self.optimal_epoch_and_params = None
 
         self.output = None
         self.error = None
@@ -95,10 +94,11 @@ class Multi_Layer_Network(Deep_Neural_Network):
                  output_size,
                  input_node=None,
                  target_node=None,
-                 initializer=tfe.Initializer.Normal.value,
+                 init_mean=0.0,
                  init_sd=0.01,
-                 activator=tfe.Activator.ReLU.value,
+                 activator=tfe.Activator.Sigmoid.value, #activator=tfe.Activator.ReLU.value,
                  optimizer=tfe.Optimizer.SGD.value,
+                 initializer=tfe.Initializer.Xavier.value, #initializer=tfe.Initializer.Normal.value,
                  learning_rate=0.01,
                  model_params_dir=None):
 
@@ -136,56 +136,72 @@ class Multi_Layer_Network(Deep_Neural_Network):
         self.param_skewness_list = {}
         self.param_kurtosis_list = {}
 
-        self.initialize_param(sd=init_sd)
+        self.initialize_normal_random_param(mean=init_mean, sd=init_sd)
+        #self.initialize_xavier_param()
         self.layering()
 
-    def initialize_param(self, mean=0.0, sd=1.0, low=-1.0, upp=1.0):
+    def initialize_param(self, initializer=tfe.Initializer.Zero.value):
         self.params_size_list = [self.input_size] + self.hidden_size_list + [self.output_size]
         for idx in range(self.hidden_layer_num + 1):
-            if self.initializer is tfe.Initializer.Normal.value:
-                self.params['W' + str(idx)] = self.initializer(
-                    shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
-                    name="W" + str(idx),
-                    mean=mean,
-                    sd=sd
-                ).param
+            self.params['W' + str(idx)] = self.initializer(
+                shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
+                name="W" + str(idx)
+            ).param
 
-                self.params['b' + str(idx)] = self.initializer(
-                    shape=(self.params_size_list[idx + 1],),
-                    name="b" + str(idx),
-                    mean=mean,
-                    sd=sd
-                ).param
+            self.params['b' + str(idx)] = self.initializer(
+                shape=(self.params_size_list[idx + 1],),
+                name="b" + str(idx)
+            ).param
 
-            elif self.initializer is tfe.Initializer.Truncated_Normal.value:
-                self.params['W' + str(idx)] = self.initializer(
-                    shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
-                    name="W" + str(idx),
-                    mean=mean,
-                    sd=sd,
-                    low=low,
-                    upp=upp
-                ).param
+            self.param_mean_list['W' + str(idx)] = []
+            self.param_variance_list['W' + str(idx)] = []
+            self.param_skewness_list['W' + str(idx)] = []
+            self.param_kurtosis_list['W' + str(idx)] = []
 
-                self.params['b' + str(idx)] = self.initializer(
-                    shape=(self.params_size_list[idx + 1],),
-                    name="b" + str(idx),
-                    mean=mean,
-                    sd=sd,
-                    low=low,
-                    upp=upp
-                ).param
+            self.param_mean_list['b' + str(idx)] = []
+            self.param_variance_list['b' + str(idx)] = []
+            self.param_skewness_list['b' + str(idx)] = []
+            self.param_kurtosis_list['b' + str(idx)] = []
 
-            else:
-                self.params['W' + str(idx)] = self.initializer(
-                    shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
-                    name="W" + str(idx)
-                ).param
+    def initialize_normal_random_param(self, mean=0.0, sd=0.1):
+        self.params_size_list = [self.input_size] + self.hidden_size_list + [self.output_size]
+        for idx in range(self.hidden_layer_num + 1):
+            self.params['W' + str(idx)] = self.initializer(
+                shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
+                name="W" + str(idx),
+                mean=mean,
+                sd=sd
+            ).param
 
-                self.params['b' + str(idx)] = self.initializer(
-                    shape=(self.params_size_list[idx + 1],),
-                    name="b" + str(idx)
-                ).param
+            self.params['b' + str(idx)] = self.initializer(
+                shape=(self.params_size_list[idx + 1],),
+                name="b" + str(idx),
+                mean=mean,
+                sd=sd
+            ).param
+
+            self.param_mean_list['W' + str(idx)] = []
+            self.param_variance_list['W' + str(idx)] = []
+            self.param_skewness_list['W' + str(idx)] = []
+            self.param_kurtosis_list['W' + str(idx)] = []
+
+            self.param_mean_list['b' + str(idx)] = []
+            self.param_variance_list['b' + str(idx)] = []
+            self.param_skewness_list['b' + str(idx)] = []
+            self.param_kurtosis_list['b' + str(idx)] = []
+
+    def initialize_xavier_param(self):
+        self.params_size_list = [self.input_size] + self.hidden_size_list + [self.output_size]
+        for idx in range(self.hidden_layer_num + 1):
+            self.params['W' + str(idx)] = self.initializer(
+                shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
+                name="W" + str(idx)
+            ).param
+
+            self.params['b' + str(idx)] = tfe.Initializer.One.value(
+                shape=(self.params_size_list[idx + 1],),
+                name="b" + str(idx)
+            ).param
 
             self.param_mean_list['W' + str(idx)] = []
             self.param_variance_list['W' + str(idx)] = []
@@ -226,7 +242,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
         self.error = tfl.SoftmaxWithCrossEntropyLoss(self.output, self.target_node, name="SCEL", graph=self)
 
-    def feed_forward(self, input_data, is_numba=False):
+    def feed_forward(self, input_data, is_numba):
         return self.session.run(self.output, {self.input_node: input_data}, is_numba, verbose=False)
 
     def backward_propagation(self, is_numba):
@@ -251,9 +267,9 @@ class Multi_Layer_Network(Deep_Neural_Network):
         os.makedirs(self.model_params_dir + "/" + self.mode_id, exist_ok=True)
         self.max_epoch = max_epoch
 
-        self.set_learning_process_specification(data, batch_size, 0, print_period, is_numba, verbose)
+        self.set_learning_process_parameters(data, batch_size, 0, print_period, is_numba, verbose)
 
-        self.save_params(0)
+        # self.save_params_pickle(0)
 
         num_batch = math.ceil(data.num_train_data / batch_size)
 
@@ -280,39 +296,32 @@ class Multi_Layer_Network(Deep_Neural_Network):
                     grads = self.backward_propagation(is_numba)
                     self.optimizer.update(params=self.params, grads=grads)
 
-            self.set_learning_process_specification(data, batch_size, epoch, print_period, is_numba, verbose)
+            self.set_learning_process_parameters(data, batch_size, epoch, print_period, is_numba, verbose)
 
-            #self.save_params_pickle(epoch)
-
-            min_validation_error_epoch = np.argmin(self.validation_error_list)
-            if min_validation_error_epoch == epoch:
-                self.save_params(epoch)
+            # self.save_params_pickle(epoch)
 
         print()
 
-        self.min_validation_error_epoch = np.argmin(self.validation_error_list)
-        self.min_train_error = float(self.train_error_list[self.min_validation_error_epoch])
-        self.min_validation_error = float(self.validation_error_list[self.min_validation_error_epoch])
-        self.max_test_accuracy = float(self.test_accuracy_list[self.min_validation_error_epoch])
-
-        print("[Best Epoch (based on Validation Error) and Its Performance]")
-        print("Epoch {:3d} Completed - Train Error: {:7.6f} - Validation Error: {:7.6f} - Test Accuracy: {:7.6f}".format(
-            self.min_validation_error_epoch,
-            self.min_train_error,
-            self.min_validation_error,
-            self.max_test_accuracy
-        ))
-
-        #self.load_params_pickle(self.min_validation_error_epoch)
-        self.load_params()
-        self.layering()
-        #self.cleanup_params_pickle()
-
-        print("Params are set to the best model!!!")
+        # self.min_validation_error_epoch = np.argmin(self.validation_error_list)
+        # self.min_train_error = float(self.train_error_list[self.min_validation_error_epoch])
+        # self.min_validation_error = float(self.validation_error_list[self.min_validation_error_epoch])
+        # self.max_test_accuracy = float(self.test_accuracy_list[self.min_validation_error_epoch])
+        #
+        # print("[Best Epoch (based on Validation Error) and Its Performance]")
+        # print("Epoch {:3d} Completed - Train Error: {:7.6f} - Validation Error: {:7.6f} - Test Accuracy: {:7.6f}".format(
+        #     self.min_validation_error_epoch,
+        #     self.min_train_error,
+        #     self.min_validation_error,
+        #     self.max_test_accuracy
+        # ))
+        # self.load_params_pickle(self.min_validation_error_epoch)
+        # self.layering()
+        # self.cleanup_params_pickle()
+        # print("Params are set to the best model!!!")
         print("-- Learning Finished --")
         print()
 
-    def set_learning_process_specification(self, data, batch_size, epoch, print_period, is_numba, verbose):
+    def set_learning_process_parameters(self, data, batch_size, epoch, print_period, is_numba, verbose):
         batch_mask = np.random.choice(data.num_train_data, batch_size)
         i_batch = data.train_input[batch_mask]
         t_batch = data.train_target[batch_mask]
@@ -362,8 +371,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
                     float(train_error),
                     float(validation_error),
                     float(test_accuracy)
-                )
-            )
+                ))
 
             if verbose:
                 self.draw_params_histogram()
@@ -401,15 +409,6 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
                 print()
 
-    def save_params(self, epoch):
-        print("Save Params at Epoch:", epoch)
-        optimal_params = copy.deepcopy(self.params)
-        self.optimal_epoch_and_params = [epoch, optimal_params]
-
-    def load_params(self):
-        print("Load Params from Epoch:", self.optimal_epoch_and_params[0])
-        self.params = self.optimal_epoch_and_params[1]
-
     def save_params_pickle(self, epoch):
         with open(self.model_params_dir + "/" + self.mode_id + "/epoch-" + str(epoch) + ".pickle", "wb") as pickle_out:
             for key, param in self.params.items():
@@ -422,7 +421,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
             self.params = pickle.load(pickle_in)
 
     def cleanup_params_pickle(self):
-        shutil.rmtree(self.model_params_dir + "/" + self.mode_id)
+        #shutil.rmtree(self.model_params_dir + "/" + self.mode_id)
         pass
 
     def draw_params_histogram(self):

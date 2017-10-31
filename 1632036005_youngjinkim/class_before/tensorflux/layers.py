@@ -183,9 +183,8 @@ class Tanh(tfg.Operation):
 
     def forward(self, u_value, is_numba):
         self.u_value = u_value
-        self.out = np.tanh(u_value);
         #self.out = (np.exp(u_value) - np.exp(-u_value)) / (np.exp(u_value) + np.exp(-u_value));
-        #self.out = (1 - np.exp(-2*u_value)) / (1 + np.exp(-2*u_value))
+        self.out = (1 - np.exp(-2*u_value)) / (1 + np.exp(-2*u_value))
         #print(self.out)
         return self.out
 
@@ -194,41 +193,7 @@ class Tanh(tfg.Operation):
             return self._backward(din, self.out)
         else:
             #dx = din * (1 + self.out)*(1 - self.out)
-            dx = din * (1 - self.out**2)
-            return dx
-
-    @staticmethod
-    @jit(nopython=True)
-    def _backward(din, out):
-        dx = din * out * (1.0 - out)
-        return dx
-
-    def __str__(self):
-        return "Sigmoid: " + self.name
-
-
-class SoftSign(tfg.Operation):
-    def __init__(self, u, name=None, graph=None):
-        """Construct ReLU
-
-        Args:
-          u: affine node
-        """
-        self.u_value = None
-
-        self.out = None
-        super().__init__([u], name, graph)
-
-    def forward(self, u_value, is_numba):
-        self.u_value = u_value
-        self.out = u_value / (1 + np.absolute(u_value))
-        return self.out
-
-    def backward(self, din, is_numba):
-        if is_numba:
-            return self._backward(din, self.out)
-        else:
-            dx = din * (1 / ((1 + np.absolute(self.u_value))**2))
+            dx = din * (1 - (self.out * self.out))
             return dx
 
     @staticmethod
