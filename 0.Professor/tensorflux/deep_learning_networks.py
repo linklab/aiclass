@@ -17,10 +17,11 @@ import os
 import pickle
 import copy
 import shutil
+import sys
 
 
 class Deep_Neural_Network(tfg.Graph):
-    def __init__(self, input_size, output_size, input_node, target_node, initializer, activator, optimizer, learning_rate, model_params_dir):
+    def __init__(self, input_size, output_size, input_node, target_node, initializer, activator, optimizer, learning_rate):
         self.input_size = input_size
         self.output_size = output_size
 
@@ -37,7 +38,6 @@ class Deep_Neural_Network(tfg.Graph):
         self.output = None
         self.error = None
         self.max_epoch = None
-        self.model_params_dir = model_params_dir
 
         self.session = tfs.Session()
 
@@ -99,8 +99,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
                  init_sd=0.01,
                  activator=tfe.Activator.ReLU.value,
                  optimizer=tfe.Optimizer.SGD.value,
-                 learning_rate=0.01,
-                 model_params_dir=None):
+                 learning_rate=0.01):
 
         super().__init__(
             input_size,
@@ -110,8 +109,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
             initializer,
             activator,
             optimizer,
-            learning_rate,
-            model_params_dir
+            learning_rate
         )
 
         print("Multi Layer Network Model - ID:", self.mode_id)
@@ -126,10 +124,12 @@ class Multi_Layer_Network(Deep_Neural_Network):
         self.validation_error_list = []
         self.test_accuracy_list = []
 
-        self.min_validation_error_epoch = None
-        self.min_train_error = None
-        self.min_validation_error = None
-        self.max_test_accuracy = None
+        self.min_validation_error_epoch = sys.float_info.max
+        self.min_train_error = sys.float_info.max
+        self.min_validation_error = sys.float_info.max
+        self.min_fold_idx = sys.maxsize
+
+        self.test_accuracy_at_min_validation_error_epoch = 0.0
 
         self.param_mean_list = {}
         self.param_variance_list = {}
@@ -248,63 +248,60 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
     def learning(self, max_epoch, data, batch_size=1000, print_period=10, is_numba=False, verbose=False):
         print("-- Learning Started --")
-        os.makedirs(self.model_params_dir + "/" + self.mode_id, exist_ok=True)
         self.max_epoch = max_epoch
 
-        self.set_learning_process_specification(data, batch_size, 0, print_period, is_numba, verbose)
+        for fold_idx in range(data.n_splits):
+            print("Fold: ", fold_idx)
+            data.set_next_train_and_validation_data()
+            num_batch = math.ceil(data.num_train_data / batch_size)
 
-        self.save_params(0)
+            if fold_idx == 0:
+                self.set_learning_process_specification(data, batch_size, 0, print_period, is_numba, fold_idx, max_epoch, verbose)
 
-        num_batch = math.ceil(data.num_train_data / batch_size)
+            for epoch in range(1, max_epoch + 1):
+                for i in range(num_batch):
+                    i_batch = data.train_input[i * batch_size: i * batch_size + batch_size]
+                    t_batch = data.train_target[i * batch_size: i * batch_size + batch_size]
 
-        for epoch in range(1, max_epoch + 1):
-            for i in range(num_batch):
-                i_batch = data.train_input[i * batch_size: i * batch_size + batch_size]
-                t_batch = data.train_target[i * batch_size: i * batch_size + batch_size]
+                    #forward
+                    self.session.run(
+                        self.error,
+                        {
+                            self.input_node: i_batch,
+                            self.target_node: t_batch
+                        },
+                        is_numba=is_numba,
+                        verbose=False)
 
-                #forward
-                self.session.run(
-                    self.error,
-                    {
-                        self.input_node: i_batch,
-                        self.target_node: t_batch
-                    },
-                    is_numba=is_numba,
-                    verbose=False)
+                    #backward
+                    if isinstance(self.optimizer, tfe.Optimizer.NAG.value):
+                        cloned_network = copy.deepcopy(self)
+                        self.optimizer.update(params=self.params, cloned_network=cloned_network, is_numba=is_numba)
+                    else:
+                        grads = self.backward_propagation(is_numba)
+                        self.optimizer.update(params=self.params, grads=grads)
 
-                #backward
-                if isinstance(self.optimizer, tfe.Optimizer.NAG.value):
-                    cloned_network = copy.deepcopy(self)
-                    self.optimizer.update(params=self.params, cloned_network=cloned_network, is_numba=is_numba)
-                else:
-                    grads = self.backward_propagation(is_numba)
-                    self.optimizer.update(params=self.params, grads=grads)
+                self.set_learning_process_specification(data, batch_size, epoch, print_period, is_numba, fold_idx, max_epoch, verbose)
 
-            self.set_learning_process_specification(data, batch_size, epoch, print_period, is_numba, verbose)
+            print()
 
-            #self.save_params_pickle(epoch)
+            self.min_train_error = float(self.train_error_list[self.min_validation_error_epoch])
+            self.min_validation_error = float(self.validation_error_list[self.min_validation_error_epoch])
+            self.test_accuracy_at_min_validation_error_epoch = float(self.test_accuracy_list[self.min_validation_error_epoch])
 
-            min_validation_error_epoch = np.argmin(self.validation_error_list)
-            if min_validation_error_epoch == epoch:
-                self.save_params(epoch)
-
-        print()
-
-        self.min_validation_error_epoch = np.argmin(self.validation_error_list)
-        self.min_train_error = float(self.train_error_list[self.min_validation_error_epoch])
-        self.min_validation_error = float(self.validation_error_list[self.min_validation_error_epoch])
-        self.max_test_accuracy = float(self.test_accuracy_list[self.min_validation_error_epoch])
-
-        print("[Best Epoch (based on Validation Error) and Its Performance]")
-        print("Epoch {:3d} Completed - Train Error: {:7.6f} - Validation Error: {:7.6f} - Test Accuracy: {:7.6f}".format(
-            self.min_validation_error_epoch,
-            self.min_train_error,
-            self.min_validation_error,
-            self.max_test_accuracy
-        ))
+            print("[Best Epoch (based on Validation Error) and Its Performance]")
+            print("Global Epoch:{:3d} (Fold:{:3d} & Epoch:{:3d}) - Train Error:{:6.5f} - Validation Error:{:6.5f} - Test Accuracy:{:6.5f}".format(
+                self.min_validation_error_epoch,
+                self.min_fold_idx,
+                self.min_validation_error_epoch - max_epoch * self.min_fold_idx,
+                self.min_train_error,
+                self.min_validation_error,
+                self.test_accuracy_at_min_validation_error_epoch
+            ))
+            print()
 
         #self.load_params_pickle(self.min_validation_error_epoch)
-        self.load_params()
+        self.load_params(data.n_splits)
         self.layering()
         #self.cleanup_params_pickle()
 
@@ -312,7 +309,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
         print("-- Learning Finished --")
         print()
 
-    def set_learning_process_specification(self, data, batch_size, epoch, print_period, is_numba, verbose):
+    def set_learning_process_specification(self, data, batch_size, epoch, print_period, is_numba, fold_idx, max_epoch, verbose):
         batch_mask = np.random.choice(data.num_train_data, batch_size)
         i_batch = data.train_input[batch_mask]
         t_batch = data.train_target[batch_mask]
@@ -337,6 +334,14 @@ class Multi_Layer_Network(Deep_Neural_Network):
             verbose=False)
         self.validation_error_list.append(validation_error)
 
+        min_flag = False
+        if validation_error < self.min_validation_error:
+            self.min_validation_error = validation_error
+            self.min_validation_error_epoch = epoch + fold_idx * max_epoch
+            self.min_fold_idx = fold_idx
+            self.save_params()
+            min_flag = True
+
         forward_final_output = self.feed_forward(input_data=data.test_input, is_numba=is_numba)
 
         test_accuracy = tff.accuracy(forward_final_output, data.test_target)
@@ -357,13 +362,18 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
         if epoch % print_period == 0:
             print(
-                "Epoch {:3d} Completed - Train Error: {:7.6f} - Validation Error: {:7.6f} - Test Accuracy: {:7.6f}".format(
+                "Epoch {:3d} Completed - Train Error:{:6.5f} - Validation Error:{:6.5f} - Test Accuracy:{:6.5f}".format(
                     epoch,
                     float(train_error),
                     float(validation_error),
                     float(test_accuracy)
-                )
+                ),
+                end=""
             )
+            if min_flag:
+                print(" <== Minimal Val. Error")
+            else:
+                print()
 
             if verbose:
                 self.draw_params_histogram()
@@ -401,29 +411,19 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
                 print()
 
-    def save_params(self, epoch):
-        print("Save Params at Epoch:", epoch)
+    def save_params(self):
         optimal_params = copy.deepcopy(self.params)
-        self.optimal_epoch_and_params = [epoch, optimal_params]
+        self.optimal_epoch_and_params = [self.min_validation_error_epoch, optimal_params]
 
-    def load_params(self):
-        print("Load Params from Epoch:", self.optimal_epoch_and_params[0])
+    def load_params(self, n_splits):
+        acc_epoch = self.optimal_epoch_and_params[0]
+        if self.min_fold_idx != 0:
+            o_epoch = acc_epoch % self.min_fold_idx
+        else:
+            o_epoch = acc_epoch
+
+        print("Load Params from Fold {:3d} & Epoch {:3d}".format(self.min_fold_idx, o_epoch))
         self.params = self.optimal_epoch_and_params[1]
-
-    def save_params_pickle(self, epoch):
-        with open(self.model_params_dir + "/" + self.mode_id + "/epoch-" + str(epoch) + ".pickle", "wb") as pickle_out:
-            for key, param in self.params.items():
-                print(key + ":" + str(param.value.shape) + ":" + str(param.value.nbytes))
-            pickle.dump(self.params, pickle_out, protocol=pickle.HIGHEST_PROTOCOL)
-
-    def load_params_pickle(self, epoch):
-        self.params = None
-        with open(self.model_params_dir + "/" + self.mode_id + "/epoch-" + str(epoch) + ".pickle", "rb") as pickle_in:
-            self.params = pickle.load(pickle_in)
-
-    def cleanup_params_pickle(self):
-        shutil.rmtree(self.model_params_dir + "/" + self.mode_id)
-        pass
 
     def draw_params_histogram(self):
         f, axarr = plt.subplots(1, (self.hidden_layer_num + 1) * 2, figsize=(10 * (self.hidden_layer_num + 1), 5))
@@ -445,7 +445,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
         # Draw Error Values and Accuracy
         plt.figure(figsize=figsize)
 
-        epoch_list = np.arange(self.max_epoch + 1)
+        epoch_list = np.arange(len(self.train_error_list))
 
         plt.subplot(121)
         plt.plot(epoch_list, self.train_error_list, 'r', label='Train')
@@ -467,7 +467,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
         # Draw Error Values and Accuracy
         plt.figure(figsize=figsize)
 
-        epoch_list = np.arange(self.max_epoch + 1)
+        epoch_list = np.arange(len(self.param_mean_list['W0']))
 
         color_dic = {
             0: 'r',
@@ -544,7 +544,13 @@ class Multi_Layer_Network(Deep_Neural_Network):
     def draw_false_prediction(self, test_input, test_target, labels, num=5, figsize=(20, 5)):
         forward_final_output = self.feed_forward(input_data=test_input, is_numba=False)
         y = np.argmax(forward_final_output, axis=1)
-        target = np.argmax(test_target, axis=1)
+        if test_target.ndim != 1:
+            target = np.argmax(test_target, axis=1)
+        else:
+            target = test_target
+
+        print(y.shape)
+        print(target.shape)
 
         diff_index_list = []
         for i in range(len(test_input)):
@@ -554,7 +560,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
         for i in range(num):
             j = diff_index_list[i]
-            print("False Prediction Index: {:d}, Prediction: {:s}, Ground Truth: {:s}".format(j, labels[y[j]], labels[target[j]]))
+            print("False Prediction Index: {:d}, Prediction: {:s}, Ground Truth: {:s}".format(j, labels[y[j]], labels[int(target[j])]))
             img = np.array(test_input[j])
             img.shape = (28, 28)
             plt.subplot(150 + (i + 1))
