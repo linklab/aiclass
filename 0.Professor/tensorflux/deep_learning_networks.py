@@ -124,23 +124,40 @@ class Multi_Layer_Network(Deep_Neural_Network):
         self.validation_error_list = []
         self.test_accuracy_list = []
 
-        self.min_validation_error_epoch = sys.float_info.max
+        self.min_validation_error_epoch = sys.maxsize
         self.min_train_error = sys.float_info.max
         self.min_validation_error = sys.float_info.max
         self.min_fold_idx = sys.maxsize
-
         self.test_accuracy_at_min_validation_error_epoch = 0.0
+
+        self.min_validation_error_per_fold = []
 
         self.param_mean_list = {}
         self.param_variance_list = {}
         self.param_skewness_list = {}
         self.param_kurtosis_list = {}
 
+        self.output_mean_list = {}
+        self.output_variance_list = {}
+        self.output_skewness_list = {}
+        self.output_kurtosis_list = {}
+
         self.initialize_param(sd=init_sd)
         self.layering()
 
-    def initialize_param(self, mean=0.0, sd=1.0, low=-1.0, upp=1.0):
+    def initialize_param(self, mean=0.0, sd=1.0):
         self.params_size_list = [self.input_size] + self.hidden_size_list + [self.output_size]
+
+        self.param_mean_list['W'] = {}
+        self.param_variance_list['W'] = {}
+        self.param_skewness_list['W'] = {}
+        self.param_kurtosis_list['W'] = {}
+
+        self.param_mean_list['b'] = {}
+        self.param_variance_list['b'] = {}
+        self.param_skewness_list['b'] = {}
+        self.param_kurtosis_list['b'] = {}
+
         for idx in range(self.hidden_layer_num + 1):
             if self.initializer is tfe.Initializer.Normal.value:
                 self.params['W' + str(idx)] = self.initializer(
@@ -149,56 +166,50 @@ class Multi_Layer_Network(Deep_Neural_Network):
                     mean=mean,
                     sd=sd
                 ).param
-
-                self.params['b' + str(idx)] = self.initializer(
-                    shape=(self.params_size_list[idx + 1],),
-                    name="b" + str(idx),
-                    mean=mean,
-                    sd=sd
-                ).param
-
             elif self.initializer is tfe.Initializer.Truncated_Normal.value:
                 self.params['W' + str(idx)] = self.initializer(
                     shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
                     name="W" + str(idx),
                     mean=mean,
                     sd=sd,
-                    low=low,
-                    upp=upp
+                    low=-sd,
+                    upp=sd
                 ).param
-
-                self.params['b' + str(idx)] = self.initializer(
-                    shape=(self.params_size_list[idx + 1],),
-                    name="b" + str(idx),
-                    mean=mean,
-                    sd=sd,
-                    low=low,
-                    upp=upp
-                ).param
-
             else:
                 self.params['W' + str(idx)] = self.initializer(
                     shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
                     name="W" + str(idx)
                 ).param
 
-                self.params['b' + str(idx)] = self.initializer(
-                    shape=(self.params_size_list[idx + 1],),
-                    name="b" + str(idx)
-                ).param
+            self.params['b' + str(idx)] = tfe.Initializer.Zero.value(
+                shape=(self.params_size_list[idx + 1],),
+                name="b" + str(idx)
+            ).param
 
-            self.param_mean_list['W' + str(idx)] = []
-            self.param_variance_list['W' + str(idx)] = []
-            self.param_skewness_list['W' + str(idx)] = []
-            self.param_kurtosis_list['W' + str(idx)] = []
+            self.param_mean_list['W'][idx] = []
+            self.param_variance_list['W'][idx] = []
+            self.param_skewness_list['W'][idx] = []
+            self.param_kurtosis_list['W'][idx] = []
 
-            self.param_mean_list['b' + str(idx)] = []
-            self.param_variance_list['b' + str(idx)] = []
-            self.param_skewness_list['b' + str(idx)] = []
-            self.param_kurtosis_list['b' + str(idx)] = []
+            self.param_mean_list['b'][idx] = []
+            self.param_variance_list['b'][idx] = []
+            self.param_skewness_list['b'][idx] = []
+            self.param_kurtosis_list['b'][idx] = []
 
-    def layering(self):
+    def layering(self, refitting=False):
         input_node = self.input_node
+
+        if not refitting:
+            self.output_mean_list['affine'] = {}
+            self.output_variance_list['affine'] = {}
+            self.output_skewness_list['affine'] = {}
+            self.output_kurtosis_list['affine'] = {}
+
+            self.output_mean_list['activation'] = {}
+            self.output_variance_list['activation'] = {}
+            self.output_skewness_list['activation'] = {}
+            self.output_kurtosis_list['activation'] = {}
+
         for idx in range(self.hidden_layer_num):
             self.layers['affine' + str(idx)] = tfl.Affine(
                 self.params['W' + str(idx)],
@@ -214,6 +225,17 @@ class Multi_Layer_Network(Deep_Neural_Network):
             )
             input_node = self.layers['activation' + str(idx)]
 
+            if not refitting:
+                self.output_mean_list['affine'][idx] = []
+                self.output_variance_list['affine'][idx] = []
+                self.output_skewness_list['affine'][idx] = []
+                self.output_kurtosis_list['affine'][idx] = []
+
+                self.output_mean_list['activation'][idx] = []
+                self.output_variance_list['activation'][idx] = []
+                self.output_skewness_list['activation'][idx] = []
+                self.output_kurtosis_list['activation'][idx] = []
+
         idx = self.hidden_layer_num
         self.layers['affine' + str(idx)] = tfl.Affine(
             self.params['W' + str(idx)],
@@ -223,6 +245,12 @@ class Multi_Layer_Network(Deep_Neural_Network):
             graph=self
         )
         self.output = self.layers['affine' + str(idx)]
+
+        if not refitting:
+            self.output_mean_list['affine'][idx] = []
+            self.output_variance_list['affine'][idx] = []
+            self.output_skewness_list['affine'][idx] = []
+            self.output_kurtosis_list['affine'][idx] = []
 
         self.error = tfl.SoftmaxWithCrossEntropyLoss(self.output, self.target_node, name="SCEL", graph=self)
 
@@ -251,13 +279,13 @@ class Multi_Layer_Network(Deep_Neural_Network):
         self.max_epoch = max_epoch
 
         for fold_idx in range(data.n_splits):
-            print("Fold: ", fold_idx)
             data.set_next_train_and_validation_data()
             num_batch = math.ceil(data.num_train_data / batch_size)
 
             if fold_idx == 0:
                 self.set_learning_process_specification(data, batch_size, 0, print_period, is_numba, fold_idx, max_epoch, verbose)
 
+            print("Fold: ", fold_idx)
             for epoch in range(1, max_epoch + 1):
                 for i in range(num_batch):
                     i_batch = data.train_input[i * batch_size: i * batch_size + batch_size]
@@ -275,7 +303,8 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
                     #backward
                     if isinstance(self.optimizer, tfe.Optimizer.NAG.value):
-                        cloned_network = copy.deepcopy(self)
+                        #cloned_network = copy.deepcopy(self)
+                        cloned_network = pickle.loads(pickle.dumps(self, -1))
                         self.optimizer.update(params=self.params, cloned_network=cloned_network, is_numba=is_numba)
                     else:
                         grads = self.backward_propagation(is_numba)
@@ -289,6 +318,8 @@ class Multi_Layer_Network(Deep_Neural_Network):
             self.min_validation_error = float(self.validation_error_list[self.min_validation_error_epoch])
             self.test_accuracy_at_min_validation_error_epoch = float(self.test_accuracy_list[self.min_validation_error_epoch])
 
+            self.min_validation_error_per_fold.append(self.min_validation_error)
+
             print("[Best Epoch (based on Validation Error) and Its Performance]")
             print("Global Epoch:{:3d} (Fold:{:3d} & Epoch:{:3d}) - Train Error:{:6.5f} - Validation Error:{:6.5f} - Test Accuracy:{:6.5f}".format(
                 self.min_validation_error_epoch,
@@ -300,10 +331,10 @@ class Multi_Layer_Network(Deep_Neural_Network):
             ))
             print()
 
-        #self.load_params_pickle(self.min_validation_error_epoch)
         self.load_params(data.n_splits)
-        self.layering()
-        #self.cleanup_params_pickle()
+        self.layering(refitting=True)
+
+        self.mean_min_validation_error_for_all_folds = np.mean(self.min_validation_error_per_fold)
 
         print("Params are set to the best model!!!")
         print("-- Learning Finished --")
@@ -349,16 +380,29 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
         for idx in range(self.hidden_layer_num + 1):
             d = self.get_param_describe(layer_num=idx, kind="W")
-            self.param_mean_list['W' + str(idx)].append(d.mean)
-            self.param_variance_list['W' + str(idx)].append(d.variance)
-            self.param_skewness_list['W' + str(idx)].append(d.skewness)
-            self.param_kurtosis_list['W' + str(idx)].append(d.kurtosis)
+            self.param_mean_list['W'][idx].append(d.mean)
+            self.param_variance_list['W'][idx].append(d.variance)
+            self.param_skewness_list['W'][idx].append(d.skewness)
+            self.param_kurtosis_list['W'][idx].append(d.kurtosis)
 
             d = self.get_param_describe(layer_num=idx, kind="b")
-            self.param_mean_list['b' + str(idx)].append(d.mean)
-            self.param_variance_list['b' + str(idx)].append(d.variance)
-            self.param_skewness_list['b' + str(idx)].append(d.skewness)
-            self.param_kurtosis_list['b' + str(idx)].append(d.kurtosis)
+            self.param_mean_list['b'][idx].append(d.mean)
+            self.param_variance_list['b'][idx].append(d.variance)
+            self.param_skewness_list['b'][idx].append(d.skewness)
+            self.param_kurtosis_list['b'][idx].append(d.kurtosis)
+
+            d = self.get_activation_describe(layer_num=idx, kind="affine")
+            self.output_mean_list['affine'][idx].append(d.mean)
+            self.output_variance_list['affine'][idx].append(d.variance)
+            self.output_skewness_list['affine'][idx].append(d.skewness)
+            self.output_kurtosis_list['affine'][idx].append(d.kurtosis)
+
+            if idx != self.hidden_layer_num:
+                d = self.get_activation_describe(layer_num=idx, kind="activation")
+                self.output_mean_list['activation'][idx].append(d.mean)
+                self.output_variance_list['activation'][idx].append(d.variance)
+                self.output_skewness_list['activation'][idx].append(d.skewness)
+                self.output_kurtosis_list['activation'][idx].append(d.kurtosis)
 
         if epoch % print_period == 0:
             print(
@@ -412,7 +456,8 @@ class Multi_Layer_Network(Deep_Neural_Network):
                 print()
 
     def save_params(self):
-        optimal_params = copy.deepcopy(self.params)
+        #optimal_params = copy.deepcopy(self.params)
+        optimal_params = pickle.loads(pickle.dumps(self.params, -1))
         self.optimal_epoch_and_params = [self.min_validation_error_epoch, optimal_params]
 
     def load_params(self, n_splits):
@@ -466,8 +511,9 @@ class Multi_Layer_Network(Deep_Neural_Network):
     def draw_param_description(self, figsize=(20, 5)):
         # Draw Error Values and Accuracy
         plt.figure(figsize=figsize)
+        plt.subplots_adjust(hspace=.5)
 
-        epoch_list = np.arange(len(self.param_mean_list['W0']))
+        epoch_list = np.arange(len(self.param_mean_list['W'][0]))
 
         color_dic = {
             0: 'r',
@@ -477,7 +523,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
         plt.subplot(241)
         for idx in range(self.hidden_layer_num + 1):
-            plt.plot(epoch_list, self.param_mean_list['W' + str(idx)], color_dic[idx], label='W' + str(idx))
+            plt.plot(epoch_list, self.param_mean_list['W'][idx], color_dic[idx], label='W' + str(idx))
         plt.ylabel('Mean')
         plt.xlabel('Epochs')
         plt.grid(True)
@@ -485,7 +531,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
         plt.subplot(242)
         for idx in range(self.hidden_layer_num + 1):
-            plt.plot(epoch_list, self.param_variance_list['W' + str(idx)], color_dic[idx], label='W' + str(idx))
+            plt.plot(epoch_list, self.param_variance_list['W'][idx], color_dic[idx], label='W' + str(idx))
         plt.ylabel('Variance')
         plt.xlabel('Epochs')
         plt.grid(True)
@@ -493,7 +539,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
         
         plt.subplot(243)
         for idx in range(self.hidden_layer_num + 1):
-            plt.plot(epoch_list, self.param_skewness_list['W' + str(idx)], color_dic[idx], label='W' + str(idx))
+            plt.plot(epoch_list, self.param_skewness_list['W'][idx], color_dic[idx], label='W' + str(idx))
         plt.ylabel('Skewness')
         plt.xlabel('Epochs')
         plt.grid(True)
@@ -501,7 +547,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
         
         plt.subplot(244)
         for idx in range(self.hidden_layer_num + 1):
-            plt.plot(epoch_list, self.param_kurtosis_list['W' + str(idx)], color_dic[idx], label='W' + str(idx))
+            plt.plot(epoch_list, self.param_kurtosis_list['W'][idx], color_dic[idx], label='W' + str(idx))
         plt.ylabel('Kurtosis')
         plt.xlabel('Epochs')
         plt.grid(True)
@@ -509,7 +555,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
         plt.subplot(245)
         for idx in range(self.hidden_layer_num + 1):
-            plt.plot(epoch_list, self.param_mean_list['b' + str(idx)], color_dic[idx], label='b' + str(idx))
+            plt.plot(epoch_list, self.param_mean_list['b'][idx], color_dic[idx], label='b' + str(idx))
         plt.ylabel('Mean')
         plt.xlabel('Epochs')
         plt.grid(True)
@@ -517,7 +563,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
         plt.subplot(246)
         for idx in range(self.hidden_layer_num + 1):
-            plt.plot(epoch_list, self.param_variance_list['b' + str(idx)], color_dic[idx], label='b' + str(idx))
+            plt.plot(epoch_list, self.param_variance_list['b'][idx], color_dic[idx], label='b' + str(idx))
         plt.ylabel('Variance')
         plt.xlabel('Epochs')
         plt.grid(True)
@@ -525,7 +571,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
         plt.subplot(247)
         for idx in range(self.hidden_layer_num + 1):
-            plt.plot(epoch_list, self.param_skewness_list['b' + str(idx)], color_dic[idx], label='b' + str(idx))
+            plt.plot(epoch_list, self.param_skewness_list['b'][idx], color_dic[idx], label='b' + str(idx))
         plt.ylabel('Skewness')
         plt.xlabel('Epochs')
         plt.grid(True)
@@ -533,7 +579,85 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
         plt.subplot(248)
         for idx in range(self.hidden_layer_num + 1):
-            plt.plot(epoch_list, self.param_kurtosis_list['b' + str(idx)], color_dic[idx], label='b' + str(idx))
+            plt.plot(epoch_list, self.param_kurtosis_list['b'][idx], color_dic[idx], label='b' + str(idx))
+        plt.ylabel('Kurtosis')
+        plt.xlabel('Epochs')
+        plt.grid(True)
+        plt.legend(loc='lower left')
+
+        plt.show()
+
+    def draw_output_description(self, figsize=(20, 5)):
+        plt.figure(figsize=figsize)
+        plt.subplots_adjust(hspace=.5)
+
+        epoch_list = np.arange(len(self.output_mean_list['affine'][0]))
+
+        color_dic = {
+            0: 'r',
+            1: 'b',
+            2: 'g',
+        }
+
+        plt.subplot(241)
+        for idx in range(self.hidden_layer_num + 1):
+            plt.plot(epoch_list, self.output_mean_list['affine'][idx], color_dic[idx], label='affine' + str(idx))
+        plt.ylabel('Mean')
+        plt.xlabel('Epochs')
+        plt.grid(True)
+        plt.legend(loc='lower left')
+
+        plt.subplot(242)
+        for idx in range(self.hidden_layer_num + 1):
+            plt.plot(epoch_list, self.output_variance_list['affine'][idx], color_dic[idx], label='affine' + str(idx))
+        plt.ylabel('Variance')
+        plt.xlabel('Epochs')
+        plt.grid(True)
+        plt.legend(loc='lower left')
+
+        plt.subplot(243)
+        for idx in range(self.hidden_layer_num + 1):
+            plt.plot(epoch_list, self.output_skewness_list['affine'][idx], color_dic[idx], label='affine' + str(idx))
+        plt.ylabel('Skewness')
+        plt.xlabel('Epochs')
+        plt.grid(True)
+        plt.legend(loc='lower left')
+
+        plt.subplot(244)
+        for idx in range(self.hidden_layer_num + 1):
+            plt.plot(epoch_list, self.output_kurtosis_list['affine'][idx], color_dic[idx], label='affine' + str(idx))
+        plt.ylabel('Kurtosis')
+        plt.xlabel('Epochs')
+        plt.grid(True)
+        plt.legend(loc='lower left')
+
+        plt.subplot(245)
+        for idx in range(self.hidden_layer_num):
+            plt.plot(epoch_list, self.output_mean_list['activation'][idx], color_dic[idx], label='activation' + str(idx))
+        plt.ylabel('Mean')
+        plt.xlabel('Epochs')
+        plt.grid(True)
+        plt.legend(loc='lower left')
+
+        plt.subplot(246)
+        for idx in range(self.hidden_layer_num):
+            plt.plot(epoch_list, self.output_variance_list['activation'][idx], color_dic[idx], label='activation' + str(idx))
+        plt.ylabel('Variance')
+        plt.xlabel('Epochs')
+        plt.grid(True)
+        plt.legend(loc='lower left')
+
+        plt.subplot(247)
+        for idx in range(self.hidden_layer_num):
+            plt.plot(epoch_list, self.output_skewness_list['activation'][idx], color_dic[idx], label='activation' + str(idx))
+        plt.ylabel('Skewness')
+        plt.xlabel('Epochs')
+        plt.grid(True)
+        plt.legend(loc='lower left')
+
+        plt.subplot(248)
+        for idx in range(self.hidden_layer_num):
+            plt.plot(epoch_list, self.output_kurtosis_list['activation'][idx], color_dic[idx], label='activation' + str(idx))
         plt.ylabel('Kurtosis')
         plt.xlabel('Epochs')
         plt.grid(True)
@@ -548,9 +672,6 @@ class Multi_Layer_Network(Deep_Neural_Network):
             target = np.argmax(test_target, axis=1)
         else:
             target = test_target
-
-        print(y.shape)
-        print(target.shape)
 
         diff_index_list = []
         for i in range(len(test_input)):
@@ -577,3 +698,13 @@ class Multi_Layer_Network(Deep_Neural_Network):
             param_flatten_list = self.params['b' + str(layer_num)].value.flatten()
 
         return stats.describe(np.array(param_flatten_list))
+
+    def get_activation_describe(self, layer_num=0, kind="affine"):
+        assert layer_num <= self.hidden_layer_num
+
+        if kind == "affine":
+            output_flatten_list = self.layers['affine' + str(layer_num)].output.flatten()
+        else:
+            output_flatten_list = self.layers['activation' + str(layer_num)].output.flatten()
+
+        return stats.describe(np.array(output_flatten_list))

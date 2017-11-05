@@ -12,8 +12,12 @@ class Initializer(Enum):
     Uniform             = tfi.Random_Uniform_Initializer
     Normal              = tfi.Random_Normal_Initializer
     Truncated_Normal    = tfi.Truncated_Normal_Initializer
-    Xavier              = tfi.Xavier
-    He                  = tfi.He
+    Lecun_Normal        = tfi.Lecun_Normal
+    Lecun_Uniform       = tfi.Lecun_Uniform
+    Xavier_Normal       = tfi.Xavier_Normal
+    Xavier_Uniform      = tfi.Xavier_Uniform
+    He_Normal           = tfi.He_Normal
+    He_Uniform          = tfi.He_Uniform
 
 
 class Optimizer(Enum):

@@ -49,6 +49,9 @@ class MNIST_Data(data.Base_Data):
     def __init__(self, validation_size=5000, n_splits=1, is_onehot_target=True):
         super().__init__(n_splits)
 
+        self.validation_size = validation_size
+        self.n_splits = n_splits
+
         self.images, self.targets = load_mnist(path=MNIST_DIR, kind='train')
         self.test_input, self.test_target = load_mnist(path=MNIST_DIR, kind='t10k')
         self.num_test_data = len(self.test_input)
@@ -59,23 +62,29 @@ class MNIST_Data(data.Base_Data):
         if is_onehot_target:
             self.targets = convertToOneHot(self.targets, num_classes=10)
 
-        if n_splits == 1:
-            self.validation_input = self.images[:validation_size]
-            self.validation_target = self.targets[:validation_size]
-
-            self.train_input = self.images[validation_size:]
-            self.train_target = self.targets[validation_size:]
-        else:
-            kf = KFold(n_splits=n_splits)
-            self.splitted_indices = kf.split(self.images)
+        self.reset_kfold()
 
         self.num_train_data = len(self.images) - validation_size
         self.num_validation_data = validation_size
+
+    def reset_kfold(self):
+        if self.n_splits == 1:
+            self.validation_input = self.images[:self.validation_size]
+            self.validation_target = self.targets[:self.validation_size]
+
+            self.train_input = self.images[self.validation_size:]
+            self.train_target = self.targets[self.validation_size:]
+        else:
+            kf = KFold(n_splits=self.n_splits)
+            self.splitted_indices = kf.split(self.images)
 
 class Fashion_MNIST_Data(data.Base_Data):
     # https://github.com/zalandoresearch/fashion-mnist
     def __init__(self, validation_size=5000, n_splits=1, is_onehot_target=True):
         super().__init__(n_splits)
+
+        self.validation_size = validation_size
+        self.n_splits = n_splits
 
         self.images, self.targets = load_mnist(path=FASHION_MNIST_DIR, kind='train')
         self.test_input, self.test_target = load_mnist(path=MNIST_DIR, kind='t10k')
@@ -87,19 +96,21 @@ class Fashion_MNIST_Data(data.Base_Data):
         if is_onehot_target:
             self.targets = convertToOneHot(self.targets, num_classes=10)
 
-        if n_splits == 1:
-            self.validation_input = self.images[:validation_size]
-            self.validation_target = self.targets[:validation_size]
-
-            self.train_input = self.images[validation_size:]
-            self.train_target = self.targets[validation_size:]
-
-        else:
-            kf = KFold(n_splits=n_splits, shuffle=True)
-            self.splitted_indices = kf.split(self.images)
+        self.reset_kfold()
 
         self.num_train_data = len(self.images) - validation_size
         self.num_validation_data = validation_size
+
+    def reset_kfold(self):
+        if self.n_splits == 1:
+            self.validation_input = self.images[:self.validation_size]
+            self.validation_target = self.targets[:self.validation_size]
+
+            self.train_input = self.images[self.validation_size:]
+            self.train_target = self.targets[self.validation_size:]
+        else:
+            kf = KFold(n_splits=self.n_splits)
+            self.splitted_indices = kf.split(self.images)
 
 
 def load_mnist(path, kind='train'):

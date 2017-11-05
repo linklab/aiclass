@@ -1,4 +1,9 @@
 # -*- coding:utf-8 -*-
+# https://stackoverflow.com/questions/33640581/how-to-do-xavier-initialization-on-tensorflow
+# http://andyljones.tumblr.com/post/110998971763/an-explanation-of-xavier-initialization
+# https://github.com/google/prettytensor/blob/a69f13998258165d6682a47a931108d974bab05e/prettytensor/layers.py
+# https://github.com/tensorflow/tensorflow/blob/r1.4/tensorflow/python/keras/_impl/keras/initializers.py
+
 import numpy as np
 import tensorflux.graph as tfg
 import tensorflux.functions as tff
@@ -80,20 +85,49 @@ class Truncated_Normal_Initializer(Initializer):
                                                            low=self.low,
                                                            upp=self.upp), name=self.name)
 
+class Lecun_Normal(Initializer):
+    def initialize_param(self):
+        sd = math.sqrt(1.0 / self.shape[0])
+        self.param = tfg.Variable(tff.get_truncated_normal(shape=self.shape, mean=0.0, sd=sd, low=-sd, upp=sd), name=self.name)
 
-class Xavier(Initializer):
+
+class Lecun_Uniform(Initializer):
+    def initialize_param(self):
+        sd = math.sqrt(1.0 / self.shape[0])
+        self.param = tfg.Variable(np.random.uniform(low=-sd, high=sd, size=self.shape), name=self.name)
+
+
+class Xavier_Normal(Initializer): # Glorot_Normal
     def initialize_param(self):
         if len(self.shape) == 2:
             sd = math.sqrt(1.0 / (self.shape[0] + self.shape[1]))
         else:
             sd = math.sqrt(1.0 / self.shape[0])
-        self.param = tfg.Variable(np.random.normal(loc=0.0, scale=sd, size=self.shape), name=self.name)
+        self.param = tfg.Variable(tff.get_truncated_normal(shape=self.shape, mean=0.0, sd=sd, low=-sd, upp=sd), name=self.name)
 
 
-class He(Initializer):
+class Xavier_Uniform(Initializer):
     def initialize_param(self):
         if len(self.shape) == 2:
-            sd = math.sqrt(3.0 / (self.shape[0] + self.shape[1]))
+            sd = math.sqrt(1.0 / (self.shape[0] + self.shape[1]))
+        else:
+            sd = math.sqrt(1.0 / self.shape[0])
+        self.param = tfg.Variable(np.random.uniform(low=-sd, high=sd, size=self.shape), name=self.name)
+
+
+class He_Normal(Initializer):
+    def initialize_param(self):
+        if len(self.shape) == 2:
+            sd = math.sqrt(2.0 / (self.shape[0] + self.shape[1]))
         else:
             sd = math.sqrt(2.0 / self.shape[0])
-        self.param = tfg.Variable(np.random.normal(loc=0.0, scale=sd, size=self.shape), name=self.name)
+        self.param = tfg.Variable(tff.get_truncated_normal(shape=self.shape, mean=0.0, sd=sd, low=-sd, upp=sd), name=self.name)
+
+
+class He_Uniform(Initializer):
+    def initialize_param(self):
+        if len(self.shape) == 2:
+            sd = math.sqrt(2.0 / (self.shape[0] + self.shape[1]))
+        else:
+            sd = math.sqrt(2.0 / self.shape[0])
+        self.param = tfg.Variable(np.random.uniform(low=-sd, high=sd, size=self.shape), name=self.name)
