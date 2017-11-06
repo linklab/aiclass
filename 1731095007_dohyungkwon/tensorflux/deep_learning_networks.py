@@ -11,33 +11,39 @@ import numpy as np
 from scipy import stats
 import math
 from networkx.drawing.nx_agraph import graphviz_layout
-from numba import jit
+import random
+import string
+import os
+import pickle
+import copy
+import shutil
 
 
 class Deep_Neural_Network(tfg.Graph):
-    def __init__(self, input_size, output_size):
+    def __init__(self, input_size, output_size, input_node, target_node, initializer, activator, optimizer, learning_rate, model_params_dir):
         self.input_size = input_size
         self.output_size = output_size
 
-        self.input_node = None
-        self.target_node = None
+        self.input_node = input_node
+        self.target_node = target_node
 
-        self.activator = None
-        self.initializer = None
-        self.optimizer = None
+        self.activator = activator
+        self.initializer = initializer
+        self.optimizer = optimizer(learning_rate=learning_rate)
 
         self.params = {}
 
         self.output = None
         self.error = None
         self.max_epoch = None
+        self.model_params_dir = model_params_dir
 
         self.session = tfs.Session()
-        super().__init__()
 
-    def set_data_node(self, input_node, target_node):
-        self.input_node = input_node
-        self.target_node = target_node
+        self.mode_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+        # 8글자짜리 랜덤하게 문자열을 만든다. ID를 만들기 위해 하는 작업
+
+        super().__init__()
 
     def initialize_param(self, initializer=tfe.Initializer.Zero.value):
         pass
@@ -45,11 +51,7 @@ class Deep_Neural_Network(tfg.Graph):
     def layering(self, activator=tfe.Activator.ReLU.value):
         pass
 
-    def set_optimizer(self, optimizer=tfe.Optimizer.SGD.value, learning_rate=0.01):
-        self.optimizer = optimizer(learning_rate=learning_rate)
-        self.optimizer.params = self.params
-
-    def backward_propagation(self):
+    def backward_propagation(self, is_numba):
         pass
 
     def get_params_str(self):
@@ -70,12 +72,12 @@ class Deep_Neural_Network(tfg.Graph):
             all_param_flatten_list.extend([item for item in param.value.flatten()])
         return stats.describe(np.array(all_param_flatten_list))
 
-    def print_feed_forward(self, num_data, input_data, target_data, verbose=False):
+    def print_feed_forward(self, num_data, input_data, target_data, is_numba, verbose=False):
         for idx in range(num_data):
             train_input_data = input_data[idx]
             train_target_data = target_data[idx]
 
-            output = self.session.run(self.output, {self.input_node: train_input_data}, verbose)
+            output = self.session.run(self.output, {self.input_node: train_input_data}, is_numba, verbose)
             print("Input Data: {:>5}, Feed Forward Output: {:>6}, Target: {:>6}".format(
                 str(train_input_data), np.array2string(output), str(train_target_data)))
 
@@ -97,7 +99,22 @@ class Multi_Layer_Network(Deep_Neural_Network):
                  init_sd=0.01,
                  activator=tfe.Activator.ReLU.value,
                  optimizer=tfe.Optimizer.SGD.value,
-                 learning_rate=0.01):
+                 learning_rate=0.01,
+                 model_params_dir=None):
+
+        super().__init__(
+            input_size,
+            output_size,
+            input_node,
+            target_node,
+            tfe.Initializer.Normal.value,
+            activator,
+            optimizer,
+            learning_rate,
+            model_params_dir
+        )
+
+        print("Multi Layer Network Model - ID:", self.mode_id)
 
         self.hidden_size_list = hidden_size_list
         self.hidden_layer_num = len(hidden_size_list)
@@ -105,35 +122,35 @@ class Multi_Layer_Network(Deep_Neural_Network):
         self.params_size_list = None
         self.layers = OrderedDict()
 
-        super().__init__(input_size, output_size)
-
         self.train_error_list = []
         self.validation_error_list = []
         self.test_accuracy_list = []
+
+        self.min_validation_error_epoch = None
+        self.min_train_error = None
+        self.min_validation_error = None
+        self.max_test_accuracy = None
 
         self.param_mean_list = {}
         self.param_variance_list = {}
         self.param_skewness_list = {}
         self.param_kurtosis_list = {}
 
-        self.set_data_node(input_node, target_node)
         self.initialize_normal_random_param(mean=init_mean, sd=init_sd)
-        self.layering(activator)
-        self.set_optimizer(optimizer, learning_rate)
-
+        self.layering()
 
     def initialize_param(self, initializer=tfe.Initializer.Zero.value):
         self.params_size_list = [self.input_size] + self.hidden_size_list + [self.output_size]
         for idx in range(self.hidden_layer_num + 1):
-            self.params['W' + str(idx)] = initializer(
+            self.params['W' + str(idx)] = self.initializer(
                 shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
                 name="W" + str(idx)
-            ).get_variable()
+            ).param
 
-            self.params['b' + str(idx)] = initializer(
+            self.params['b' + str(idx)] = self.initializer(
                 shape=(self.params_size_list[idx + 1],),
                 name="b" + str(idx)
-            ).get_variable()
+            ).param
 
             self.param_mean_list['W' + str(idx)] = []
             self.param_variance_list['W' + str(idx)] = []
@@ -148,19 +165,19 @@ class Multi_Layer_Network(Deep_Neural_Network):
     def initialize_normal_random_param(self, mean=0.0, sd=0.1):
         self.params_size_list = [self.input_size] + self.hidden_size_list + [self.output_size]
         for idx in range(self.hidden_layer_num + 1):
-            self.params['W' + str(idx)] = tfi.Random_Normal_Initializer(
+            self.params['W' + str(idx)] = self.initializer(
                 shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
                 name="W" + str(idx),
                 mean=mean,
                 sd=sd
-            ).get_variable()
+            ).param
 
-            self.params['b' + str(idx)] = tfi.Random_Normal_Initializer(
+            self.params['b' + str(idx)] = self.initializer(
                 shape=(self.params_size_list[idx + 1],),
                 name="b" + str(idx),
                 mean=mean,
                 sd=sd
-            ).get_variable()
+            ).param
 
             self.param_mean_list['W' + str(idx)] = []
             self.param_variance_list['W' + str(idx)] = []
@@ -172,9 +189,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
             self.param_skewness_list['b' + str(idx)] = []
             self.param_kurtosis_list['b' + str(idx)] = []
 
-    def layering(self, activator=tfe.Activator.ReLU.value):
-        self.activator = activator
-
+    def layering(self):
         input_node = self.input_node
         for idx in range(self.hidden_layer_num):
             self.layers['affine' + str(idx)] = tfl.Affine(
@@ -184,7 +199,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
                 name='affine' + str(idx),
                 graph=self
             )
-            self.layers['activation' + str(idx)] = activator(
+            self.layers['activation' + str(idx)] = self.activator(
                 self.layers['affine' + str(idx)],
                 name='activation' + str(idx),
                 graph=self
@@ -203,21 +218,19 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
         self.error = tfl.SoftmaxWithCrossEntropyLoss(self.output, self.target_node, name="SCEL", graph=self)
 
+    def feed_forward(self, input_data, is_numba):
+        return self.session.run(self.output, {self.input_node: input_data}, is_numba, verbose=False)
 
-    def feed_forward(self, input_data):
-        return self.session.run(self.output, {self.input_node: input_data}, verbose=False)
-
-
-    def backward_propagation(self):
+    def backward_propagation(self, is_numba):
         grads = {}
 
-        d_error = self.error.backward(1.0)
+        d_error = self.error.backward(1.0, is_numba)
         din = d_error
 
         layers = list(self.layers.values())
         layers.reverse()
         for layer in layers:
-            din = layer.backward(din)
+            din = layer.backward(din, is_numba)
 
         for idx in range(self.hidden_layer_num + 1):
             grads['W' + str(idx)] = self.layers['affine' + str(idx)].dw
@@ -225,54 +238,101 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
         return grads
 
-    @jit
-    def learning(self, max_epoch, data, batch_size=1000, print_period=10, verbose=False):
+    def learning(self, max_epoch, data, batch_size=1000, print_period=10, is_numba=False, verbose=False):
+        print("-- Learning Started --")
+        os.makedirs(self.model_params_dir + "/" + self.mode_id, exist_ok=True)
+        # 해당 디렉토리에 ID를 붙여서 폴더를 만든다(덮어쓰기)
+
         self.max_epoch = max_epoch
 
-        self.set_learning_process_parameters(data, batch_size, 0, print_period, verbose)
+        self.set_learning_process_parameters(data, batch_size, 0, print_period, is_numba, verbose)
+        # trainerror, valid error, accuracy 등을 저장함. 그래프 그리기 위해
+
+        self.save_params_pickle(0) # Ctrl + B
 
         num_batch = math.ceil(data.num_train_data / batch_size)
 
-
-        for epoch in range(1, max_epoch + 1):
+        for epoch in range(1, max_epoch + 1): # 40번
             for i in range(num_batch):
                 i_batch = data.train_input[i * batch_size: i * batch_size + batch_size]
                 t_batch = data.train_target[i * batch_size: i * batch_size + batch_size]
 
                 #forward
-                self.session.run(self.error,
-                                {
-                                    self.input_node: i_batch,
-                                    self.target_node: t_batch
-                                }, False)
+                self.session.run( # Backward를 위해선 이 과정이 필요함
+                    self.error,
+                    {
+                        self.input_node: i_batch,
+                        self.target_node: t_batch
+                    },
+                    is_numba=is_numba,
+                    verbose=False)
 
-                #backward
-                grads = self.backward_propagation()
+                #backward 과정
+                if isinstance(self.optimizer, tfe.Optimizer.NAG.value): # NAG.value 객체의 클래스냐를 묻는 중이다
+                    cloned_network = copy.deepcopy(self) # shallow copy가 아님.
+                    self.optimizer.update(params=self.params, cloned_network=cloned_network, is_numba=is_numba)
+                else: # NAG 이외의 클래스들은 아래의 파라미터들을 대입한다
+                    grads = self.backward_propagation(is_numba) # gradient를 가져온다
+                    self.optimizer.update(params=self.params, grads=grads) #해당 optimizer의 update 메소드를 호출한다
 
-                self.optimizer.update(grads=grads)
+            self.set_learning_process_parameters(data, batch_size, epoch, print_period, is_numba, verbose)
+            # 550번 등의 batch size번의 반복이 끝나면 epoch별로 train error, ..등의 정보가 저장됨
 
-            self.set_learning_process_parameters(data, batch_size, epoch, print_period, verbose)
+            self.save_params_pickle(epoch)
+            # epoch별로 파라미터를 저장한다
+            # validation error가 낮을 때의 parameter정보를 찾아서 pickle로 저장한다
 
-    def set_learning_process_parameters(self, data, batch_size, epoch, print_period, verbose):
+        print()
+
+        # 하드디스크에 파라미터를 저장하는 코드
+        self.min_validation_error_epoch = np.argmin(self.validation_error_list)
+        self.min_train_error = float(self.train_error_list[self.min_validation_error_epoch])
+        self.min_validation_error = float(self.validation_error_list[self.min_validation_error_epoch])
+        self.max_test_accuracy = float(self.test_accuracy_list[self.min_validation_error_epoch])
+        #
+        print("[Best Epoch (based on Validation Error) and Its Performance]")
+        print("Epoch {:3d} Completed - Train Error: {:7.6f} - Validation Error: {:7.6f} - Test Accuracy: {:7.6f}".format(
+            self.min_validation_error_epoch,
+            self.min_train_error,
+            self.min_validation_error,
+            self.max_test_accuracy
+        ))
+        self.load_params_pickle(self.min_validation_error_epoch) # validation error가 가장 낮을 때의 순번 숫자가 들어감
+        # # Ctrl + B
+        self.layering()
+        self.cleanup_params_pickle() #폴더 지움
+        print("Params are set to the best model!!!")
+        # 위의 코드는 하드디스크에 파라미터를 파일의 형태로 저장하는 코드
+
+        print("-- Learning Finished --")
+        print()
+
+    def set_learning_process_parameters(self, data, batch_size, epoch, print_period, is_numba, verbose):
         batch_mask = np.random.choice(data.num_train_data, batch_size)
         i_batch = data.train_input[batch_mask]
         t_batch = data.train_target[batch_mask]
 
-        train_error = self.session.run(self.error,
-                                       {
-                                           self.input_node: i_batch,
-                                           self.target_node: t_batch
-                                       }, False)
+        train_error = self.session.run(
+            self.error,
+            {
+                self.input_node: i_batch,
+                self.target_node: t_batch
+            },
+            is_numba=is_numba,
+            verbose=False)
         self.train_error_list.append(train_error)
 
-        validation_error = self.session.run(self.error,
-                                            {
-                                                self.input_node: data.validation_input,
-                                                self.target_node: data.validation_target
-                                            }, False)
+        validation_error = self.session.run(
+            self.error,
+            {
+                self.input_node: data.validation_input,
+                self.target_node: data.validation_target
+            },
+            is_numba=is_numba,
+            verbose=False)
         self.validation_error_list.append(validation_error)
 
-        forward_final_output = self.feed_forward(input_data=data.test_input)
+        forward_final_output = self.feed_forward(input_data=data.test_input, is_numba=is_numba)
 
         test_accuracy = tff.accuracy(forward_final_output, data.test_target)
         self.test_accuracy_list.append(test_accuracy)
@@ -334,6 +394,26 @@ class Multi_Layer_Network(Deep_Neural_Network):
                     )
 
                 print()
+
+    def save_params_pickle(self, epoch):
+        with open(self.model_params_dir + "/" + self.mode_id + "/epoch-" + str(epoch) + ".pickle", "wb") as pickle_out:
+            # open(경로)내장함수 호출.
+            for key, param in self.params.items(): # self.params ;  W나 b 등의 parameter들을 간직하는 변수
+                print(key + ":" + str(param.value.shape) + ":" + str(param.value.nbytes))
+                # numpy는 C로 구현되어 있음
+                #   128*8=1024
+            pickle.dump(self.params, pickle_out, protocol=pickle.HIGHEST_PROTOCOL) # 하드디스크에 dump
+
+    def load_params_pickle(self, epoch):
+        self.params = None # 일단 다 없애고
+        with open(self.model_params_dir + "/" + self.mode_id + "/epoch-" + str(epoch) + ".pickle", "rb") as pickle_in:
+            self.params = pickle.load(pickle_in)
+            # 해당 파라미터들을 다시 불러와서 저장한다
+
+    def cleanup_params_pickle(self):
+        #shutil.rmtree(self.model_params_dir + "/" + self.mode_id)
+        # 해당 디렉토리를 없애는 것(용량 부담)
+        pass
 
     def draw_params_histogram(self):
         f, axarr = plt.subplots(1, (self.hidden_layer_num + 1) * 2, figsize=(10 * (self.hidden_layer_num + 1), 5))
@@ -400,7 +480,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
         plt.xlabel('Epochs')
         plt.grid(True)
         plt.legend(loc='lower left')
-
+        
         plt.subplot(243)
         for idx in range(self.hidden_layer_num + 1):
             plt.plot(epoch_list, self.param_skewness_list['W' + str(idx)], color_dic[idx], label='W' + str(idx))
@@ -408,7 +488,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
         plt.xlabel('Epochs')
         plt.grid(True)
         plt.legend(loc='lower left')
-
+        
         plt.subplot(244)
         for idx in range(self.hidden_layer_num + 1):
             plt.plot(epoch_list, self.param_kurtosis_list['W' + str(idx)], color_dic[idx], label='W' + str(idx))
@@ -452,7 +532,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
         plt.show()
 
     def draw_false_prediction(self, test_input, test_target, labels, num=5, figsize=(20, 5)):
-        forward_final_output = self.feed_forward(input_data=test_input)
+        forward_final_output = self.feed_forward(input_data=test_input, is_numba=False)
         y = np.argmax(forward_final_output, axis=1)
         target = np.argmax(test_target, axis=1)
 
