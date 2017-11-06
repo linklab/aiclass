@@ -324,7 +324,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
             print("Global Epoch:{:3d} (Fold:{:3d} & Epoch:{:3d}) - Train Error:{:6.5f} - Validation Error:{:6.5f} - Test Accuracy:{:6.5f}".format(
                 self.min_validation_error_epoch,
                 self.min_fold_idx,
-                self.min_validation_error_epoch - max_epoch * self.min_fold_idx,
+                self.min_validation_error_epoch - self.max_epoch * self.min_fold_idx,
                 self.min_train_error,
                 self.min_validation_error,
                 self.test_accuracy_at_min_validation_error_epoch
@@ -462,10 +462,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
     def load_params(self, n_splits):
         acc_epoch = self.optimal_epoch_and_params[0]
-        if self.min_fold_idx != 0:
-            o_epoch = acc_epoch % self.min_fold_idx
-        else:
-            o_epoch = acc_epoch
+        o_epoch = acc_epoch - self.max_epoch * self.min_fold_idx
 
         print("Load Params from Fold {:3d} & Epoch {:3d}".format(self.min_fold_idx, o_epoch))
         self.params = self.optimal_epoch_and_params[1]
