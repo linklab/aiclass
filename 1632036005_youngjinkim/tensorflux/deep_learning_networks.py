@@ -11,35 +11,39 @@ import numpy as np
 from scipy import stats
 import math
 from networkx.drawing.nx_agraph import graphviz_layout
-
-import numba
-from numba import jit, float32, int32, void, cuda
+import random
+import string
+import os
+import pickle
+import copy
+import shutil
 
 
 class Deep_Neural_Network(tfg.Graph):
-    def __init__(self, input_size, output_size):
+    def __init__(self, input_size, output_size, input_node, target_node, initializer, activator, optimizer, learning_rate, model_params_dir):
         self.input_size = input_size
         self.output_size = output_size
 
-        self.input_node = None
-        self.target_node = None
+        self.input_node = input_node
+        self.target_node = target_node
 
-        self.activator = None
-        self.initializer = None
-        self.optimizer = None
+        self.activator = activator
+        self.initializer = initializer
+        self.optimizer = optimizer(learning_rate=learning_rate)
 
         self.params = {}
+        self.optimal_epoch_and_params = None
 
         self.output = None
         self.error = None
         self.max_epoch = None
+        self.model_params_dir = model_params_dir
 
         self.session = tfs.Session()
-        super().__init__()
 
-    def set_data_node(self, input_node, target_node):
-        self.input_node = input_node
-        self.target_node = target_node
+        self.mode_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+
+        super().__init__()
 
     def initialize_param(self, initializer=tfe.Initializer.Zero.value):
         pass
@@ -47,11 +51,7 @@ class Deep_Neural_Network(tfg.Graph):
     def layering(self, activator=tfe.Activator.ReLU.value):
         pass
 
-    def set_optimizer(self, optimizer=tfe.Optimizer.SGD.value, learning_rate=0.01):
-        self.optimizer = optimizer(learning_rate=learning_rate)
-        self.optimizer.params = self.params
-
-    def backward_propagation(self):
+    def backward_propagation(self, is_numba):
         pass
 
     def get_params_str(self):
@@ -72,12 +72,12 @@ class Deep_Neural_Network(tfg.Graph):
             all_param_flatten_list.extend([item for item in param.value.flatten()])
         return stats.describe(np.array(all_param_flatten_list))
 
-    def print_feed_forward(self, num_data, input_data, target_data, verbose=False):
+    def print_feed_forward(self, num_data, input_data, target_data, is_numba, verbose=False):
         for idx in range(num_data):
             train_input_data = input_data[idx]
             train_target_data = target_data[idx]
 
-            output = self.session.run(self.output, {self.input_node: train_input_data}, verbose)
+            output = self.session.run(self.output, {self.input_node: train_input_data}, is_numba, verbose)
             print("Input Data: {:>5}, Feed Forward Output: {:>6}, Target: {:>6}".format(
                 str(train_input_data), np.array2string(output), str(train_target_data)))
 
@@ -95,11 +95,26 @@ class Multi_Layer_Network(Deep_Neural_Network):
                  output_size,
                  input_node=None,
                  target_node=None,
-                 init_mean=0.0,
+                 initializer=tfe.Initializer.Normal.value,
                  init_sd=0.01,
                  activator=tfe.Activator.ReLU.value,
                  optimizer=tfe.Optimizer.SGD.value,
-                 learning_rate=0.01):
+                 learning_rate=0.01,
+                 model_params_dir=None):
+
+        super().__init__(
+            input_size,
+            output_size,
+            input_node,
+            target_node,
+            initializer,
+            activator,
+            optimizer,
+            learning_rate,
+            model_params_dir
+        )
+
+        print("Multi Layer Network Model - ID:", self.mode_id)
 
         self.hidden_size_list = hidden_size_list
         self.hidden_layer_num = len(hidden_size_list)
@@ -107,34 +122,70 @@ class Multi_Layer_Network(Deep_Neural_Network):
         self.params_size_list = None
         self.layers = OrderedDict()
 
-        super().__init__(input_size, output_size)
-
         self.train_error_list = []
         self.validation_error_list = []
         self.test_accuracy_list = []
+
+        self.min_validation_error_epoch = None
+        self.min_train_error = None
+        self.min_validation_error = None
+        self.max_test_accuracy = None
 
         self.param_mean_list = {}
         self.param_variance_list = {}
         self.param_skewness_list = {}
         self.param_kurtosis_list = {}
 
-        self.set_data_node(input_node, target_node)
-        self.initialize_normal_random_param(mean=init_mean, sd=init_sd)
-        self.layering(activator)
-        self.set_optimizer(optimizer, learning_rate)
+        self.initialize_param(sd=init_sd)
+        self.layering()
 
-    def initialize_param(self, initializer=tfe.Initializer.Zero.value):
+    def initialize_param(self, mean=0.0, sd=1.0, low=-1.0, upp=1.0):
         self.params_size_list = [self.input_size] + self.hidden_size_list + [self.output_size]
         for idx in range(self.hidden_layer_num + 1):
-            self.params['W' + str(idx)] = initializer(
-                shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
-                name="W" + str(idx)
-            ).get_variable()
+            if self.initializer is tfe.Initializer.Normal.value:
+                self.params['W' + str(idx)] = self.initializer(
+                    shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
+                    name="W" + str(idx),
+                    mean=mean,
+                    sd=sd
+                ).param
 
-            self.params['b' + str(idx)] = initializer(
-                shape=(self.params_size_list[idx + 1],),
-                name="b" + str(idx)
-            ).get_variable()
+                self.params['b' + str(idx)] = self.initializer(
+                    shape=(self.params_size_list[idx + 1],),
+                    name="b" + str(idx),
+                    mean=mean,
+                    sd=sd
+                ).param
+
+            elif self.initializer is tfe.Initializer.Truncated_Normal.value:
+                self.params['W' + str(idx)] = self.initializer(
+                    shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
+                    name="W" + str(idx),
+                    mean=mean,
+                    sd=sd,
+                    low=low,
+                    upp=upp
+                ).param
+
+                self.params['b' + str(idx)] = self.initializer(
+                    shape=(self.params_size_list[idx + 1],),
+                    name="b" + str(idx),
+                    mean=mean,
+                    sd=sd,
+                    low=low,
+                    upp=upp
+                ).param
+
+            else:
+                self.params['W' + str(idx)] = self.initializer(
+                    shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
+                    name="W" + str(idx)
+                ).param
+
+                self.params['b' + str(idx)] = self.initializer(
+                    shape=(self.params_size_list[idx + 1],),
+                    name="b" + str(idx)
+                ).param
 
             self.param_mean_list['W' + str(idx)] = []
             self.param_variance_list['W' + str(idx)] = []
@@ -146,36 +197,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
             self.param_skewness_list['b' + str(idx)] = []
             self.param_kurtosis_list['b' + str(idx)] = []
 
-    def initialize_normal_random_param(self, mean=0.0, sd=0.1):
-        self.params_size_list = [self.input_size] + self.hidden_size_list + [self.output_size]
-        for idx in range(self.hidden_layer_num + 1):
-            self.params['W' + str(idx)] = tfi.Random_Normal_Initializer(
-                shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
-                name="W" + str(idx),
-                mean=mean,
-                sd=sd
-            ).get_variable()
-
-            self.params['b' + str(idx)] = tfi.Random_Normal_Initializer(
-                shape=(self.params_size_list[idx + 1],),
-                name="b" + str(idx),
-                mean=mean,
-                sd=sd
-            ).get_variable()
-
-            self.param_mean_list['W' + str(idx)] = []
-            self.param_variance_list['W' + str(idx)] = []
-            self.param_skewness_list['W' + str(idx)] = []
-            self.param_kurtosis_list['W' + str(idx)] = []
-
-            self.param_mean_list['b' + str(idx)] = []
-            self.param_variance_list['b' + str(idx)] = []
-            self.param_skewness_list['b' + str(idx)] = []
-            self.param_kurtosis_list['b' + str(idx)] = []
-
-    def layering(self, activator=tfe.Activator.ReLU.value):
-        self.activator = activator
-
+    def layering(self):
         input_node = self.input_node
         for idx in range(self.hidden_layer_num):
             self.layers['affine' + str(idx)] = tfl.Affine(
@@ -185,7 +207,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
                 name='affine' + str(idx),
                 graph=self
             )
-            self.layers['activation' + str(idx)] = activator(
+            self.layers['activation' + str(idx)] = self.activator(
                 self.layers['affine' + str(idx)],
                 name='activation' + str(idx),
                 graph=self
@@ -204,20 +226,19 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
         self.error = tfl.SoftmaxWithCrossEntropyLoss(self.output, self.target_node, name="SCEL", graph=self)
 
-    def feed_forward(self, input_data):
-        return self.session.run(self.output, {self.input_node: input_data}, verbose=False)
+    def feed_forward(self, input_data, is_numba=False):
+        return self.session.run(self.output, {self.input_node: input_data}, is_numba, verbose=False)
 
-    @jit
-    def backward_propagation(self):
+    def backward_propagation(self, is_numba):
         grads = {}
 
-        d_error = self.error.backward(1.0)
+        d_error = self.error.backward(1.0, is_numba)
         din = d_error
 
         layers = list(self.layers.values())
         layers.reverse()
         for layer in layers:
-            din = layer.backward(din)
+            din = layer.backward(din, is_numba)
 
         for idx in range(self.hidden_layer_num + 1):
             grads['W' + str(idx)] = self.layers['affine' + str(idx)].dw
@@ -225,10 +246,14 @@ class Multi_Layer_Network(Deep_Neural_Network):
 
         return grads
 
-    def learning(self, max_epoch, data, batch_size=1000, print_period=10, verbose=False):
+    def learning(self, max_epoch, data, batch_size=1000, print_period=10, is_numba=False, verbose=False):
+        print("-- Learning Started --")
+        os.makedirs(self.model_params_dir + "/" + self.mode_id, exist_ok=True)
         self.max_epoch = max_epoch
 
-        self.set_learning_process_parameters(data, batch_size, 0, print_period, verbose)
+        self.set_learning_process_specification(data, batch_size, 0, print_period, is_numba, verbose)
+
+        self.save_params(0)
 
         num_batch = math.ceil(data.num_train_data / batch_size)
 
@@ -238,39 +263,81 @@ class Multi_Layer_Network(Deep_Neural_Network):
                 t_batch = data.train_target[i * batch_size: i * batch_size + batch_size]
 
                 #forward
-                self.session.run(self.error,
-                                {
-                                    self.input_node: i_batch,
-                                    self.target_node: t_batch
-                                }, False)
+                self.session.run(
+                    self.error,
+                    {
+                        self.input_node: i_batch,
+                        self.target_node: t_batch
+                    },
+                    is_numba=is_numba,
+                    verbose=False)
 
                 #backward
-                grads = self.backward_propagation()
+                if isinstance(self.optimizer, tfe.Optimizer.NAG.value):
+                    cloned_network = copy.deepcopy(self)
+                    self.optimizer.update(params=self.params, cloned_network=cloned_network, is_numba=is_numba)
+                else:
+                    grads = self.backward_propagation(is_numba)
+                    self.optimizer.update(params=self.params, grads=grads)
 
-                self.optimizer.update(grads=grads)
+            self.set_learning_process_specification(data, batch_size, epoch, print_period, is_numba, verbose)
 
-            self.set_learning_process_parameters(data, batch_size, epoch, print_period, verbose)
+            #self.save_params_pickle(epoch)
 
-    def set_learning_process_parameters(self, data, batch_size, epoch, print_period, verbose):
+            min_validation_error_epoch = np.argmin(self.validation_error_list)
+            if min_validation_error_epoch == epoch:
+                self.save_params(epoch)
+
+        print()
+
+        self.min_validation_error_epoch = np.argmin(self.validation_error_list)
+        self.min_train_error = float(self.train_error_list[self.min_validation_error_epoch])
+        self.min_validation_error = float(self.validation_error_list[self.min_validation_error_epoch])
+        self.max_test_accuracy = float(self.test_accuracy_list[self.min_validation_error_epoch])
+
+        print("[Best Epoch (based on Validation Error) and Its Performance]")
+        print("Epoch {:3d} Completed - Train Error: {:7.6f} - Validation Error: {:7.6f} - Test Accuracy: {:7.6f}".format(
+            self.min_validation_error_epoch,
+            self.min_train_error,
+            self.min_validation_error,
+            self.max_test_accuracy
+        ))
+
+        #self.load_params_pickle(self.min_validation_error_epoch)
+        self.load_params()
+        self.layering()
+        #self.cleanup_params_pickle()
+
+        print("Params are set to the best model!!!")
+        print("-- Learning Finished --")
+        print()
+
+    def set_learning_process_specification(self, data, batch_size, epoch, print_period, is_numba, verbose):
         batch_mask = np.random.choice(data.num_train_data, batch_size)
         i_batch = data.train_input[batch_mask]
         t_batch = data.train_target[batch_mask]
 
-        train_error = self.session.run(self.error,
-                                       {
-                                           self.input_node: i_batch,
-                                           self.target_node: t_batch
-                                       }, False)
+        train_error = self.session.run(
+            self.error,
+            {
+                self.input_node: i_batch,
+                self.target_node: t_batch
+            },
+            is_numba=is_numba,
+            verbose=False)
         self.train_error_list.append(train_error)
 
-        validation_error = self.session.run(self.error,
-                                            {
-                                                self.input_node: data.validation_input,
-                                                self.target_node: data.validation_target
-                                            }, False)
+        validation_error = self.session.run(
+            self.error,
+            {
+                self.input_node: data.validation_input,
+                self.target_node: data.validation_target
+            },
+            is_numba=is_numba,
+            verbose=False)
         self.validation_error_list.append(validation_error)
 
-        forward_final_output = self.feed_forward(input_data=data.test_input)
+        forward_final_output = self.feed_forward(input_data=data.test_input, is_numba=is_numba)
 
         test_accuracy = tff.accuracy(forward_final_output, data.test_target)
         self.test_accuracy_list.append(test_accuracy)
@@ -295,7 +362,8 @@ class Multi_Layer_Network(Deep_Neural_Network):
                     float(train_error),
                     float(validation_error),
                     float(test_accuracy)
-                ))
+                )
+            )
 
             if verbose:
                 self.draw_params_histogram()
@@ -332,6 +400,30 @@ class Multi_Layer_Network(Deep_Neural_Network):
                     )
 
                 print()
+
+    def save_params(self, epoch):
+        print("Save Params at Epoch:", epoch)
+        optimal_params = copy.deepcopy(self.params)
+        self.optimal_epoch_and_params = [epoch, optimal_params]
+
+    def load_params(self):
+        print("Load Params from Epoch:", self.optimal_epoch_and_params[0])
+        self.params = self.optimal_epoch_and_params[1]
+
+    def save_params_pickle(self, epoch):
+        with open(self.model_params_dir + "/" + self.mode_id + "/epoch-" + str(epoch) + ".pickle", "wb") as pickle_out:
+            for key, param in self.params.items():
+                print(key + ":" + str(param.value.shape) + ":" + str(param.value.nbytes))
+            pickle.dump(self.params, pickle_out, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def load_params_pickle(self, epoch):
+        self.params = None
+        with open(self.model_params_dir + "/" + self.mode_id + "/epoch-" + str(epoch) + ".pickle", "rb") as pickle_in:
+            self.params = pickle.load(pickle_in)
+
+    def cleanup_params_pickle(self):
+        shutil.rmtree(self.model_params_dir + "/" + self.mode_id)
+        pass
 
     def draw_params_histogram(self):
         f, axarr = plt.subplots(1, (self.hidden_layer_num + 1) * 2, figsize=(10 * (self.hidden_layer_num + 1), 5))
@@ -450,7 +542,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
         plt.show()
 
     def draw_false_prediction(self, test_input, test_target, labels, num=5, figsize=(20, 5)):
-        forward_final_output = self.feed_forward(input_data=test_input)
+        forward_final_output = self.feed_forward(input_data=test_input, is_numba=False)
         y = np.argmax(forward_final_output, axis=1)
         target = np.argmax(test_target, axis=1)
 

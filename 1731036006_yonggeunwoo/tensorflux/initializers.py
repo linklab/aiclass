@@ -82,3 +82,12 @@ class Truncated_Normal_Initializer(Initializer):
                                                            low=self.low,
                                                            upp=self.upp), name=self.name)
 
+
+class Xavier_Initializer(Initializer):
+    def __init__(self, shape, name):
+        super().__init__(shape, name)
+
+    def initialize_param(self):
+        init_range = np.sqrt(6.0 / (self.shape[0] + self.shape[1]))
+        self.param = tfg.Variable((init_range - (-init_range) * np.random.random_sample(size=self.shape) + (-init_range)),
+                                  name=self.name)

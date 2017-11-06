@@ -2,6 +2,7 @@
 import numpy as np
 import tensorflux.graph as tfg
 import tensorflux.functions as tff
+import math
 
 
 class Initializer:
@@ -14,9 +15,6 @@ class Initializer:
 
     def initialize_param(self):
         pass
-
-    def get_variable(self):
-        return self.param
 
 
 class Value_Assignment_Initializer(Initializer):
@@ -53,7 +51,7 @@ class Random_Normal_Initializer(Initializer):
     scale : float -- Standard deviation (spread or “width”) of the distribution.
     size : tuple of ints -- Output shape.
     """
-    def __init__(self, shape, name, mean=0.0, sd=0.1):
+    def __init__(self, shape, name, mean=0.0, sd=1.0):
         self.mean = mean
         self.sd = sd
         super().__init__(shape, name)
@@ -65,6 +63,15 @@ class Random_Normal_Initializer(Initializer):
 class Random_Uniform_Initializer(Initializer):
     def initialize_param(self):
         self.param = tfg.Variable(np.random.random(size=self.shape), name=self.name)
+
+
+class Standard_Uniform_Initializer(Initializer):
+    def initialize_param(self):
+        if len(self.shape) == 2:
+            sd = math.sqrt(1.0 / self.shape[0])
+        else:
+            sd = math.sqrt(1.0 / self.shape[0])
+        self.param = tfg.Variable(np.random.uniform(high=-sd, low=sd, size=self.shape), name=self.name)
 
 
 class Truncated_Normal_Initializer(Initializer):
@@ -82,3 +89,24 @@ class Truncated_Normal_Initializer(Initializer):
                                                            low=self.low,
                                                            upp=self.upp), name=self.name)
 
+
+class Xavier(Initializer):
+    def initialize_param(self):
+        if len(self.shape) == 2:
+            # sd = math.sqrt(1.0 / (self.shape[0] + self.shape[1]))
+            sd = math.sqrt(6.0 / (self.shape[0] + self.shape[1]))
+        else:
+            # sd = math.sqrt(1.0 / self.shape[0])
+            sd = math.sqrt(6.0 / self.shape[0])
+        self.param = tfg.Variable(np.random.uniform(high=-sd, low=sd, size=self.shape), name=self.name)
+        # self.param = tfg.Variable(np.random.normal(loc=0.0, scale=sd, size=self.shape), name=self.name)
+
+
+class He(Initializer):
+    def initialize_param(self):
+        if len(self.shape) == 2:
+            sd = math.sqrt(4.0 / (self.shape[0] + self.shape[1]))
+        else:
+            sd = math.sqrt(2.0 / self.shape[0])
+
+        self.param = tfg.Variable(np.random.normal(loc=0.0, scale=sd, size=self.shape), name=self.name)
