@@ -1,5 +1,5 @@
 import tensorflux.graph as tfg
-import tensorflux.deep_learning_networks as tfn
+import tensorflux.Deep_Neural_Network as tfn
 import tensorflux.enums as tfe
 import datasource.mnist as mnist
 import tensorflux.functions as tff

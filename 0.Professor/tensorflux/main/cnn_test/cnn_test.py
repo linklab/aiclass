@@ -1,20 +1,33 @@
 import tensorflux.graph as tfg
-import tensorflux.Multi_Layer_Network as tfn
+import tensorflux.CNN as tfn
 import tensorflux.enums as tfe
 import datasource.mnist as mnist
 import tensorflux.functions as tff
 
-input_size = 784
-hidden_layer1_size = 128
-hidden_layer2_size = 128
+"""
+    conv - relu - conv- relu - pool -
+    conv - relu - conv- relu - pool -
+    conv - relu - conv- relu - pool -
+    affine - relu - dropout - affine - dropout - softmax
+"""
+
+input_dim = (1, 28, 28)
+conv_param_0 = {'filter_num':16, 'filter_size':3, 'pad':1, 'stride':1},
+conv_param_1 = {'filter_num':16, 'filter_size':3, 'pad':1, 'stride':1},
+conv_param_2 = {'filter_num':32, 'filter_size':3, 'pad':1, 'stride':1},
+conv_param_3 = {'filter_num':32, 'filter_size':3, 'pad':2, 'stride':1},
+conv_param_4 = {'filter_num':64, 'filter_size':3, 'pad':1, 'stride':1},
+conv_param_5 = {'filter_num':64, 'filter_size':3, 'pad':1, 'stride':1},
+fc_size = 64
 output_size = 10
 
 x = tfg.Placeholder(name="x")
 target = tfg.Placeholder(name="target")
 
-n = tfn.Multi_Layer_Network(
-    input_size=input_size,
-    hidden_size_list=[hidden_layer1_size, hidden_layer2_size],
+n = tfn.CNN(
+    input_dim=input_dim,
+    conv_param_list=[conv_param_0, conv_param_1, conv_param_2, conv_param_3, conv_param_4, conv_param_5],
+    fc_size=fc_size,
     output_size=output_size,
     input_node=x,
     target_node=target,
