@@ -16,20 +16,20 @@ import random
 import string
 
 """
-    conv - relu - conv - relu - pool -
-    conv - relu - conv - relu - pool -
-    conv - relu - conv - relu - pool -
-    affine - relu - dropout - affine - dropout - softmax
+    conv0 (activation0) - conv1 (activation1) - pool2 - 
+    conv3 (activation3) - conv4 (activation4) - pool5 - 
+    affine6 (activation6) - affine7 - softmax (output)
 """
 
 class CNN(dnn.Deep_Neural_Network):
     def __init__(self,
                  input_dim,
-                 conv_param_list,
-                 fc_size,
+                 cnn_param_list,
+                 fc_hidden_size,
                  output_size,
                  input_node=None,
                  target_node=None,
+                 conv_initializer=tfe.Initializer.Conv_Xavier_Normal,
                  initializer=tfe.Initializer.Normal.value,
                  init_sd=0.01,
                  activator=tfe.Activator.ReLU.value,
@@ -39,15 +39,16 @@ class CNN(dnn.Deep_Neural_Network):
         super().__init__()
 
         self.input_dim = input_dim
-        self.conv_param_list = conv_param_list
-        self.fc_size = fc_size
+        self.cnn_param_list = cnn_param_list
+        self.fc_hidden_size = fc_hidden_size
         self.output_size = output_size
 
         self.input_node = input_node
         self.target_node = target_node
 
-        self.activator = activator
+        self.conv_initializer = conv_initializer
         self.initializer = initializer
+        self.activator = activator
         self.optimizer = optimizer(learning_rate=learning_rate)
 
         self.params = {}
@@ -61,7 +62,7 @@ class CNN(dnn.Deep_Neural_Network):
 
         self.mode_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
 
-        print("Multi Layer Network Model - ID:", self.mode_id)
+        print("Convolutional Neural Network Model - ID:", self.mode_id)
 
         self.params_size_list = None
         self.layers = OrderedDict()
@@ -78,140 +79,150 @@ class CNN(dnn.Deep_Neural_Network):
 
         self.min_validation_error_per_fold = []
 
-        self.param_mean_list = {}
-        self.param_variance_list = {}
-        self.param_skewness_list = {}
-        self.param_kurtosis_list = {}
-
-        self.output_mean_list = {}
-        self.output_variance_list = {}
-        self.output_skewness_list = {}
-        self.output_kurtosis_list = {}
-
         self.initialize_param(sd=init_sd)
         self.layering()
 
-    def get_conv_layer_output_size(self, filter_num, pre_channel_num, input_size, filter_size, padding_size, stride_size):
-        image_output_size = (input_size - filter_size + 2 * padding_size) / stride_size + 1
-        return (filter_num, pre_channel_num, image_output_size, image_output_size)
+    def get_conv_layer_output_size(self, input_height, input_width, filter_size, padding_size, stride_size):
+        output_height = (input_height - filter_size + 2 * padding_size) / stride_size + 1
+        output_width  = (input_width - filter_size + 2 * padding_size) / stride_size + 1
+        assert output_height == int(output_height)
+        assert output_width == int(output_height)
+        return output_height, output_width
 
-    def get_pooling_layer_output_size(self, filter_num, pre_channel_num, input_size, filter_size, stride_size):
-        image_output_size = (input_size - filter_size) / stride_size + 1
-        return (filter_num, pre_channel_num, image_output_size, image_output_size)
+    def get_pooling_layer_output_size(self, input_height, input_width, filter_size, stride_size):
+        output_height = (input_height - filter_size) / stride_size + 1
+        output_width = (input_width - filter_size) / stride_size + 1
+        assert output_height == int(output_height)
+        assert output_width == int(output_width)
+        return output_height, output_width
 
     def initialize_param(self, mean=0.0, sd=1.0):
-        #self.pre_param_size_list = np.array([1*3*3, 16*3*3, 16*3*3, 32*3*3, 32*3*3, 64*3*3, 64*4*4, fc_size])
-        self.params_size_list = []
-        channel_num = self.input_dim[0]
-        for conv_param in self.conv_param_list:
-            self.params_size_list.append(channel_num * conv_param['filter_size'] * conv_param['filter_size'])
-            channel_num = conv_param['filter_num']
-
-        self.params_size_list = [self.input_size] + self.hidden_size_list + [self.output_size]
-
-        self.param_mean_list['W'] = {}
-        self.param_variance_list['W'] = {}
-        self.param_skewness_list['W'] = {}
-        self.param_kurtosis_list['W'] = {}
-
-        self.param_mean_list['b'] = {}
-        self.param_variance_list['b'] = {}
-        self.param_skewness_list['b'] = {}
-        self.param_kurtosis_list['b'] = {}
-
-        for idx in range(self.hidden_layer_num + 1):
-            if self.initializer is tfe.Initializer.Normal.value:
-                self.params['W' + str(idx)] = self.initializer(
-                    shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
-                    name="W" + str(idx),
-                    mean=mean,
-                    sd=sd
-                ).param
-            elif self.initializer is tfe.Initializer.Truncated_Normal.value:
-                self.params['W' + str(idx)] = self.initializer(
-                    shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
-                    name="W" + str(idx),
-                    mean=mean,
-                    sd=sd,
-                    low=-sd,
-                    upp=sd
-                ).param
-            else:
-                self.params['W' + str(idx)] = self.initializer(
-                    shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
+        pre_channel_num = self.input_dim[0]
+        input_height = self.input_dim[1]
+        input_width = self.input_dim[2]
+        for idx, cnn_param in enumerate(self.cnn_param_list):
+            if cnn_param['type'] == 'conv':
+                self.params['W' + str(idx)] = self.conv_initializer(
+                    shape=(cnn_param['filter_num'], pre_channel_num, cnn_param['filter_size'], cnn_param['filter_size']),
                     name="W" + str(idx)
                 ).param
 
-            self.params['b' + str(idx)] = tfe.Initializer.Zero.value(
-                shape=(self.params_size_list[idx + 1],),
-                name="b" + str(idx)
+                self.params['b' + str(idx)] = tfe.Initializer.Zero.value(
+                    shape=(cnn_param['filter_num'],),
+                    name="b" + str(idx)
+                ).param
+                input_height, input_width = self.get_conv_layer_output_size(
+                    input_height,
+                    input_width,
+                    cnn_param['filter_size'],
+                    cnn_param['pad'],
+                    cnn_param['stride']
+                )
+                pre_channel_num = cnn_param['filter_num']
+
+            if cnn_param['type'] == 'pooling':
+                input_height, input_width = self.get_pooling_layer_output_size(
+                    input_height,
+                    input_width,
+                    cnn_param['filter_size'],
+                    cnn_param['stride']
+                )
+
+        idx += 1
+        num_neurons_flatten = int(pre_channel_num * input_height * input_width)
+        if self.initializer is tfe.Initializer.Normal.value or self.initializer is tfe.Initializer.Truncated_Normal.value:
+            self.params['W' + str(idx)] = self.initializer(
+                shape=(num_neurons_flatten, self.fc_hidden_size),
+                name="W" + str(idx),
+                mean=mean,
+                sd=sd
+            ).param
+        else:
+            self.params['W' + str(idx)] = self.initializer(
+                shape=(num_neurons_flatten, self.fc_hidden_size),
+                name="W" + str(idx)
             ).param
 
-            self.param_mean_list['W'][idx] = []
-            self.param_variance_list['W'][idx] = []
-            self.param_skewness_list['W'][idx] = []
-            self.param_kurtosis_list['W'][idx] = []
+        self.params['b' + str(idx)] = tfe.Initializer.Zero.value(
+            shape=(self.fc_hidden_size,),
+            name="b" + str(idx)
+        ).param
 
-            self.param_mean_list['b'][idx] = []
-            self.param_variance_list['b'][idx] = []
-            self.param_skewness_list['b'][idx] = []
-            self.param_kurtosis_list['b'][idx] = []
+        idx += 1
+        if self.initializer is tfe.Initializer.Normal.value or self.initializer is tfe.Initializer.Truncated_Normal.value:
+            self.params['W' + str(idx)] = self.initializer(
+                shape=(self.fc_hidden_size, self.output_size),
+                name="W" + str(idx),
+                mean=mean,
+                sd=sd
+            ).param
+        else:
+            self.params['W' + str(idx)] = self.initializer(
+                shape=(self.fc_hidden_size, self.output_size),
+                name="W" + str(idx)
+            ).param
+
+        self.params['b' + str(idx)] = tfe.Initializer.Zero.value(
+            shape=(self.output_size,),
+            name="b" + str(idx)
+        ).param
 
     def layering(self, refitting=False):
         input_node = self.input_node
 
-        if not refitting:
-            self.output_mean_list['affine'] = {}
-            self.output_variance_list['affine'] = {}
-            self.output_skewness_list['affine'] = {}
-            self.output_kurtosis_list['affine'] = {}
+        for idx, cnn_param in enumerate(self.cnn_param_list):
+            if cnn_param['type'] == 'conv':
+                self.layers['conv' + str(idx)] = tfl.Convolution(
+                    w       =self.params['W' + str(idx)],
+                    x       =input_node,
+                    b       =self.params['b' + str(idx)],
+                    pad     =cnn_param['pad'],
+                    stride  =cnn_param['stride'],
+                    name    ='conv' + str(idx),
+                    graph   =self
+                )
+                self.layers['activation' + str(idx)] = self.activator(
+                    u       =self.layers['conv' + str(idx)],
+                    name    ='activation' + str(idx),
+                    graph   =self
+                )
+                input_node = self.layers['activation' + str(idx)]
+            elif cnn_param['type'] == 'pooling':
+                self.layers['pooling' + str(idx)] = tfl.Pooling(
+                    w=self.params['W' + str(idx)],
+                    x=input_node,
+                    pad=cnn_param['pad'],
+                    stride=cnn_param['stride'],
+                    name='pooling' + str(idx),
+                    graph=self
+                )
+                input_node = self.layers['pooling' + str(idx)]
 
-            self.output_mean_list['activation'] = {}
-            self.output_variance_list['activation'] = {}
-            self.output_skewness_list['activation'] = {}
-            self.output_kurtosis_list['activation'] = {}
-
-        for idx in range(self.hidden_layer_num):
-            self.layers['affine' + str(idx)] = tfl.Affine(
-                self.params['W' + str(idx)],
-                input_node,
-                self.params['b' + str(idx)],
-                name='affine' + str(idx),
-                graph=self
-            )
-            self.layers['activation' + str(idx)] = self.activator(
-                self.layers['affine' + str(idx)],
-                name='activation' + str(idx),
-                graph=self
-            )
-            input_node = self.layers['activation' + str(idx)]
-
-            if not refitting:
-                self.output_mean_list['affine'][idx] = []
-                self.output_variance_list['affine'][idx] = []
-                self.output_skewness_list['affine'][idx] = []
-                self.output_kurtosis_list['affine'][idx] = []
-
-                self.output_mean_list['activation'][idx] = []
-                self.output_variance_list['activation'][idx] = []
-                self.output_skewness_list['activation'][idx] = []
-                self.output_kurtosis_list['activation'][idx] = []
-
-        idx = self.hidden_layer_num
+        idx += 1
         self.layers['affine' + str(idx)] = tfl.Affine(
             self.params['W' + str(idx)],
-            self.layers['activation' + str(idx - 1)],
+            input_node,
             self.params['b' + str(idx)],
             name='affine' + str(idx),
             graph=self
         )
-        self.output = self.layers['affine' + str(idx)]
+        self.layers['activation' + str(idx)] = self.activator(
+            self.layers['affine' + str(idx)],
+            name='activation' + str(idx),
+            graph=self
+        )
+        input_node = self.layers['activation' + str(idx)]
 
-        if not refitting:
-            self.output_mean_list['affine'][idx] = []
-            self.output_variance_list['affine'][idx] = []
-            self.output_skewness_list['affine'][idx] = []
-            self.output_kurtosis_list['affine'][idx] = []
+        idx += 1
+        self.layers['affine' + str(idx)] = tfl.Affine(
+            self.params['W' + str(idx)],
+            input_node,
+            self.params['b' + str(idx)],
+            name='affine' + str(idx),
+            graph=self
+        )
+
+        self.output = self.layers['affine' + str(idx)]
 
         self.error = tfl.SoftmaxWithCrossEntropyLoss(self.output, self.target_node, name="SCEL", graph=self)
 
@@ -229,9 +240,17 @@ class CNN(dnn.Deep_Neural_Network):
         for layer in layers:
             din = layer.backward(din, is_numba)
 
-        for idx in range(self.hidden_layer_num + 1):
-            grads['W' + str(idx)] = self.layers['affine' + str(idx)].dw
-            grads['b' + str(idx)] = self.layers['affine' + str(idx)].db
+        for idx in range(self.cnn_param_list):
+            grads['W' + str(idx)] = self.layers['conv' + str(idx)].dw
+            grads['b' + str(idx)] = self.layers['conv' + str(idx)].db
+
+        idx += 1
+        grads['W' + str(idx)] = self.layers['affine' + str(idx)].dw
+        grads['b' + str(idx)] = self.layers['affine' + str(idx)].db
+
+        idx += 1
+        grads['W' + str(idx)] = self.layers['affine' + str(idx)].dw
+        grads['b' + str(idx)] = self.layers['affine' + str(idx)].db
 
         return grads
 
@@ -339,31 +358,7 @@ class CNN(dnn.Deep_Neural_Network):
         test_accuracy = tff.accuracy(forward_final_output, data.test_target)
         self.test_accuracy_list.append(test_accuracy)
 
-        for idx in range(self.hidden_layer_num + 1):
-            d = self.get_param_describe(layer_num=idx, kind="W")
-            self.param_mean_list['W'][idx].append(d.mean)
-            self.param_variance_list['W'][idx].append(d.variance)
-            self.param_skewness_list['W'][idx].append(d.skewness)
-            self.param_kurtosis_list['W'][idx].append(d.kurtosis)
 
-            d = self.get_param_describe(layer_num=idx, kind="b")
-            self.param_mean_list['b'][idx].append(d.mean)
-            self.param_variance_list['b'][idx].append(d.variance)
-            self.param_skewness_list['b'][idx].append(d.skewness)
-            self.param_kurtosis_list['b'][idx].append(d.kurtosis)
-
-            d = self.get_activation_describe(layer_num=idx, kind="affine")
-            self.output_mean_list['affine'][idx].append(d.mean)
-            self.output_variance_list['affine'][idx].append(d.variance)
-            self.output_skewness_list['affine'][idx].append(d.skewness)
-            self.output_kurtosis_list['affine'][idx].append(d.kurtosis)
-
-            if idx != self.hidden_layer_num:
-                d = self.get_activation_describe(layer_num=idx, kind="activation")
-                self.output_mean_list['activation'][idx].append(d.mean)
-                self.output_variance_list['activation'][idx].append(d.variance)
-                self.output_skewness_list['activation'][idx].append(d.skewness)
-                self.output_kurtosis_list['activation'][idx].append(d.kurtosis)
 
         if epoch % print_period == 0:
             print(
@@ -499,162 +494,6 @@ class CNN(dnn.Deep_Neural_Network):
         plt.legend(loc='lower left')
         plt.show()
 
-    def draw_param_description(self, figsize=(20, 5)):
-        # Draw Error Values and Accuracy
-        plt.figure(figsize=figsize)
-        plt.subplots_adjust(hspace=.5)
-
-        epoch_list = np.arange(len(self.param_mean_list['W'][0]))
-
-        color_dic = {
-            0: 'r',
-            1: 'b',
-            2: 'g',
-        }
-
-        plt.subplot(241)
-        for idx in range(self.hidden_layer_num + 1):
-            plt.plot(epoch_list, self.param_mean_list['W'][idx], color_dic[idx], label='W' + str(idx))
-        plt.ylabel('Mean')
-        plt.xlabel('Epochs')
-        plt.grid(True)
-        plt.legend(loc='lower left')
-
-        plt.subplot(242)
-        for idx in range(self.hidden_layer_num + 1):
-            plt.plot(epoch_list, self.param_variance_list['W'][idx], color_dic[idx], label='W' + str(idx))
-        plt.ylabel('Variance')
-        plt.xlabel('Epochs')
-        plt.grid(True)
-        plt.legend(loc='lower left')
-
-        plt.subplot(243)
-        for idx in range(self.hidden_layer_num + 1):
-            plt.plot(epoch_list, self.param_skewness_list['W'][idx], color_dic[idx], label='W' + str(idx))
-        plt.ylabel('Skewness')
-        plt.xlabel('Epochs')
-        plt.grid(True)
-        plt.legend(loc='lower left')
-
-        plt.subplot(244)
-        for idx in range(self.hidden_layer_num + 1):
-            plt.plot(epoch_list, self.param_kurtosis_list['W'][idx], color_dic[idx], label='W' + str(idx))
-        plt.ylabel('Kurtosis')
-        plt.xlabel('Epochs')
-        plt.grid(True)
-        plt.legend(loc='lower left')
-
-        plt.subplot(245)
-        for idx in range(self.hidden_layer_num + 1):
-            plt.plot(epoch_list, self.param_mean_list['b'][idx], color_dic[idx], label='b' + str(idx))
-        plt.ylabel('Mean')
-        plt.xlabel('Epochs')
-        plt.grid(True)
-        plt.legend(loc='lower left')
-
-        plt.subplot(246)
-        for idx in range(self.hidden_layer_num + 1):
-            plt.plot(epoch_list, self.param_variance_list['b'][idx], color_dic[idx], label='b' + str(idx))
-        plt.ylabel('Variance')
-        plt.xlabel('Epochs')
-        plt.grid(True)
-        plt.legend(loc='lower left')
-
-        plt.subplot(247)
-        for idx in range(self.hidden_layer_num + 1):
-            plt.plot(epoch_list, self.param_skewness_list['b'][idx], color_dic[idx], label='b' + str(idx))
-        plt.ylabel('Skewness')
-        plt.xlabel('Epochs')
-        plt.grid(True)
-        plt.legend(loc='lower left')
-
-        plt.subplot(248)
-        for idx in range(self.hidden_layer_num + 1):
-            plt.plot(epoch_list, self.param_kurtosis_list['b'][idx], color_dic[idx], label='b' + str(idx))
-        plt.ylabel('Kurtosis')
-        plt.xlabel('Epochs')
-        plt.grid(True)
-        plt.legend(loc='lower left')
-
-        plt.show()
-
-    def draw_output_description(self, figsize=(20, 5)):
-        plt.figure(figsize=figsize)
-        plt.subplots_adjust(hspace=.5)
-
-        epoch_list = np.arange(len(self.output_mean_list['affine'][0]))
-
-        color_dic = {
-            0: 'r',
-            1: 'b',
-            2: 'g',
-        }
-
-        plt.subplot(241)
-        for idx in range(self.hidden_layer_num + 1):
-            plt.plot(epoch_list, self.output_mean_list['affine'][idx], color_dic[idx], label='affine' + str(idx))
-        plt.ylabel('Mean')
-        plt.xlabel('Epochs')
-        plt.grid(True)
-        plt.legend(loc='lower left')
-
-        plt.subplot(242)
-        for idx in range(self.hidden_layer_num + 1):
-            plt.plot(epoch_list, self.output_variance_list['affine'][idx], color_dic[idx], label='affine' + str(idx))
-        plt.ylabel('Variance')
-        plt.xlabel('Epochs')
-        plt.grid(True)
-        plt.legend(loc='lower left')
-
-        plt.subplot(243)
-        for idx in range(self.hidden_layer_num + 1):
-            plt.plot(epoch_list, self.output_skewness_list['affine'][idx], color_dic[idx], label='affine' + str(idx))
-        plt.ylabel('Skewness')
-        plt.xlabel('Epochs')
-        plt.grid(True)
-        plt.legend(loc='lower left')
-
-        plt.subplot(244)
-        for idx in range(self.hidden_layer_num + 1):
-            plt.plot(epoch_list, self.output_kurtosis_list['affine'][idx], color_dic[idx], label='affine' + str(idx))
-        plt.ylabel('Kurtosis')
-        plt.xlabel('Epochs')
-        plt.grid(True)
-        plt.legend(loc='lower left')
-
-        plt.subplot(245)
-        for idx in range(self.hidden_layer_num):
-            plt.plot(epoch_list, self.output_mean_list['activation'][idx], color_dic[idx], label='activation' + str(idx))
-        plt.ylabel('Mean')
-        plt.xlabel('Epochs')
-        plt.grid(True)
-        plt.legend(loc='lower left')
-
-        plt.subplot(246)
-        for idx in range(self.hidden_layer_num):
-            plt.plot(epoch_list, self.output_variance_list['activation'][idx], color_dic[idx], label='activation' + str(idx))
-        plt.ylabel('Variance')
-        plt.xlabel('Epochs')
-        plt.grid(True)
-        plt.legend(loc='lower left')
-
-        plt.subplot(247)
-        for idx in range(self.hidden_layer_num):
-            plt.plot(epoch_list, self.output_skewness_list['activation'][idx], color_dic[idx], label='activation' + str(idx))
-        plt.ylabel('Skewness')
-        plt.xlabel('Epochs')
-        plt.grid(True)
-        plt.legend(loc='lower left')
-
-        plt.subplot(248)
-        for idx in range(self.hidden_layer_num):
-            plt.plot(epoch_list, self.output_kurtosis_list['activation'][idx], color_dic[idx], label='activation' + str(idx))
-        plt.ylabel('Kurtosis')
-        plt.xlabel('Epochs')
-        plt.grid(True)
-        plt.legend(loc='lower left')
-
-        plt.show()
 
     def draw_false_prediction(self, test_input, test_target, labels, num=5, figsize=(20, 5)):
         forward_final_output = self.feed_forward(input_data=test_input, is_numba=False)

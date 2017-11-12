@@ -99,21 +99,12 @@ class Multi_Layer_Network(dnn.Deep_Neural_Network):
         self.param_kurtosis_list['b'] = {}
 
         for idx in range(self.hidden_layer_num + 1):
-            if self.initializer is tfe.Initializer.Normal.value:
+            if self.initializer is tfe.Initializer.Normal.value or self.initializer is tfe.Initializer.Truncated_Normal.value:
                 self.params['W' + str(idx)] = self.initializer(
                     shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
                     name="W" + str(idx),
                     mean=mean,
                     sd=sd
-                ).param
-            elif self.initializer is tfe.Initializer.Truncated_Normal.value:
-                self.params['W' + str(idx)] = self.initializer(
-                    shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
-                    name="W" + str(idx),
-                    mean=mean,
-                    sd=sd,
-                    low=-sd,
-                    upp=sd
                 ).param
             else:
                 self.params['W' + str(idx)] = self.initializer(

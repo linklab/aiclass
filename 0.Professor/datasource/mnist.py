@@ -46,14 +46,14 @@ def convertToOneHot(vector, num_classes=None):
 
 class MNIST_Data(data.Base_Data):
     # http://yann.lecun.com/exdb/mnist/
-    def __init__(self, validation_size=5000, n_splits=1, is_onehot_target=True):
+    def __init__(self, validation_size=5000, n_splits=1, is_onehot_target=True, cnn=False):
         super().__init__(n_splits)
 
         self.validation_size = validation_size
         self.n_splits = n_splits
 
-        self.images, self.targets = load_mnist(path=MNIST_DIR, kind='train')
-        self.test_input, self.test_target = load_mnist(path=MNIST_DIR, kind='t10k')
+        self.images, self.targets = load_mnist(path=MNIST_DIR, kind='train', cnn=cnn)
+        self.test_input, self.test_target = load_mnist(path=MNIST_DIR, kind='t10k', cnn=cnn)
         self.num_test_data = len(self.test_input)
 
         self.labels = ['Zero', 'One', 'Two', 'Three', 'Four',
@@ -80,14 +80,14 @@ class MNIST_Data(data.Base_Data):
 
 class Fashion_MNIST_Data(data.Base_Data):
     # https://github.com/zalandoresearch/fashion-mnist
-    def __init__(self, validation_size=5000, n_splits=1, is_onehot_target=True):
+    def __init__(self, validation_size=5000, n_splits=1, is_onehot_target=True, cnn=False):
         super().__init__(n_splits)
 
         self.validation_size = validation_size
         self.n_splits = n_splits
 
-        self.images, self.targets = load_mnist(path=FASHION_MNIST_DIR, kind='train')
-        self.test_input, self.test_target = load_mnist(path=MNIST_DIR, kind='t10k')
+        self.images, self.targets = load_mnist(path=FASHION_MNIST_DIR, kind='train', cnn=cnn)
+        self.test_input, self.test_target = load_mnist(path=MNIST_DIR, kind='t10k', cnn=cnn)
         self.num_test_data = len(self.test_input)
 
         self.labels = ['t_shirt_top', 'trouser', 'pullover', 'dress', 'coat',
@@ -113,7 +113,7 @@ class Fashion_MNIST_Data(data.Base_Data):
             self.splitted_indices = kf.split(self.images)
 
 
-def load_mnist(path, kind='train'):
+def load_mnist(path, kind='train', cnn=False):
     """Load MNIST data from `path`"""
     labels_path = os.path.join(path, '%s-labels-idx1-ubyte.gz' % kind)
     images_path = os.path.join(path, '%s-images-idx3-ubyte.gz' % kind)
@@ -122,7 +122,10 @@ def load_mnist(path, kind='train'):
         labels = np.frombuffer(lbpath.read(), dtype=np.uint8, offset=8)
 
     with gzip.open(images_path, 'rb') as imgpath:
-        images = np.frombuffer(imgpath.read(), dtype=np.uint8, offset=16).reshape(len(labels), 784)
+        if cnn:
+            images = np.frombuffer(imgpath.read(), dtype=np.uint8, offset=16).reshape(len(labels), 1, 28, 28)
+        else:
+            images = np.frombuffer(imgpath.read(), dtype=np.uint8, offset=16).reshape(len(labels), 784)
 
     labels = labels.astype(np.float64, copy=False)
     images = images.astype(np.float64, copy=False)
@@ -131,7 +134,7 @@ def load_mnist(path, kind='train'):
 
 
 if __name__ == '__main__':
-    data = MNIST_Data(validation_size=5000, n_splits=12, is_onehot_target=True)
+    data = MNIST_Data(validation_size=5000, n_splits=12, is_onehot_target=True, cnn=True)
     #data = Fashion_MNIST_Data(validation_size=5000, n_splits=12, is_onehot_target=True)
 
     print("N_Splits:", data.n_splits)
