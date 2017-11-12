@@ -79,6 +79,9 @@ class CNN(dnn.Deep_Neural_Network):
 
         self.min_validation_error_per_fold = []
 
+        self.shape_before_fc = None
+        self.num_neurons_flatten_for_fc = None
+
         self.initialize_param(sd=init_sd)
         self.layering()
 
@@ -86,7 +89,7 @@ class CNN(dnn.Deep_Neural_Network):
         output_height = (input_height - filter_size + 2 * padding_size) / stride_size + 1
         output_width  = (input_width - filter_size + 2 * padding_size) / stride_size + 1
         assert output_height == int(output_height)
-        assert output_width == int(output_height)
+        assert output_width == int(output_width)
         return output_height, output_width
 
     def get_pooling_layer_output_size(self, input_height, input_width, filter_size, stride_size):
@@ -128,18 +131,20 @@ class CNN(dnn.Deep_Neural_Network):
                     cnn_param['stride']
                 )
 
+        self.shape_before_fc = (pre_channel_num, input_height, input_width)
+        self.num_neurons_flatten_for_fc = int(pre_channel_num * input_height * input_width)
+
         idx += 1
-        num_neurons_flatten = int(pre_channel_num * input_height * input_width)
         if self.initializer is tfe.Initializer.Normal.value or self.initializer is tfe.Initializer.Truncated_Normal.value:
             self.params['W' + str(idx)] = self.initializer(
-                shape=(num_neurons_flatten, self.fc_hidden_size),
+                shape=(self.num_neurons_flatten_for_fc, self.fc_hidden_size),
                 name="W" + str(idx),
                 mean=mean,
                 sd=sd
             ).param
         else:
             self.params['W' + str(idx)] = self.initializer(
-                shape=(num_neurons_flatten, self.fc_hidden_size),
+                shape=(self.num_neurons_flatten_for_fc, self.fc_hidden_size),
                 name="W" + str(idx)
             ).param
 
@@ -198,28 +203,35 @@ class CNN(dnn.Deep_Neural_Network):
                 )
                 input_node = self.layers['pooling' + str(idx)]
 
-        idx += 1
-        self.layers['affine' + str(idx)] = tfl.Affine(
-            self.params['W' + str(idx)],
-            input_node,
-            self.params['b' + str(idx)],
-            name='affine' + str(idx),
-            graph=self
+        self.layers['reshape'] = tfl.Reshape(
+            u       =input_node,
+            p_shape =self.shape_before_fc,
+            n_shape =self.num_neurons_flatten_for_fc,
+            name    ='reshape',
+            graph   =self
         )
-        self.layers['activation' + str(idx)] = self.activator(
-            self.layers['affine' + str(idx)],
-            name='activation' + str(idx),
-            graph=self
-        )
-        input_node = self.layers['activation' + str(idx)]
 
         idx += 1
         self.layers['affine' + str(idx)] = tfl.Affine(
-            self.params['W' + str(idx)],
-            input_node,
-            self.params['b' + str(idx)],
-            name='affine' + str(idx),
-            graph=self
+            w       =self.params['W' + str(idx)],
+            x       =self.layers['reshape'],
+            b       =self.params['b' + str(idx)],
+            name    ='affine' + str(idx),
+            graph   =self
+        )
+        self.layers['activation' + str(idx)] = self.activator(
+            u       =self.layers['affine' + str(idx)],
+            name    ='activation' + str(idx),
+            graph   =self
+        )
+
+        idx += 1
+        self.layers['affine' + str(idx)] = tfl.Affine(
+            w       =self.params['W' + str(idx)],
+            x       =self.layers['activation' + str(idx - 1)],
+            b       =self.params['b' + str(idx)],
+            name    ='affine' + str(idx),
+            graph   =self
         )
 
         self.output = self.layers['affine' + str(idx)]

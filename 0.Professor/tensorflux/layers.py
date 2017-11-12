@@ -470,3 +470,20 @@ class Pooling(tfg.Operation):
         dx = tff.col2im(dcol, x_value.shape, FH, FW, stride, pad)
 
         return dx
+
+class Reshape(tfg.Operation):
+    def __init__(self, u, p_shape, n_shape, name=None, graph=None):
+        self.u_value = None
+        self.p_shape = p_shape
+        self.n_shape = n_shape
+        self.batch_size = None
+        super().__init__([u], name, graph)
+
+    def forward(self, u_value, is_numba=False):
+        self.batch_size = u_value.shape[0]
+        out = np.reshape(u_value, (self.batch_size, self.n_shape))
+        return out
+
+    def backward(self, din, is_numba=False):
+        dx = np.reshape(din, (self.batch_size, *self.p_shape))
+        return dx

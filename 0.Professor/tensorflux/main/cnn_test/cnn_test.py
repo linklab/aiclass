@@ -12,11 +12,11 @@ import tensorflux.functions as tff
 
 input_dim = (1, 28, 28)
 cnn_param_list = [
-    {'type': 'conv', 'filter_num': 16, 'filter_size': 3, 'pad': 1, 'stride': 1},
-    {'type': 'conv', 'filter_num': 16, 'filter_size': 3, 'pad': 1, 'stride': 1},
+    {'type': 'conv', 'filter_num': 4, 'filter_size': 3, 'pad': 1, 'stride': 1},
+    {'type': 'conv', 'filter_num': 4, 'filter_size': 3, 'pad': 1, 'stride': 1},
     {'type': 'pool', 'filter_size': 2, 'stride': 2},
-    {'type': 'conv', 'filter_num': 32, 'filter_size': 3, 'pad': 1, 'stride': 1},
-    {'type': 'conv', 'filter_num': 32, 'filter_size': 3, 'pad': 2, 'stride': 1},
+    {'type': 'conv', 'filter_num': 8, 'filter_size': 3, 'pad': 1, 'stride': 1},
+    {'type': 'conv', 'filter_num': 8, 'filter_size': 3, 'pad': 1, 'stride': 1},
     {'type': 'pool', 'filter_size': 2, 'stride': 2},
 ]
 fc_hidden_size = 64
@@ -50,7 +50,7 @@ print(forward_final_output.shape)
 print(tff.accuracy(forward_final_output, data.test_target))
 
 batch_size = 1000
-n.learning(max_epoch=5, data=data, batch_size=batch_size, print_period=1, is_numba=True, verbose=False)
+n.learning(max_epoch=5, data=data, batch_size=batch_size, print_period=1, is_numba=False, verbose=False)
 
 forward_final_output = n.feed_forward(input_data=data.test_input, is_numba=False)
 print(tff.accuracy(forward_final_output, data.test_target))

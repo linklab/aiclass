@@ -106,8 +106,14 @@ def im2col(input_data, filter_h, filter_w, stride=1, pad=0):
     col : 2차원행렬
     """
     N, C, H, W = input_data.shape
-    out_h = (H + 2 * pad - filter_h) // stride + 1
-    out_w = (W + 2 * pad - filter_w) // stride + 1
+    out_h = (H + 2 * pad - filter_h) / stride + 1
+    out_w = (W + 2 * pad - filter_w) / stride + 1
+
+    assert out_h == int(out_h)
+    out_h = int(out_h)
+
+    assert out_w == int(out_w)
+    out_w = int(out_w)
 
     img = np.pad(input_data, [(0,0), (0,0), (pad, pad), (pad, pad)], 'constant')
     col = np.zeros((N, C, filter_h, filter_w, out_h, out_w))
@@ -139,8 +145,15 @@ def col2im(col, input_shape, filter_h, filter_w, stride=1, pad=0):
 
     """
     N, C, H, W = input_shape
-    out_h = (H + 2*pad - filter_h)//stride + 1
-    out_w = (W + 2*pad - filter_w)//stride + 1
+    out_h = (H + 2 * pad - filter_h) / stride + 1
+    out_w = (W + 2 * pad - filter_w) / stride + 1
+
+    assert out_h == int(out_h)
+    out_h = int(out_h)
+
+    assert out_w == int(out_w)
+    out_w = int(out_w)
+
     col = col.reshape(N, out_h, out_w, C, filter_h, filter_w).transpose(0, 3, 4, 5, 1, 2)
 
     img = np.zeros((N, C, H + 2*pad + stride - 1, W + 2*pad + stride - 1))
