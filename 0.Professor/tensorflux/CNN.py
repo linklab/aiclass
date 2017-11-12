@@ -131,7 +131,7 @@ class CNN(dnn.Deep_Neural_Network):
                     cnn_param['stride']
                 )
 
-        self.shape_before_fc = (pre_channel_num, input_height, input_width)
+        self.shape_before_fc = (int(pre_channel_num), int(input_height), int(input_width))
         self.num_neurons_flatten_for_fc = int(pre_channel_num * input_height * input_width)
 
         idx += 1
@@ -252,9 +252,10 @@ class CNN(dnn.Deep_Neural_Network):
         for layer in layers:
             din = layer.backward(din, is_numba)
 
-        for idx in range(self.cnn_param_list):
-            grads['W' + str(idx)] = self.layers['conv' + str(idx)].dw
-            grads['b' + str(idx)] = self.layers['conv' + str(idx)].db
+        for idx, cnn_param in enumerate(self.cnn_param_list):
+            if cnn_param['type'] == 'conv':
+                grads['W' + str(idx)] = self.layers['conv' + str(idx)].dw
+                grads['b' + str(idx)] = self.layers['conv' + str(idx)].db
 
         idx += 1
         grads['W' + str(idx)] = self.layers['affine' + str(idx)].dw
