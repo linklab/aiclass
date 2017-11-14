@@ -1,9 +1,8 @@
 import tensorflux.graph as tfg
-import tensorflux.deep_learning_networks as tfn
+import tensorflux.Multi_Layer_Network as tfn
 import tensorflux.enums as tfe
 import datasource.mnist as mnist
 import tensorflux.functions as tff
-import math
 
 input_size = 784
 hidden_layer1_size = 128
