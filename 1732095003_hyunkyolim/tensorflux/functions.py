@@ -103,28 +103,31 @@ if __name__ == "__main__":
     # ax[2].hist(x3.flatten())
     # plt.show()
 
-    a = np.array([1.0, 2.0, 3.0])
-    print(sigmoid(a, is_numba=True))
-    print()
+    # a = np.array([1.0, 2.0, 3.0])
+    # print(sigmoid(a, is_numba=True))
+    # print()
+    #
+    # b = np.array([1.0, 0.0, 1.0])
+    # c = np.array([0.0, 1.0, 0.0])
+    # print(squared_error(b, c, is_numba=True))
+    # print()
+    #
+    # print(cross_entropy_error(b, c, is_numba=True))
+    # print()
+    #
+    # d = np.array([[1.0, 2.0, 3.0], [3.0, 2.0, 1.0]])
+    # print(softmax(d, is_numba=True))
+    # print()
+    #
+    #
+    #
+    # q = np.array([[3.3, 1.2, 9.4], [7.1, 2.2, 3.3], [1.9, 9.2, 2.3]])
+    # t = np.array([[0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+    # print(accuracy(q, t, is_numba=True))
+    #
+    # q = np.array([[3.3, 1.2, 9.4], [7.1, 2.2, 3.3], [1.9, 9.2, 2.3]])
+    # t = np.array([[1.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+    # print(accuracy(q, t, is_numba=True))
 
-    b = np.array([1.0, 0.0, 1.0])
-    c = np.array([0.0, 1.0, 0.0])
-    print(squared_error(b, c, is_numba=True))
-    print()
-
-    print(cross_entropy_error(b, c, is_numba=True))
-    print()
-
-    d = np.array([[1.0, 2.0, 3.0], [3.0, 2.0, 1.0]])
-    print(softmax(d, is_numba=True))
-    print()
-
-
-
-    q = np.array([[3.3, 1.2, 9.4], [7.1, 2.2, 3.3], [1.9, 9.2, 2.3]])
-    t = np.array([[0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
-    print(accuracy(q, t, is_numba=True))
-
-    q = np.array([[3.3, 1.2, 9.4], [7.1, 2.2, 3.3], [1.9, 9.2, 2.3]])
-    t = np.array([[1.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
-    print(accuracy(q, t, is_numba=True))
+    x = get_truncated_normal(shape=(100,), mean=0.0, sd=1.0, low=-1.0, upp=1.0)
+    print(x)
