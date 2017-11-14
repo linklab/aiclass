@@ -36,7 +36,7 @@ print(forward_final_output.shape)
 print(tff.accuracy(forward_final_output, data.test_target))
 
 batch_size = 1000
-n.learning(max_epoch=5, data=data, batch_size=batch_size, print_period=1, is_numba=True, verbose=False)
+n.learning(max_epoch=5, data=data, batch_size=batch_size, print_period=1, is_numba=False, verbose=False)
 
 forward_final_output = n.feed_forward(input_data=data.test_input, is_numba=False)
 print(tff.accuracy(forward_final_output, data.test_target))
