@@ -281,3 +281,209 @@ class Affine2(tfg.Operation):
 
     def __str__(self):
         return "Affine2: " + self.name
+
+
+class Convolution(tfg.Operation):
+    def __init__(self, w, x, b, pad, stride, name=None, graph=None):
+        """Construct Convolution
+
+        Args:
+          x: Filter node, y: Input node, b: Bias node
+        """
+        self.w_value = None
+        self.x_value = None
+        self.b_value = None
+
+        self.pad = pad
+        self.stride = stride
+
+        self.col = None
+        self.col_w = None
+        self.dw = None
+        self.db = None
+        super().__init__([w, x, b], name, graph)
+
+    def forward(self, w_value, x_value, b_value, is_numba):
+        self.w_value = w_value
+        self.x_value = x_value
+        self.b_value = b_value
+
+        if is_numba:
+            x_value, col, col_w, out = self._forward(w_value, x_value, b_value, self.pad, self.stride)
+            self.x_value = x_value
+            self.col = col
+            self.col_w = col_w
+            return out
+        else:
+            FN, C, FH, FW = self.w_value.shape
+            N, C, H, W = x_value.shape
+            out_h = 1 + int((H + 2 * self.pad - FH) / self.stride)
+            out_w = 1 + int((W + 2 * self.pad - FW) / self.stride)
+
+            col = tff.im2col(x_value, FH, FW, self.stride, self.pad)
+            col_w = self.w_value.reshape(FN, -1).T
+
+            out = np.dot(col, col_w) + self.b_value
+            out = out.reshape(N, out_h, out_w, -1).transpose(0, 3, 1, 2)
+
+            self.x_value = x_value
+            self.col = col
+            self.col_w = col_w
+
+            return out
+
+    @staticmethod
+    @jit(nopython=True)
+    def _forward(w_value, x_value, b_value, pad, stride):
+        FN, C, FH, FW = w_value.shape
+        N, C, H, W = x_value.shape
+        out_h = 1 + int((H + 2 * pad - FH) / stride)
+        out_w = 1 + int((W + 2 * pad - FW) / stride)
+
+        col = tff.im2col(x_value, FH, FW, stride, pad)
+        col_w = w_value.reshape(FN, -1).T
+
+        out = np.dot(col, col_w) + b_value
+        out = out.reshape(N, out_h, out_w, -1).transpose(0, 3, 1, 2)
+
+        return x_value, col, col_w, out
+
+    def backward(self, din, is_numba):
+        if is_numba:
+            dw, dx, db = self._backward(din, self.w_value, self.x_value, self.col, self.col_w, self.pad, self.stride)
+            self.dw = dw
+            self.db = db
+            return dx
+        else:
+            FN, C, FH, FW = self.w_value.shape
+            din = din.transpose(0, 2, 3, 1).reshape(-1, FN)
+
+            self.db = np.sum(din, axis=0)
+            self.dw = np.dot(self.col.T, din)
+            self.dw = self.dw.transpose(1, 0).reshape(FN, C, FH, FW)
+
+            dcol = np.dot(din, self.col_w.T)
+            dx = tff.col2im(dcol, self.x_value.shape, FH, FW, self.stride, self.pad)
+            return dx
+
+    @staticmethod
+    @jit(nopython=True)
+    def _backward(din, w_value, x_value, col, col_w, pad, stride):
+        FN, C, FH, FW = w_value.shape
+        din = din.transpose(0, 2, 3, 1).reshape(-1, FN)
+
+        db = np.sum(din, axis=0)
+        dw = np.dot(col.T, din)
+        dw = dw.transpose(1, 0).reshape(FN, C, FH, FW)
+
+        dcol = np.dot(din, col_w.T)
+        dx = tff.col2im(dcol, x_value.shape, FH, FW, stride, pad)
+
+        return dw, dx, db
+
+
+class Pooling(tfg.Operation):
+    def __init__(self, w, x, pad, stride, name=None, graph=None):
+        """Construct Pooling
+
+        Args:
+          x: Filter node, y: Input node, b: Bias node
+        """
+        self.w_value = None
+        self.x_value = None
+        self.stride = stride
+        self.pad = pad
+
+        self.arg_max
+        super().__init__([w, x], name, graph)
+
+    def forward(self, w_value, x_value, is_numba):
+        self.w_value = w_value
+        self.x_value = x_value
+
+        if is_numba:
+            arg_max, out = self._forward(self.w_value, self.x_value, self.pad, self.stride)
+            self.arg_max = arg_max
+            return out
+        else:
+            FN, C, FH, FW = self.w_value.shape
+            N, C, H, W = self.x_value.shape
+            out_h = int(1 + (H - FH) / self.stride)
+            out_w = int(1 + (W - FW) / self.stride)
+
+            col = tff.im2col(self.x_value, FH, FW, self.stride, self.pad)
+            col = col.reshape(-1, FH * FW)
+
+            arg_max = np.argmax(col, axis=1)
+            out = np.max(col, axis=1)
+            out = out.reshape(N, out_h, out_w, C).transpose(0, 3, 1, 2)
+
+            self.arg_max = arg_max
+            return out
+
+    @staticmethod
+    @jit(nopython=True)
+    def _forward(w_value, x_value, pad, stride):
+        FN, C, FH, FW = w_value.shape
+        N, C, H, W = x_value.shape
+        out_h = int(1 + (H - FH) / stride)
+        out_w = int(1 + (W - FW) / stride)
+
+        col = tff.im2col(x_value, FH, FW, stride, pad)
+        col = col.reshape(-1, FH * FW)
+
+        arg_max = np.argmax(col, axis=1)
+        out = np.max(col, axis=1)
+        out = out.reshape(N, out_h, out_w, C).transpose(0, 3, 1, 2)
+
+        return arg_max, out
+
+    def backward(self, din, is_numba):
+        if is_numba:
+            self._backward(din, self.w_value, self.x_value, self.pad, self.stride, self.arg_max)
+        else:
+            FN, C, FH, FW = self.w_value.shape
+            din = din.transpose(0, 2, 3, 1)
+
+            pool_size = FH * FW
+            dmax = np.zeros((din.size, pool_size))
+            dmax[np.arange(self.arg_max.size), self.arg_max.flatten()] = din.flatten()
+            dmax = dmax.reshape(din.shape + (pool_size,))
+
+            dcol = dmax.reshape(dmax.shape[0] * dmax.shape[1] * dmax.shape[2], -1)
+            dx = tff.col2im(dcol, self.x_value.shape, FH, FW, self.stride, self.pad)
+
+            return dx
+
+    @staticmethod
+    @jit(nopython=True)
+    def _backward(din, w_value, x_value, pad, stride, arg_max):
+        FN, C, FH, FW = w_value.shape
+        din = din.transpose(0, 2, 3, 1)
+
+        pool_size = FH * FW
+        dmax = np.zeros((din.size, pool_size))
+        dmax[np.arange(arg_max.size), arg_max.flatten()] = din.flatten()
+        dmax = dmax.reshape(din.shape + (pool_size,))
+
+        dcol = dmax.reshape(dmax.shape[0] * dmax.shape[1] * dmax.shape[2], -1)
+        dx = tff.col2im(dcol, x_value.shape, FH, FW, stride, pad)
+
+        return dx
+
+class Reshape(tfg.Operation):
+    def __init__(self, u, p_shape, n_shape, name=None, graph=None):
+        self.u_value = None
+        self.p_shape = p_shape
+        self.n_shape = n_shape
+        self.batch_size = None
+        super().__init__([u], name, graph)
+
+    def forward(self, u_value, is_numba=False):
+        self.batch_size = u_value.shape[0]
+        out = np.reshape(u_value, (self.batch_size, self.n_shape))
+        return out
+
+    def backward(self, din, is_numba=False):
+        dx = np.reshape(din, (self.batch_size, *self.p_shape))
+        return dx
