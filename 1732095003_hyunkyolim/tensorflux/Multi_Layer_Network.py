@@ -1,27 +1,36 @@
 from collections import OrderedDict
-import tensorflux.graph as tfg
 import tensorflux.enums as tfe
 import tensorflux.layers as tfl
 import tensorflux.session as tfs
 import tensorflux.functions as tff
-import tensorflux.initializers as tfi
-import networkx as nx
 import matplotlib.pyplot as plt
+import networkx as nx
+import tensorflux.Deep_Neural_Network as dnn
+from networkx.drawing.nx_agraph import graphviz_layout
 import numpy as np
 from scipy import stats
 import math
-from networkx.drawing.nx_agraph import graphviz_layout
+import pickle
+import sys
 import random
 import string
-import os
-import pickle
-import copy
-import shutil
-import sys
 
 
-class Deep_Neural_Network(tfg.Graph):
-    def __init__(self, input_size, output_size, input_node, target_node, initializer, activator, optimizer, learning_rate):
+class Multi_Layer_Network(dnn.Deep_Neural_Network):
+    def __init__(self,
+                 input_size,
+                 hidden_size_list,
+                 output_size,
+                 input_node=None,
+                 target_node=None,
+                 initializer=tfe.Initializer.Normal.value,
+                 init_sd=0.01,
+                 activator=tfe.Activator.ReLU.value,
+                 optimizer=tfe.Optimizer.SGD.value,
+                 learning_rate=0.01):
+
+        super().__init__()
+
         self.input_size = input_size
         self.output_size = output_size
 
@@ -42,75 +51,6 @@ class Deep_Neural_Network(tfg.Graph):
         self.session = tfs.Session()
 
         self.mode_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
-
-        super().__init__()
-
-    def initialize_param(self, initializer=tfe.Initializer.Zero.value):
-        pass
-
-    def layering(self, activator=tfe.Activator.ReLU.value):
-        pass
-
-    def backward_propagation(self, is_numba):
-        pass
-
-    def get_params_str(self):
-        params_str = ""
-        for param_key, param in self.params.items():
-            params_str = params_str + param_key + ": " + str(param.value) + ", "
-        params_str = params_str[0:-2]
-        return params_str
-
-    def get_all_param_describe(self):
-        """
-        :return: starts.description
-        skewness - https://ko.wikipedia.org/wiki/%EB%B9%84%EB%8C%80%EC%B9%AD%EB%8F%84
-        kurtosis - https://ko.wikipedia.org/wiki/%EC%B2%A8%EB%8F%84
-        """
-        all_param_flatten_list = []
-        for param in self.params.values():
-            all_param_flatten_list.extend([item for item in param.value.flatten()])
-        return stats.describe(np.array(all_param_flatten_list))
-
-    def print_feed_forward(self, num_data, input_data, target_data, is_numba, verbose=False):
-        for idx in range(num_data):
-            train_input_data = input_data[idx]
-            train_target_data = target_data[idx]
-
-            output = self.session.run(self.output, {self.input_node: train_input_data}, is_numba, verbose)
-            print("Input Data: {:>5}, Feed Forward Output: {:>6}, Target: {:>6}".format(
-                str(train_input_data), np.array2string(output), str(train_target_data)))
-
-    def draw_and_show(self, figsize=(8, 8)):
-        pos = graphviz_layout(self)
-        plt.figure(figsize=figsize)
-        nx.draw_networkx(self, pos=pos, with_labels=True)
-        plt.show(block=True)
-
-
-class Multi_Layer_Network(Deep_Neural_Network):
-    def __init__(self,
-                 input_size,
-                 hidden_size_list,
-                 output_size,
-                 input_node=None,
-                 target_node=None,
-                 initializer=tfe.Initializer.Normal.value,
-                 init_sd=0.01,
-                 activator=tfe.Activator.ReLU.value,
-                 optimizer=tfe.Optimizer.SGD.value,
-                 learning_rate=0.01):
-
-        super().__init__(
-            input_size,
-            output_size,
-            input_node,
-            target_node,
-            initializer,
-            activator,
-            optimizer,
-            learning_rate
-        )
 
         print("Multi Layer Network Model - ID:", self.mode_id)
 
@@ -159,21 +99,12 @@ class Multi_Layer_Network(Deep_Neural_Network):
         self.param_kurtosis_list['b'] = {}
 
         for idx in range(self.hidden_layer_num + 1):
-            if self.initializer is tfe.Initializer.Normal.value:
+            if self.initializer is tfe.Initializer.Normal.value or self.initializer is tfe.Initializer.Truncated_Normal.value:
                 self.params['W' + str(idx)] = self.initializer(
                     shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
                     name="W" + str(idx),
                     mean=mean,
                     sd=sd
-                ).param
-            elif self.initializer is tfe.Initializer.Truncated_Normal.value:
-                self.params['W' + str(idx)] = self.initializer(
-                    shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
-                    name="W" + str(idx),
-                    mean=mean,
-                    sd=sd,
-                    low=-sd,
-                    upp=sd
                 ).param
             else:
                 self.params['W' + str(idx)] = self.initializer(
@@ -467,6 +398,39 @@ class Multi_Layer_Network(Deep_Neural_Network):
         print("Load Params from Fold {:3d} & Epoch {:3d}".format(self.min_fold_idx, o_epoch))
         self.params = self.optimal_epoch_and_params[1]
 
+    def get_params_str(self):
+        params_str = ""
+        for param_key, param in self.params.items():
+            params_str = params_str + param_key + ": " + str(param.value) + ", "
+        params_str = params_str[0:-2]
+        return params_str
+
+    def get_all_param_describe(self):
+        """
+        :return: starts.description
+        skewness - https://ko.wikipedia.org/wiki/%EB%B9%84%EB%8C%80%EC%B9%AD%EB%8F%84
+        kurtosis - https://ko.wikipedia.org/wiki/%EC%B2%A8%EB%8F%84
+        """
+        all_param_flatten_list = []
+        for param in self.params.values():
+            all_param_flatten_list.extend([item for item in param.value.flatten()])
+        return stats.describe(np.array(all_param_flatten_list))
+
+    def print_feed_forward(self, num_data, input_data, target_data, is_numba, verbose=False):
+        for idx in range(num_data):
+            train_input_data = input_data[idx]
+            train_target_data = target_data[idx]
+
+            output = self.session.run(self.output, {self.input_node: train_input_data}, is_numba, verbose)
+            print("Input Data: {:>5}, Feed Forward Output: {:>6}, Target: {:>6}".format(
+                str(train_input_data), np.array2string(output), str(train_target_data)))
+
+    def draw_and_show(self, figsize=(8, 8)):
+        pos = graphviz_layout(self)
+        plt.figure(figsize=figsize)
+        nx.draw_networkx(self, pos=pos, with_labels=True)
+        plt.show(block=True)
+
     def draw_params_histogram(self):
         f, axarr = plt.subplots(1, (self.hidden_layer_num + 1) * 2, figsize=(10 * (self.hidden_layer_num + 1), 5))
 
@@ -533,7 +497,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
         plt.xlabel('Epochs')
         plt.grid(True)
         plt.legend(loc='lower left')
-        
+
         plt.subplot(243)
         for idx in range(self.hidden_layer_num + 1):
             plt.plot(epoch_list, self.param_skewness_list['W'][idx], color_dic[idx], label='W' + str(idx))
@@ -541,7 +505,7 @@ class Multi_Layer_Network(Deep_Neural_Network):
         plt.xlabel('Epochs')
         plt.grid(True)
         plt.legend(loc='lower left')
-        
+
         plt.subplot(244)
         for idx in range(self.hidden_layer_num + 1):
             plt.plot(epoch_list, self.param_kurtosis_list['W'][idx], color_dic[idx], label='W' + str(idx))

@@ -1,9 +1,11 @@
 # -*- coding:utf-8 -*-
+# https://medium.com/towards-data-science/train-test-split-and-cross-validation-in-python-80b61beca4b6
 
 import numpy as np
 import datasource.data as data
 import os
 import gzip
+from sklearn.model_selection import KFold
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__)) + '/'
 MNIST_DIR = ROOT_DIR + "mnist"
@@ -36,61 +38,82 @@ def convertToOneHot(vector, num_classes=None):
         assert num_classes > 0
         assert num_classes >= np.max(vector)
 
-    t = np.zeros((vector.size, num_classes))
+    t = np.zeros((vector.size, num_classes), dtype=np.float64)
     for idx, row in enumerate(t):
-        row[vector[idx]] = 1
+        row[int(vector[idx])] = 1.0
     return t
 
 
 class MNIST_Data(data.Base_Data):
     # http://yann.lecun.com/exdb/mnist/
-    def __init__(self, validation_size=5000, is_onehot_target=True):
-        images, labels = load_mnist(path=MNIST_DIR, kind='train')
+    def __init__(self, validation_size=5000, n_splits=1, is_onehot_target=True, cnn=False):
+        super().__init__(n_splits)
 
-        self.validation_input = images[:validation_size]
-        self.validation_target = labels[:validation_size]
+        self.validation_size = validation_size
+        self.n_splits = n_splits
 
-        self.train_input = images[validation_size:]
-        self.train_target = labels[validation_size:]
-
-        self.test_input, self.test_target = load_mnist(path=MNIST_DIR, kind='t10k')
+        self.images, self.targets = load_mnist(path=MNIST_DIR, kind='train', cnn=cnn)
+        self.test_input, self.test_target = load_mnist(path=MNIST_DIR, kind='t10k', cnn=cnn)
+        self.num_test_data = len(self.test_input)
 
         self.labels = ['Zero', 'One', 'Two', 'Three', 'Four',
                        'Five', 'Six', 'Seven', 'Eight', 'Nine']
 
         if is_onehot_target:
-            self.train_target = convertToOneHot(self.train_target, num_classes=10)
-            self.validation_target = convertToOneHot(self.validation_target, num_classes=10)
-            self.test_target = convertToOneHot(self.test_target, num_classes=10)
+            self.targets = convertToOneHot(self.targets, num_classes=10)
 
-        super().__init__()
+        self.reset_kfold()
 
+        self.num_train_data = len(self.images) - validation_size
+        self.num_validation_data = validation_size
+
+    def reset_kfold(self):
+        if self.n_splits == 1:
+            self.validation_input = self.images[:self.validation_size]
+            self.validation_target = self.targets[:self.validation_size]
+
+            self.train_input = self.images[self.validation_size:]
+            self.train_target = self.targets[self.validation_size:]
+        else:
+            kf = KFold(n_splits=self.n_splits)
+            self.splitted_indices = kf.split(self.images)
 
 class Fashion_MNIST_Data(data.Base_Data):
     # https://github.com/zalandoresearch/fashion-mnist
-    def __init__(self, validation_size=5000, is_onehot_target=True):
-        images, labels = load_mnist(path=FASHION_MNIST_DIR, kind='train')
+    def __init__(self, validation_size=5000, n_splits=1, is_onehot_target=True, cnn=False):
+        super().__init__(n_splits)
 
-        self.validation_input = images[:validation_size]
-        self.validation_target = labels[:validation_size]
+        self.validation_size = validation_size
+        self.n_splits = n_splits
 
-        self.train_input = images[validation_size:]
-        self.train_target = labels[validation_size:]
-
-        self.test_input, self.test_target = load_mnist(path=FASHION_MNIST_DIR, kind='t10k')
+        self.images, self.targets = load_mnist(path=FASHION_MNIST_DIR, kind='train', cnn=cnn)
+        self.test_input, self.test_target = load_mnist(path=MNIST_DIR, kind='t10k', cnn=cnn)
+        self.num_test_data = len(self.test_input)
 
         self.labels = ['t_shirt_top', 'trouser', 'pullover', 'dress', 'coat',
                        'sandal', 'shirt', 'sneaker', 'bag', 'ankle_boots']
 
         if is_onehot_target:
-            self.train_target = convertToOneHot(self.train_target, num_classes=10)
-            self.validation_target = convertToOneHot(self.validation_target, num_classes=10)
-            self.test_target = convertToOneHot(self.test_target, num_classes=10)
+            self.targets = convertToOneHot(self.targets, num_classes=10)
 
-        super().__init__()
+        self.reset_kfold()
+
+        self.num_train_data = len(self.images) - validation_size
+        self.num_validation_data = validation_size
+
+    def reset_kfold(self):
+        if self.n_splits == 1:
+            self.validation_input = self.images[:self.validation_size]
+            self.validation_target = self.targets[:self.validation_size]
+
+            self.train_input = self.images[self.validation_size:]
+            self.train_target = self.targets[self.validation_size:]
+        else:
+            kf = KFold(n_splits=self.n_splits)
+            self.splitted_indices = kf.split(self.images)
 
 
-def load_mnist(path, kind='train'):
+def load_mnist(path, kind='train', cnn=False):
     """Load MNIST data from `path`"""
     labels_path = os.path.join(path, '%s-labels-idx1-ubyte.gz' % kind)
     images_path = os.path.join(path, '%s-images-idx3-ubyte.gz' % kind)
@@ -99,7 +122,31 @@ def load_mnist(path, kind='train'):
         labels = np.frombuffer(lbpath.read(), dtype=np.uint8, offset=8)
 
     with gzip.open(images_path, 'rb') as imgpath:
-        images = np.frombuffer(imgpath.read(), dtype=np.uint8, offset=16).reshape(len(labels), 784)
+        if cnn:
+            images = np.frombuffer(imgpath.read(), dtype=np.uint8, offset=16).reshape(len(labels), 1, 28, 28)
+        else:
+            images = np.frombuffer(imgpath.read(), dtype=np.uint8, offset=16).reshape(len(labels), 784)
+
+    labels = labels.astype(np.float64, copy=False)
+    images = images.astype(np.float64, copy=False)
 
     return images, labels
 
+
+if __name__ == '__main__':
+    data = MNIST_Data(validation_size=5000, n_splits=12, is_onehot_target=True, cnn=True)
+    #data = Fashion_MNIST_Data(validation_size=5000, n_splits=12, is_onehot_target=True)
+
+    print("N_Splits:", data.n_splits)
+    for i in range(12):
+        data.set_next_train_and_validation_data()
+        print(i)
+        print(data.train_input.shape, np.sum(data.train_input))
+        print(data.train_target.shape, np.sum(data.train_target))
+        print()
+        print(data.validation_input.shape, np.sum(data.validation_input))
+        print(data.validation_target.shape, np.sum(data.validation_target))
+        print()
+        print(data.test_input.shape, np.sum(data.test_input))
+        print(data.test_target.shape, np.sum(data.test_target))
+        print()
