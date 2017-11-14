@@ -1,7 +1,7 @@
 # Reference: http://www.deepideas.net/deep-learning-from-scratch-i-computational-graphs/
-import Tensorflux.graph_backward as tfg
-import Tensorflux.networks as tfn
-import Tensorflux.enums as tfe
+import tensorflux.graph as tfg
+import tensorflux.networks as tfn
+import tensorflux.enums as tfe
 import datasource.simple as simple_data
 import time
 
@@ -25,7 +25,7 @@ while not (start_param_description.variance > 0.17 and 0.0 < start_param_descrip
 n.layering(activator=tfe.Activator.ReLU.value)
 n.set_optimizer(optimizer=tfe.Optimizer.SGD.value, learning_rate=0.05)
 
-#n.draw_and_show()
+n.draw_and_show()
 
 data = simple_data.Xor_Gate_Data()
 

@@ -1,7 +1,7 @@
 # Reference: http://www.deepideas.net/deep-learning-from-scratch-i-computational-graphs/
-import Tensorflux.graph_backward as tfg
-import Tensorflux.networks as tfn
-import Tensorflux.enums as tfe
+import tensorflux.graph as tfg
+import tensorflux.networks as tfn
+import tensorflux.enums as tfe
 import datasource.simple as simple_data
 
 n = tfn.Single_Neuron_Network(input_size=2, output_size=1)
