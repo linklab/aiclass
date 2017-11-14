@@ -18,6 +18,10 @@ class Initializer(Enum):
     Xavier_Uniform      = tfi.Xavier_Uniform
     He_Normal           = tfi.He_Normal
     He_Uniform          = tfi.He_Uniform
+    Conv_Xavier_Normal  = tfi.Conv_Xavier_Normal
+    Conv_Xavier_Uniform = tfi.Conv_Xavier_Uniform
+    Conv_He_Normal      = tfi.Conv_He_Normal
+    Conv_He_Uniform     = tfi.Conv_He_Uniform
 
 
 class Optimizer(Enum):
