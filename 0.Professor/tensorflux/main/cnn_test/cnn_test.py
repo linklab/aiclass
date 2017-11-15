@@ -12,12 +12,12 @@ import tensorflux.functions as tff
 
 input_dim = (1, 28, 28)
 cnn_param_list = [
-    {'type': 'conv', 'filter_num': 4, 'filter_size': 3, 'pad': 1, 'stride': 1},
-    {'type': 'conv', 'filter_num': 4, 'filter_size': 3, 'pad': 1, 'stride': 1},
-    {'type': 'pool', 'filter_size': 2, 'stride': 2},
-    {'type': 'conv', 'filter_num': 8, 'filter_size': 3, 'pad': 1, 'stride': 1},
-    {'type': 'conv', 'filter_num': 8, 'filter_size': 3, 'pad': 1, 'stride': 1},
-    {'type': 'pool', 'filter_size': 2, 'stride': 2},
+    {'type': 'conv', 'filter_num': 3, 'filter_h': 3, 'filter_w': 3, 'pad': 1, 'stride': 1},
+#    {'type': 'conv', 'filter_num': 3, 'filter_h': 3, 'filter_w': 3, 'pad': 1, 'stride': 1},
+    {'type': 'pooling', 'filter_h': 2, 'filter_w': 2, 'stride': 2},
+    {'type': 'conv', 'filter_num': 3, 'filter_h': 3, 'filter_w': 3, 'pad': 1, 'stride': 1},
+#    {'type': 'conv', 'filter_num': 3, 'filter_h': 3, 'filter_w': 3, 'pad': 1, 'stride': 1},
+    {'type': 'pooling', 'filter_h': 2, 'filter_w': 2, 'stride': 2},
 ]
 fc_hidden_size = 64
 output_size = 10

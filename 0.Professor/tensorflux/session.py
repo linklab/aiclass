@@ -28,7 +28,9 @@ class Session:
 
         # Iterate all nodes to determine their value
         for node in nodes_postorder:
-            if type(node) == tfg.Placeholder:
+            if node is None:
+                continue
+            elif type(node) == tfg.Placeholder:
                 # Set the node value to the placeholder value from feed_dict
                 node.output = feed_dict[node]
             elif type(node) == tfg.Variable:
@@ -39,7 +41,7 @@ class Session:
                 node.output = node.value
             else: # Operation
                 # Get the input values for this operation from node_values
-                node_inputs = [input_node.output for input_node in node.input_nodes]
+                node_inputs = [input_node.output for input_node in node.input_nodes if input_node is not None]
 
                 # Compute the output of this operation
                 node.output = node.forward(*node_inputs, is_numba)

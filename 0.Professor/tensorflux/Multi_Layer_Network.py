@@ -175,13 +175,14 @@ class Multi_Layer_Network(dnn.Deep_Neural_Network):
             name='affine' + str(idx),
             graph=self
         )
-        self.output = self.layers['affine' + str(idx)]
 
         if not refitting:
             self.output_mean_list['affine'][idx] = []
             self.output_variance_list['affine'][idx] = []
             self.output_skewness_list['affine'][idx] = []
             self.output_kurtosis_list['affine'][idx] = []
+
+        self.output = self.layers['affine' + str(idx)]
 
         self.error = tfl.SoftmaxWithCrossEntropyLoss(self.output, self.target_node, name="SCEL", graph=self)
 

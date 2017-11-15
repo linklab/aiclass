@@ -91,8 +91,9 @@ class Operation:
 
         # Append this operation to the list of consumers of all input nodes
         for input_node in input_nodes:
-            input_node.consumers.append(self)
-            graph.add_edge(input_node, self)
+            if input_node is not None:
+                input_node.consumers.append(self)
+                graph.add_edge(input_node, self)
 
     def forward(self, is_numba):
         """Computes the output of this operation.
