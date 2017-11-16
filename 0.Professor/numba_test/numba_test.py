@@ -1,6 +1,7 @@
 # [Note] http://numba.pydata.org/
 # [Note] http://numba.pydata.org/numba-doc/0.35.0/index.html
 # [Note] conda update numba
+# [Note] conda install cudatoolkit
 
 
 import numba
@@ -41,14 +42,14 @@ def sum(arr):
     return result
 
 
-# @cuda.jit(void(int32[:]))
-# def cuda_jit_sum(arr):
-#     M, N = arr.shape
-#     result = 0.0
-#     for i in range(M):
-#         for j in range(N):
-#             result += arr[i,j]
-#     return result
+@cuda.jit
+def cuda_jit_sum(arr):
+    M, N = arr.shape
+    result = 0.0
+    for i in range(M):
+        for j in range(N):
+            result += arr[i,j]
+    return result
 
 
 a = arange(9000000).reshape(3000, 3000)
@@ -80,8 +81,8 @@ print(result)
 
 print()
 
-# s = timer()
-# result = cuda_jit_sum(a)
-# e = timer()
-# print("{:7.6f} ms".format((e - s) * 1000))
-# print(result)
+s = timer()
+result = cuda_jit_sum(a)
+e = timer()
+print("{:7.6f} ms".format((e - s) * 1000))
+print(result)
