@@ -4,6 +4,7 @@ import tensorflux.layers as tfl
 import tensorflux.session as tfs
 import tensorflux.functions as tff
 import matplotlib.pyplot as plt
+from matplotlib import cm
 import networkx as nx
 import tensorflux.Deep_Neural_Network as dnn
 from networkx.drawing.nx_agraph import graphviz_layout
@@ -14,6 +15,17 @@ import pickle
 import sys
 import random
 import string
+
+color_dic = {
+            0: 'r',
+            1: 'b',
+            2: 'g',
+            3: 'c',
+            4: 'm',
+            5: 'y',
+            6: 'k',
+            7: 'w'
+}
 
 """
     conv0 (activation0) - conv1 (activation1) - pool2 - 
@@ -93,6 +105,8 @@ class CNN(dnn.Deep_Neural_Network):
         self.num_neurons_flatten_for_fc = None
 
         self.last_layer_idx = -1
+        self.global_last_epoch = -1
+
         self.param_idx_list = []
         self.conv_param_idx_list = []
 
@@ -156,7 +170,9 @@ class CNN(dnn.Deep_Neural_Network):
                 print("Param Key: b{:d}, Shape: {:s}".format(idx, str((cnn_param['filter_num'],))))
                 print("Data Size: {:s}".format(str((cnn_param['filter_num'], input_height, input_width))))
                 print("         |")
-
+                print("[Activation Layer {:d}]".format(idx))
+                print("Data Size: {:s}".format(str((cnn_param['filter_num'], input_height, input_width))))
+                print("         |")
                 pre_channel_num = cnn_param['filter_num']
 
                 self.param_idx_list.append(idx)
@@ -187,6 +203,10 @@ class CNN(dnn.Deep_Neural_Network):
         self.shape_before_fc = (int(pre_channel_num), int(input_height), int(input_width))
         self.num_neurons_flatten_for_fc = int(pre_channel_num * input_height * input_width)
 
+        print("[Reshape Layer]")
+        print("Data Size: {:s}".format(str(self.num_neurons_flatten_for_fc)))
+        print("         |")
+
         idx += 1
         if self.initializer is tfe.Initializer.Normal.value or self.initializer is tfe.Initializer.Truncated_Normal.value:
             self.params['W' + str(idx)] = self.initializer(
@@ -209,6 +229,10 @@ class CNN(dnn.Deep_Neural_Network):
         print("[Affine Layer {:d}]".format(idx))
         print("Param Key: W{:d}, Shape: {:s}".format(idx, str((self.num_neurons_flatten_for_fc, self.fc_hidden_size))))
         print("Param Key: b{:d}, Shape: {:s}".format(idx, str((self.fc_hidden_size,))))
+        print("Data Size: {:s}".format(str(self.fc_hidden_size)))
+        print("         |")
+        print("[Activation Layer {:d}]".format(idx))
+        print("Data Size: {:s}".format(str(self.fc_hidden_size)))
         print("         |")
 
         self.param_idx_list.append(idx)
@@ -245,7 +269,12 @@ class CNN(dnn.Deep_Neural_Network):
         print("[Affine Layer {:d}]".format(idx))
         print("Param Key: W{:d}, Shape: {:s}".format(idx, str((self.fc_hidden_size, self.output_size))))
         print("Param Key: b{:d}, Shape: {:s}".format(idx, str((self.output_size,))))
+        print("Data Size: {:s}".format(str(self.output_size)))
+        print("         |")
+        print("[Softmax Layer {:d}]".format(idx))
+        print("Data Size: {:s}".format(str(self.output_size)))
         print()
+
 
         self.param_idx_list.append(idx)
 
@@ -451,6 +480,8 @@ class CNN(dnn.Deep_Neural_Network):
                 self.set_learning_process_specification(data, batch_size, epoch, print_period, is_numba, fold_idx, max_epoch, verbose)
 
             print()
+
+            self.global_last_epoch = len(self.train_error_list) - 1
 
             self.min_train_error = float(self.train_error_list[self.min_validation_error_epoch])
             self.min_validation_error = float(self.validation_error_list[self.min_validation_error_epoch])
@@ -751,13 +782,7 @@ class CNN(dnn.Deep_Neural_Network):
         plt.figure(figsize=figsize)
         plt.subplots_adjust(hspace=.5)
 
-        epoch_list = np.arange(len(self.param_mean_list['W'][0]))
-
-        color_dic = {
-            0: 'r',
-            1: 'b',
-            2: 'g',
-        }
+        epoch_list = np.arange(self.global_last_epoch + 1)
 
         plt.subplot(241)
         for idx in self.param_idx_list:
@@ -829,13 +854,7 @@ class CNN(dnn.Deep_Neural_Network):
         plt.figure(figsize=figsize)
         plt.subplots_adjust(hspace=.5)
 
-        epoch_list = np.arange(len(self.output_mean_list['affine'][0]))
-
-        color_dic = {
-            0: 'r',
-            1: 'b',
-            2: 'g',
-        }
+        epoch_list = np.arange(self.global_last_epoch + 1)
 
         for layer_name, layer in self.layers.items():
             print("[{:s}]".format(layer_name))
@@ -897,7 +916,7 @@ class CNN(dnn.Deep_Neural_Network):
                 elif(img.shape[0] == 3 or img.shape[0] == 4):
                     img = np.transpose(img, (1, 2, 0))
                     print(img.shape)
-                    plt.imshow(img)
+                    plt.imshow(img, cmap=cm.PRGn)
                 else:
                     print("Image Channel Size (Filter Num) should be 1, 3, 4")
                     sys.exit(-1)
@@ -916,12 +935,9 @@ class CNN(dnn.Deep_Neural_Network):
         plt.show()
 
         for layer_name, layer in self.layers.items():
-            if layer_name.startswith("conv") or layer_name.startswith("pooling"):
-                if layer_name.startswith("conv"):
-                    print("[Convolution Layer: {:s}]".format(layer_name))
-                else:
-                    print("[Pooling Layer: {:s}]".format(layer_name))
-                plt.figure(figsize=(layer.output[idx].shape[2], int(layer.output[idx].shape[1] / len(layer.output))))
+            if layer_name.startswith("conv"):
+                print("[Convolution Layer: {:s}]".format(layer_name))
+                plt.figure(figsize=(layer.output[0].shape[2], int(layer.output[0].shape[1] / len(layer.output))))
                 for idx in range(len(layer.output)):
                     plt.subplot(100 + len(layer.output) * 10 + idx + 1)
                     img = layer.output[idx]
@@ -932,7 +948,76 @@ class CNN(dnn.Deep_Neural_Network):
                     elif (img.shape[0] == 3 or img.shape[0] == 4):
                         img = np.transpose(img, (1, 2, 0))
                         print(img.shape)
-                        plt.imshow(img)
+                        plt.imshow(img, cmap=cm.PRGn)
                     else:
                         print("Image Channel Size (Filter Num) should be 1, 3, 4")
                 plt.show()
+
+                activation_layer_name = "activation" + layer_name[4:]
+                activation_layer = self.layers[activation_layer_name]
+
+                print("[Activation Layer: {:s}]".format(activation_layer_name))
+                plt.figure(figsize=(activation_layer.output[0].shape[2], int(activation_layer.output[0].shape[1] / len(activation_layer.output))))
+                for idx in range(len(activation_layer.output)):
+                    plt.subplot(100 + len(activation_layer.output) * 10 + idx + 1)
+                    img = activation_layer.output[idx]
+                    if (img.shape[0] == 1):
+                        img = np.reshape(img, (img.shape[1], img.shape[2]))
+                        print(img.shape)
+                        plt.imshow(img, cmap='gray')
+                    elif (img.shape[0] == 3 or img.shape[0] == 4):
+                        img = np.transpose(img, (1, 2, 0))
+                        print(img.shape)
+                        plt.imshow(img, cmap=cm.PRGn)
+                    else:
+                        print("Image Channel Size (Filter Num) should be 1, 3, 4")
+                plt.show()
+
+            if layer_name.startswith("pooling"):
+                print("[Pooling Layer: {:s}]".format(layer_name))
+                plt.figure(figsize=(layer.output[0].shape[2], int(layer.output[0].shape[1] / len(layer.output))))
+                for idx in range(len(layer.output)):
+                    plt.subplot(100 + len(layer.output) * 10 + idx + 1)
+                    img = layer.output[idx]
+                    if (img.shape[0] == 1):
+                        img = np.reshape(img, (img.shape[1], img.shape[2]))
+                        print(img.shape)
+                        plt.imshow(img, cmap='gray')
+                    elif (img.shape[0] == 3 or img.shape[0] == 4):
+                        img = np.transpose(img, (1, 2, 0))
+                        print(img.shape)
+                        plt.imshow(img, cmap=cm.PRGn)
+                    else:
+                        print("Image Channel Size (Filter Num) should be 1, 3, 4")
+                plt.show()
+
+            if layer_name.startswith("reshape"):
+                print("[Pooling Layer: {:s}]".format(layer_name))
+                for idx in range(len(layer.output)):
+                    plt.figure(figsize=(layer.output.shape[1], int(layer.output.shape[0])))
+                    img = layer.output[idx]
+                    img.shape = (1, len(img))
+                    print(img.shape)
+                    plt.imshow(img, cmap='gray')
+                plt.show()
+
+            if layer_name.startswith("affine"):
+                print("[Affine Layer: {:s}]".format(layer_name))
+                for idx in range(len(layer.output)):
+                    plt.figure(figsize=(layer.output.shape[1], int(layer.output.shape[0])))
+                    img = layer.output[idx]
+                    img.shape = (1, len(img))
+                    print(img.shape)
+                    plt.imshow(img, cmap='gray')
+                plt.show()
+
+        print("[Softmax Layer]")
+        np.set_printoptions(precision=3)
+        for idx in range(len(layer.output)):
+            plt.figure(figsize=(layer.output.shape[1], int(layer.output.shape[0])))
+            img = layer.output[idx]
+            softmax_img = tff.softmax(img, is_numba=False)
+            softmax_img.shape = (1, len(softmax_img))
+            print(softmax_img.shape, ":", softmax_img)
+            plt.imshow(softmax_img, cmap='gray')
+        plt.show()
