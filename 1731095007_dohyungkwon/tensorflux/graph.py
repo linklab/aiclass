@@ -1,20 +1,19 @@
+# -*- coding:utf-8 -*-
+
 # Reference: http://www.deepideas.net/deep-learning-from-scratch-i-computational-graphs/
-_default_graph = None
+import networkx as nx
+import numpy as np
+from numba import jit, float64, uint8, void, cuda
 
-
-class Graph():# 클래스를 만들 때는 두 줄을 new line
+class Graph(nx.Graph):
     """Represents a computational graph (a neural network)
     """
-
     def __init__(self):
         """Construct Graph"""
         self.operations = []
         self.placeholders = []
         self.variables = []
-
-    def initialize(self):
-        global _default_graph
-        _default_graph = self
+        super().__init__()
 
 
 class Placeholder:
@@ -25,15 +24,10 @@ class Placeholder:
         """Construct placeholder
         """
         self.output = None
-        self.consumers = [] # placeholder를 소비하는 변수인 operation노드를 의미한다.
+        self.consumers = []
         self.name = name
-        if self.name is None:
-            self.name = 'p' + str(len(_default_graph.placeholders) + 1)
 
-        # Append this placeholder to the list of placeholders in the currently active default graph
-        _default_graph.placeholders.append(self)
-
-    def __str__(self): # 이 객체를 print할 때 찍히는 내용
+    def __str__(self):
         return self.name
 
 
@@ -49,12 +43,29 @@ class Variable:
         """
         self.value = initial_value
         self.output = None
+
         self.consumers = []
         self.name = name
-        if self.name is None:
-            self.name = 'v' + str(len(_default_graph.variables) + 1)
-        # Append this variable to the list of variables in the currently active default graph
-        _default_graph.variables.append(self)
+
+    def __str__(self):
+        return self.name
+
+
+class Constant:
+    """Represents a constant.
+    """
+
+    def __init__(self, value=None, name=None):
+        """Construct Constant
+
+        Args:
+          value: this constant's value
+        """
+        self.value = value
+        self.output = None
+
+        self.consumers = []
+        self.name = name
 
     def __str__(self):
         return self.name
@@ -68,7 +79,7 @@ class Operation:
     as output.
     """
 
-    def __init__(self, input_nodes=[], name=None):
+    def __init__(self, input_nodes=[], name=None, graph=None):
         """Construct Forwarding Operation
         """
         self.input_nodes = input_nodes
@@ -77,96 +88,90 @@ class Operation:
         # Initialize list of consumers (i.e. nodes that receive this operation's output as input)
         self.consumers = []
         self.name = name
-        if self.name is None:
-            self.name = 'o' + str(len(_default_graph.operations) + 1)
 
         # Append this operation to the list of consumers of all input nodes
         for input_node in input_nodes:
-            input_node.consumers.append(self) # 각각의 변수가 갖고 있는 컨슈머를 지금 오퍼레이션(자기자신)을 등록
+            input_node.consumers.append(self)
+            graph.add_edge(input_node, self)
 
-        # Append this operation to the list of operations in the currently active default graph
-        _default_graph.operations.append(self)
-
-    def forward(self):
+    def forward(self, is_numba):
         """Computes the output of this operation.
         "" Must be implemented by the particular operation.
         """
         pass
 
+    def backward(self):
+        pass
+
     def __str__(self):
-        return self.name
+        return "O: " + self.name
 
 
-class Add(Operation):#상속
-    """Returns x + y element-wise.
-    """
-
+class Add(Operation):
     def __init__(self, x, y, name=None):
-        """Construct add
+        super().__init__([x, y], name)
 
-        Args:
-          x: First summand node
-          y: Second summand node
-        """
-        self.inputs = None #이 자식클래스에서 관리하는 값(실제값)
-        super().__init__([x, y], name) #부모클래스의 생성자를 부름
+    def forward(self, x_value, y_value, is_numba):
+        if is_numba:
+            return self._forward(x_value, y_value)
+        else:
+            return x_value + y_value
 
-    def forward(self, x_value, y_value):#상속받은 것을 오버라이드
-        """Compute the output of the add operation
+    def backward(self, d_in):
+        d_x_value = d_in * 1
+        d_y_value = d_in * 1
+        return d_x_value, d_y_value
 
-        Args:
-          x_value: First summand value
-          y_value: Second summand value
-        """
-        self.inputs = [x_value, y_value]
-        return x_value + y_value # plus of numpy array
+    @staticmethod
+    @jit(nopython=True)
+    def _forward(x_value, y_value):
+        return x_value + y_value
 
 
 class Mul(Operation):
-    """Returns x * y.
-    """
-
     def __init__(self, x, y, name=None):
-        """Construct add
-
-        Args:
-          x: First summand node
-          y: Second summand node
-        """
-        self.inputs = None
+        self.x_value = None
+        self.y_value = None
         super().__init__([x, y], name)
 
-    def forward(self, x_value, y_value):
-        """Compute the output of the add operation
+    def forward(self, x_value, y_value, is_numba):
+        self.x_value = x_value
+        self.y_value = y_value
+        if is_numba:
+            return self._forward(x_value, y_value)
+        else:
+            return x_value * y_value
 
-        Args:
-          x_value: First summand value
-          y_value: Second summand value
-        """
-        self.inputs = [x_value, y_value]
+    def backward(self, d_in):
+        d_x_value = d_in * self.y_value
+        d_y_value = d_in * self.x_value
+        return d_x_value, d_y_value
+
+    @staticmethod
+    @jit(nopython=True)
+    def _forward(x_value, y_value):
         return x_value * y_value
 
-
 class Matmul(Operation):
-    """Multiplies matrix x by matrix y, producing x * y.
-    """
-
     def __init__(self, x, y, name=None):
-        """Construct matmul
-
-        Args:
-          x: First matrix
-          y: Second matrix
-        """
-        self.inputs = None
+        self.x_value = None
+        self.y_value = None
         super().__init__([x, y], name)
 
-    def forward(self, x_value, y_value):# numpy 객체가 들어옴
-        """Compute the output of the matmul operation
+    def forward(self, x_value, y_value, is_numba):
+        self.x_value = x_value
+        self.y_value = y_value
+        if is_numba:
+            return self._forward(x_value, y_value)
+        else:
+            return x_value.dot(y_value)
 
-        Args:
-          x_value: First matrix value
-          y_value: Second matrix value
-        """
-        self.inputs = [x_value, y_value]
+    def backward(self, d_in):
+        d_x_value = np.dot(self.y_value.T, d_in)
+        d_y_value = np.dot(d_in, self.x_value.T)
+        return d_x_value, d_y_value
+
+    @staticmethod
+    @jit(nopython=True)
+    def _forward(x_value, y_value):
         return x_value.dot(y_value)

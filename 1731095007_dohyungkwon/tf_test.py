@@ -48,8 +48,8 @@ print(output)
 print()
 print("-------------------")
 #--------------
-#nx.draw_networkx(g, with_labels=True)
-#plt.show(block=True)
+nx.draw_networkx(g, with_labels=True)
+plt.show(block=True)
 
 
 W = tfg.Variable(5.0, name="W")
@@ -74,3 +74,5 @@ print(output)
 output = session.run(z, {x: 3.0})
 print(output)
 print()
+
+

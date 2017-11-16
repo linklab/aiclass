@@ -1,25 +1,30 @@
+# -*- coding:utf-8 -*-
+
 # Reference: http://www.deepideas.net/deep-learning-from-scratch-i-computational-graphs
 import numpy as np
-from Tensorflux import graph as tfg
+import Tensorflux.graph as tfg
 
 
 class Session:
     """Represents a particular execution of a computational graph.
     """
 
-    def run(self, operation, feed_dict={}):
+    def run(self, operation, feed_dict, is_numba, verbose=False):
         """Computes the output of an operation
-
+        
         Args:
           operation: The operation whose output we'd like to compute.
           feed_dict: A dictionary that maps placeholders to values for this session
+          verbose: verbose
         """
+
+        assert feed_dict is not None
+        assert is_numba is not None
 
         # Perform a post-order traversal of the graph to bring the nodes into the right order
         nodes_postorder = self.traverse_postorder(operation)
-
-        for node in nodes_postorder:
-            print(node)
+        if verbose:
+            print("*** nodes in post-order ***")
 
         # Iterate all nodes to determine their value
         for node in nodes_postorder:
@@ -29,16 +34,25 @@ class Session:
             elif type(node) == tfg.Variable:
                 # Set the node value to the variable's value attribute
                 node.output = node.value
-            else:  # Operation
+            elif type(node) == tfg.Constant:
+                # Set the node value to the constant's value attribute
+                node.output = node.value
+            else: # Operation
                 # Get the input values for this operation from node_values
-                node.inputs = [input_node.output for input_node in node.input_nodes]
+                node_inputs = [input_node.output for input_node in node.input_nodes]
 
                 # Compute the output of this operation
-                node.output = node.forward(*node.inputs)
+                node.output = node.forward(*node_inputs, is_numba)
 
             # Convert lists to numpy arrays
-            if type(node.output) == list:
-                node.output = np.array(node.output)
+            if type(node.output) is not np.ndarray:
+                node.output = np.asarray(node.output)
+
+            if verbose:
+                print("Node: {:>10} - Output Value: {:>5}".format(str(node), str(node.output)))
+
+        if verbose:
+            print()
 
         # Return the requested node value
         return operation.output

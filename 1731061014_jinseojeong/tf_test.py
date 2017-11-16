@@ -1,25 +1,29 @@
-
-import matplotlib.pyplot as plt
-from networkx import networkx as nx
-from tensorflux import graph as tfg
-from tensorflux import session as tfs
-from tensorflux2 import layer as lay
+from tensorflux2 import graph as tfg
+from tensorflux2 import session as tfs
 
 g = tfg.Graph()
 g.initialize()
 
-w = tfg.Variable(5.0, name="w")
+# Create variables
+w = tfg.Variable(5.0, name="a")
 b = tfg.Variable(-1.0, name="b")
+
+# Create placeholder
 x = tfg.Placeholder(name="x")
 
-lay.Affine()
+# Create hidden node y
+y = tfg.Mul(w, x, name="y")
+
+# Create output node z
+z = tfg.Add(y, b, name="z")
+
 
 session = tfs.Session()
+output = session.run(z, {x: 1.0})
+print(output)
+output = session.run(z, {x: 2.0})
+print(output)
+output = session.run(z, {x: 3.0})
+print(output)
 
 
-# nx.draw_networkx(g)
-# plt.show()
-#
-# session = tfs.Session()
-# output = session.run(z, {x: [1, 2]})
-# print(output)

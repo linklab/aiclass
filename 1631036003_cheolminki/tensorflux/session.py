@@ -1,14 +1,15 @@
-# -*- coding: utf-8 -*-
+# -*- coding:utf-8 -*-
+
 # Reference: http://www.deepideas.net/deep-learning-from-scratch-i-computational-graphs
 import numpy as np
-from tensorflux import graph as tfg
+import tensorflux.graph as tfg
 
 
 class Session:
     """Represents a particular execution of a computational graph.
     """
 
-    def run(self, operation, feed_dict={}):     #operation을 받기 때문에 variable 사용 불
+    def run(self, operation, feed_dict={}, verbose=True):
         """Computes the output of an operation
         
         Args:
@@ -18,9 +19,11 @@ class Session:
 
         # Perform a post-order traversal of the graph to bring the nodes into the right order
         nodes_postorder = self.traverse_postorder(operation)
-
-        for node in nodes_postorder:
-            print(node)
+        if verbose:
+            print("[nodes_postorder]")
+            for node in nodes_postorder:
+                print(node)
+            print
 
         # Iterate all nodes to determine their value
         for node in nodes_postorder:
@@ -35,17 +38,20 @@ class Session:
                 node.inputs = [input_node.output for input_node in node.input_nodes]
 
                 # Compute the output of this operation
-                node.output = node.forward(*node.inputs)    #node.inputs는 리스트, *가 붙으면 값을 불러와서 집어넣어줌
+                node.output = node.forward(*node.inputs)
 
             # Convert lists to numpy arrays
-            if type(node.output) == list:          #list type이면 numpy array로 바꿈
-                node.output = np.array(node.output)
+            if type(node.output) is not np.ndarray:
+                node.output = np.asarray(node.output)
+
+            if verbose:
+                print("Node: {:>10} - Output Value: {:>5}".format(str(node), str(node.output)))
 
         # Return the requested node value
         return operation.output
 
     @staticmethod
-    def traverse_postorder(operation):      #class의 메소드
+    def traverse_postorder(operation):
         """Performs a post-order traversal, returning a list of nodes
         in the order in which they have to be computed
 
@@ -53,11 +59,9 @@ class Session:
            operation: The operation to start traversal at
         """
 
-        #post-order방식으로 그래프의 순서를 정함.
         nodes_postorder = []
 
-
-        def recursive_visit(node):  #method 내의 method 선언
+        def recursive_visit(node):
             if isinstance(node, tfg.Operation):
                 for input_node in node.input_nodes:
                     recursive_visit(input_node)

@@ -1,69 +1,75 @@
-# -*- coding: utf-8 -*-
+# -*- coding:utf-8 -*-
+
 # Reference: http://www.deepideas.net/deep-learning-from-scratch-i-computational-graphs/
-
 import networkx as nx
+import numpy as np
 
-_default_graph = None
 
-
-class Graph(nx.Graph):      #nx.Graph를 상속받는다.
+class Graph(nx.Graph):
     """Represents a computational graph (a neural network)
     """
-
-    def __init__(self):                 #생성자
+    def __init__(self):
         """Construct Graph"""
-        self.operations = []            # 리스트 3개, operations, placeholders, variables
-        self.placeholders = []          # 그래프의 vertex(node)
+        self.operations = []
+        self.placeholders = []
         self.variables = []
         super().__init__()
 
-    def initialize(self):
-        global _default_graph
-        _default_graph = self           # 객체를 만들고 initialize하면 객체 자신이 선언
 
 class Placeholder:
     """Represents a placeholder node that has to be provided with a value
        when computing the output of a computational graph
     """
-    def __init__(self, name=None):      #placeholder의 이름 설정 가능
+    def __init__(self, name=None):
         """Construct placeholder
         """
-        self.consumers = [] #placeholder에 값을 넣을건데 placeholder를 소비하는 것 (ex) 다음 operator)
-        self.name = name    #placeholder의 이름, 초기 None
         self.output = None
-        if self.name is None:
-            self.name = 'p' + str(len(_default_graph.placeholders) + 1)
+        self.consumers = []
+        self.name = name
 
-        # Append this placeholder to the list of placeholders in the currently active default graph
-        _default_graph.placeholders.append(self)    #placeholders라는 리스트로 initialize
-        _default_graph.add_node(self)
-
-    def __str__(self):      #자바의 tostring과 같은 효과
+    def __str__(self):
         return self.name
+
 
 class Variable:
     """Represents a variable (i.e. an intrinsic, changeable parameter of a computational graph).
     """
 
-    def __init__(self, initial_value=None, name=None):      #variable은 초기 value값을 넣어줌
+    def __init__(self, initial_value=None, name=None):
         """Construct Variable
 
         Args:
           initial_value: The initial value of this variable
         """
         self.value = initial_value
+        self.output = None
+
         self.consumers = []
         self.name = name
-        self.output = None
-        if self.name is None:
-            self.name = 'v' + str(len(_default_graph.variables) + 1)
-
-        # Append this variable to the list of variables in the currently active default graph
-        _default_graph.variables.append(self)
-        _default_graph.add_node(self)
 
     def __str__(self):
         return self.name
+
+
+class Constant:
+    """Represents a constant.
+    """
+
+    def __init__(self, value=None, name=None):
+        """Construct Constant
+
+        Args:
+          value: this constant's value
+        """
+        self.value = value
+        self.output = None
+
+        self.consumers = []
+        self.name = name
+
+    def __str__(self):
+        return self.name
+
 
 class Operation:
     """Represents a graph node that performs a computation (forwaring operation).
@@ -73,38 +79,37 @@ class Operation:
     as output.
     """
 
-    def __init__(self, input_nodes=[], name=None):
+    def __init__(self, input_nodes=[], name=None, graph=None):
         """Construct Forwarding Operation
         """
         self.input_nodes = input_nodes
+        self.output = None
 
         # Initialize list of consumers (i.e. nodes that receive this operation's output as input)
         self.consumers = []
         self.name = name
-        self.output = None
-        if self.name is None:
-            self.name = 'o' + str(len(_default_graph.operations) + 1)
 
         # Append this operation to the list of consumers of all input nodes
         for input_node in input_nodes:
             input_node.consumers.append(self)
-            _default_graph.add_edge(input_node, self)
-
-        # Append this operation to the list of operations in the currently active default graph
-        _default_graph.operations.append(self)
-        _default_graph.add_node(self)
+            graph.add_edge(input_node, self)
+            graph.add_edge(input_node, self)
+            graph.add_edge(input_node, self)
 
     def forward(self):
         """Computes the output of this operation.
         "" Must be implemented by the particular operation.
         """
-        pass        #forward는 자식클래스에서 정의할거라서 pass
+        pass
+
+    def backward(self):
+        pass
 
     def __str__(self):
-        return self.name
+        return "O: " + self.name
 
 
-class Add(Operation):       #operation class를 상속받음.
+class Add(Operation):
     """Returns x + y element-wise.
     """
 
@@ -127,6 +132,11 @@ class Add(Operation):       #operation class를 상속받음.
         """
         self.inputs = [x_value, y_value]
         return x_value + y_value
+
+    def backward(self, d_in):
+        d_x_value = d_in * 1
+        d_y_value = d_in * 1
+        return d_x_value, d_y_value
 
 
 class Mul(Operation):
@@ -153,6 +163,11 @@ class Mul(Operation):
         self.inputs = [x_value, y_value]
         return x_value * y_value
 
+    def backward(self, d_in):
+        d_x_value = d_in * self.inputs[1]
+        d_y_value = d_in * self.inputs[0]
+        return d_x_value, d_y_value
+
 
 class Matmul(Operation):
     """Multiplies matrix x by matrix y, producing x * y.
@@ -176,4 +191,9 @@ class Matmul(Operation):
           y_value: Second matrix value
         """
         self.inputs = [x_value, y_value]
-        return x_value.dot(y_value) #matrix 연산, numpy의 dot product
+        return x_value.dot(y_value)
+
+    def backward(self, d_in):
+        d_x_value = np.dot(self.inputs[1].T, d_in)
+        d_y_value = np.dot(d_in, self.inputs[0].T)
+        return d_x_value, d_y_value
