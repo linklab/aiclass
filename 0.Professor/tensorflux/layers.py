@@ -497,6 +497,11 @@ class BatchNormalization(tfg.Operation):
         self.xc = None
         self.xn = None
         self.std = None
+
+        self.momentum = 0.9
+        self.running_mean = None
+        self.running_var = None
+
         self.dgamma = None
         self.dbeta = None
         super().__init__([x], name, graph)
@@ -510,6 +515,11 @@ class BatchNormalization(tfg.Operation):
             N, C, H, W = self.x_value.shape
             self.x_value = self.x_value.reshape(N, -1)
 
+        if self.running_mean is None:
+            N, D = self.x_value.shape
+            self.running_mean = np.zeros(D)
+            self.running_var = np.zeros(D)
+
         if is_train:
             mu = self.x_value.mean(axis=0)
             xc = self.x_value - mu
@@ -519,8 +529,11 @@ class BatchNormalization(tfg.Operation):
             self.xc = xc
             self.xn = xn
             self.std = std
+            self.running_mean = self.momentum * self.running_mean + (1 - self.momentum) * mu
+            self.running_var = self.momentum * self.running_var + (1 - self.momentum) * var
         else:
-            xn = self.x_value
+            xc = self.x_value - self.running_mean
+            xn = xc / ((np.sqrt(self.running_var + 10e-7)))
 
         out = self.gamma.value * xn + self.beta.value
         out = out.reshape(*self.input_shape)
