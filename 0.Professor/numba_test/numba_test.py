@@ -2,11 +2,14 @@
 # [Note] http://numba.pydata.org/numba-doc/0.35.0/index.html
 # [Note] conda update numba
 # [Note] conda install cudatoolkit
+# [Note] conda install cudatoolkit
+# nvprof python vector_add_test.py
 
 
 import numba
-from numba import jit, float32, int32, void, cuda
-from numpy import arange
+import numpy as np
+from numba import jit, float32, int32, void
+from numba import guvectorize, vectorize, cuda
 from timeit import default_timer as timer
 
 print("Numba Version", numba.__version__)
@@ -23,7 +26,7 @@ def jit_sum_1(arr):
     return result
 
 
-@jit(float32(int32[:]))
+@jit(float32(float32[:,:]))
 def jit_sum_2(arr):
     M, N = arr.shape
     result = 0.0
@@ -32,6 +35,16 @@ def jit_sum_2(arr):
             result += arr[i,j]
     return result
 
+#@vectorize([float32(float32[:,:])], target='cuda')
+@cuda.jit(void(float32[:,:]))
+def cuda_sum(arr):
+    #M, N = arr.shape
+    M = 3000
+    N = 3000
+    result = 0.0
+    for i in range(M):
+        for j in range(N):
+            result += arr[i,j]
 
 def sum(arr):
     M, N = arr.shape
@@ -42,18 +55,8 @@ def sum(arr):
     return result
 
 
-@cuda.jit
-def cuda_jit_sum(arr):
-    M, N = arr.shape
-    result = 0.0
-    for i in range(M):
-        for j in range(N):
-            result += arr[i,j]
-    return result
-
-
-a = arange(900000000).reshape(30000, 30000)
-print(a)
+a = np.arange(900000000, dtype=np.float32).reshape(30000, 30000)
+print(a.shape)
 
 print()
 
@@ -74,15 +77,18 @@ print(result)
 print()
 
 s = timer()
-result = sum(a)
+result = cuda_sum(a)
 e = timer()
-print("NORMAL_SUM: {:7.6f} ms".format((e - s) * 1000))
+print("CUDA_SUM: {:7.6f} ms".format((e - s) * 1000))
 print(result)
 
 print()
 
 s = timer()
-result = cuda_jit_sum(a)
+result = sum(a)
 e = timer()
-print("{:7.6f} ms".format((e - s) * 1000))
+print("NORMAL_SUM: {:7.6f} ms".format((e - s) * 1000))
 print(result)
+
+
+
