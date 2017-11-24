@@ -592,7 +592,7 @@ class CNN(dnn.Deep_Neural_Network):
             self.save_params()
             min_flag = True
 
-        forward_final_output = self.feed_forward(input_data=data.test_input, is_train=True, is_numba=is_numba)
+        forward_final_output = self.feed_forward(input_data=data.test_input, is_train=False, is_numba=is_numba)
 
         test_accuracy = tff.accuracy(forward_final_output, data.test_target)
         self.test_accuracy_list.append(test_accuracy)
