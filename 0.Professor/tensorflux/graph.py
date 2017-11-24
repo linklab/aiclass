@@ -95,7 +95,7 @@ class Operation:
                 input_node.consumers.append(self)
                 graph.add_edge(input_node, self)
 
-    def forward(self, is_numba):
+    def forward(self, is_train=True, is_numba=False):
         """Computes the output of this operation.
         "" Must be implemented by the particular operation.
         """
@@ -112,7 +112,7 @@ class Add(Operation):
     def __init__(self, x, y, name=None):
         super().__init__([x, y], name)
 
-    def forward(self, x_value, y_value, is_numba):
+    def forward(self, x_value, y_value, is_train=True, is_numba=False):
         if is_numba:
             return self._forward(x_value, y_value)
         else:
@@ -135,7 +135,7 @@ class Mul(Operation):
         self.y_value = None
         super().__init__([x, y], name)
 
-    def forward(self, x_value, y_value, is_numba):
+    def forward(self, x_value, y_value, is_train=True, is_numba=False):
         self.x_value = x_value
         self.y_value = y_value
         if is_numba:
@@ -159,7 +159,7 @@ class Matmul(Operation):
         self.y_value = None
         super().__init__([x, y], name)
 
-    def forward(self, x_value, y_value, is_numba):
+    def forward(self, x_value, y_value, is_train=True, is_numba=False):
         self.x_value = x_value
         self.y_value = y_value
         if is_numba:

@@ -27,12 +27,6 @@ color_dic = {
             7: 'w'
 }
 
-"""
-    conv0 (activation0) - conv1 (activation1) - pool2 - 
-    conv3 (activation3) - conv4 (activation4) - pool5 - 
-    affine6 (activation6) - affine7 - softmax (output)
-"""
-
 class CNN(dnn.Deep_Neural_Network):
     def __init__(self,
                  input_dim,
@@ -41,6 +35,7 @@ class CNN(dnn.Deep_Neural_Network):
                  output_size,
                  input_node=None,
                  target_node=None,
+                 use_batch_normalization=False,
                  conv_initializer=tfe.Initializer.Conv_Xavier_Normal,
                  initializer=tfe.Initializer.Normal.value,
                  init_sd=0.01,
@@ -54,6 +49,8 @@ class CNN(dnn.Deep_Neural_Network):
         self.cnn_param_list = cnn_param_list
         self.fc_hidden_size = fc_hidden_size
         self.output_size = output_size
+
+        self.use_batch_normalization = use_batch_normalization
 
         self.input_node = input_node
         self.target_node = target_node
@@ -165,11 +162,43 @@ class CNN(dnn.Deep_Neural_Network):
                     cnn_param['stride']
                 )
 
+                if self.use_batch_normalization:
+                    if self.initializer is tfe.Initializer.Normal.value or self.initializer is tfe.Initializer.Truncated_Normal.value:
+                        self.params['gamma' + str(idx)] = self.initializer(
+                            shape=(1, 1),
+                            name="gamma" + str(idx),
+                            mean=mean,
+                            sd=sd
+                        ).param
+
+                        self.params['beta' + str(idx)] = self.initializer(
+                            shape=(1, 1),
+                            name="beta" + str(idx),
+                            mean=mean,
+                            sd=sd
+                        ).param
+                    else:
+                        self.params['gamma' + str(idx)] = self.initializer(
+                            shape=(1, 1),
+                            name="gamma" + str(idx)
+                        ).param
+
+                        self.params['beta' + str(idx)] = self.initializer(
+                            shape=(1, 1),
+                            name="beta" + str(idx)
+                        ).param
+
                 print("[Convolution Layer {:d}]".format(idx))
                 print("Param Key: W{:d}, Shape: {:s}".format(idx, str((cnn_param['filter_num'], pre_channel_num, cnn_param['filter_h'], cnn_param['filter_w']))))
                 print("Param Key: b{:d}, Shape: {:s}".format(idx, str((cnn_param['filter_num'],))))
                 print("Data Size: {:s}".format(str((cnn_param['filter_num'], input_height, input_width))))
                 print("         |")
+                if self.use_batch_normalization:
+                    print("[Batch Normalization {:d}]".format(idx))
+                    print("Param Key: gamma{:d}, Shape: {:s}".format(idx, str((1,1))))
+                    print("Param Key: beta{:d}, Shape: {:s}".format(idx, str((1,1))))
+                    print("Data Size: {:s}".format(str((cnn_param['filter_num'], input_height, input_width))))
+                    print("         |")
                 print("[Activation Layer {:d}]".format(idx))
                 print("Data Size: {:s}".format(str((cnn_param['filter_num'], input_height, input_width))))
                 print("         |")
@@ -323,8 +352,20 @@ class CNN(dnn.Deep_Neural_Network):
                     name    ='conv' + str(idx),
                     graph   =self
                 )
+                if self.use_batch_normalization:
+                    self.layers['batch_normal' + str(idx)] = tfl.BatchNormalization(
+                        x       =self.layers['conv' + str(idx)],
+                        gamma   =self.params['gamma' + str(idx)],
+                        beta    =self.params['beta' + str(idx)],
+                        name    ='batch_normal' + str(idx),
+                        graph   =self
+                    )
+                    next_input_node = self.layers['batch_normal' + str(idx)]
+                else:
+                    next_input_node = self.layers['conv' + str(idx)]
+
                 self.layers['activation' + str(idx)] = self.activator(
-                    u       =self.layers['conv' + str(idx)],
+                    u       =next_input_node,
                     name    ='activation' + str(idx),
                     graph   =self
                 )
@@ -412,8 +453,8 @@ class CNN(dnn.Deep_Neural_Network):
 
         self.error = tfl.SoftmaxWithCrossEntropyLoss(self.output, self.target_node, name="SCEL", graph=self)
 
-    def feed_forward(self, input_data, is_numba=False):
-        return self.session.run(self.output, {self.input_node: input_data}, is_numba, verbose=False)
+    def feed_forward(self, input_data, is_train=True, is_numba=False):
+        return self.session.run(self.output, {self.input_node: input_data}, is_train, is_numba, verbose=False)
 
     def backward_propagation(self, is_numba):
         grads = {}
@@ -430,6 +471,9 @@ class CNN(dnn.Deep_Neural_Network):
             if cnn_param['type'] == 'conv':
                 grads['W' + str(idx)] = self.layers['conv' + str(idx)].dw
                 grads['b' + str(idx)] = self.layers['conv' + str(idx)].db
+                if self.use_batch_normalization:
+                    grads['gamma' + str(idx)] = self.layers['batch_normal' + str(idx)].dgamma
+                    grads['beta' + str(idx)] = self.layers['batch_normal' + str(idx)].dbeta
 
         idx += 1
         grads['W' + str(idx)] = self.layers['affine' + str(idx)].dw
@@ -465,8 +509,10 @@ class CNN(dnn.Deep_Neural_Network):
                             self.input_node: i_batch,
                             self.target_node: t_batch
                         },
+                        is_train=True,
                         is_numba=is_numba,
-                        verbose=False)
+                        verbose=False
+                    )
 
                     #backward
                     if isinstance(self.optimizer, tfe.Optimizer.NAG.value):
@@ -520,8 +566,10 @@ class CNN(dnn.Deep_Neural_Network):
                 self.input_node: i_batch,
                 self.target_node: t_batch
             },
+            is_train=False,
             is_numba=is_numba,
-            verbose=False)
+            verbose=False
+        )
         self.train_error_list.append(train_error)
 
         validation_error = self.session.run(
@@ -530,8 +578,10 @@ class CNN(dnn.Deep_Neural_Network):
                 self.input_node: data.validation_input,
                 self.target_node: data.validation_target
             },
+            is_train=False,
             is_numba=is_numba,
-            verbose=False)
+            verbose=False
+        )
         self.validation_error_list.append(validation_error)
 
         min_flag = False
@@ -542,7 +592,7 @@ class CNN(dnn.Deep_Neural_Network):
             self.save_params()
             min_flag = True
 
-        forward_final_output = self.feed_forward(input_data=data.test_input, is_numba=is_numba)
+        forward_final_output = self.feed_forward(input_data=data.test_input, is_train=True, is_numba=is_numba)
 
         test_accuracy = tff.accuracy(forward_final_output, data.test_target)
         self.test_accuracy_list.append(test_accuracy)
@@ -686,12 +736,12 @@ class CNN(dnn.Deep_Neural_Network):
             all_param_flatten_list.extend([item for item in param.value.flatten()])
         return stats.describe(np.array(all_param_flatten_list))
 
-    def print_feed_forward(self, num_data, input_data, target_data, is_numba, verbose=False):
+    def print_feed_forward(self, num_data, input_data, target_data, is_train=False, is_numba=False, verbose=False):
         for idx in range(num_data):
             train_input_data = input_data[idx]
             train_target_data = target_data[idx]
 
-            output = self.session.run(self.output, {self.input_node: train_input_data}, is_numba, verbose)
+            output = self.session.run(self.output, {self.input_node: train_input_data}, is_train, is_numba, verbose)
             print("Input Data: {:>5}, Feed Forward Output: {:>6}, Target: {:>6}".format(
                 str(train_input_data), np.array2string(output), str(train_target_data)))
 
@@ -741,7 +791,7 @@ class CNN(dnn.Deep_Neural_Network):
 
 
     def draw_false_prediction(self, test_input, test_target, labels, num=5, figsize=(20, 5)):
-        forward_final_output = self.feed_forward(input_data=test_input, is_numba=False)
+        forward_final_output = self.feed_forward(input_data=test_input, is_train=False, is_numba=False)
         y = np.argmax(forward_final_output, axis=1)
         if test_target.ndim != 1:
             target = np.argmax(test_target, axis=1)
@@ -923,7 +973,7 @@ class CNN(dnn.Deep_Neural_Network):
             plt.show()
 
     def draw_filtered_images(self, test_inputs, figsize=(20, 5)):
-        self.feed_forward(input_data=test_inputs, is_numba=False)
+        self.feed_forward(input_data=test_inputs, is_train=False, is_numba=False)
 
         plt.figure(figsize=figsize)
         for idx in range(len(test_inputs)):

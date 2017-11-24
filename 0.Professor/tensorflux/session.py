@@ -9,7 +9,7 @@ class Session:
     """Represents a particular execution of a computational graph.
     """
 
-    def run(self, operation, feed_dict, is_numba, verbose=False):
+    def run(self, operation, feed_dict, is_train, is_numba, verbose=False):
         """Computes the output of an operation
         
         Args:
@@ -44,7 +44,7 @@ class Session:
                 node_inputs = [input_node.output for input_node in node.input_nodes if input_node is not None]
 
                 # Compute the output of this operation
-                node.output = node.forward(*node_inputs, is_numba)
+                node.output = node.forward(*node_inputs, is_train, is_numba)
 
             # Convert lists to numpy arrays
             if type(node.output) is not np.ndarray:

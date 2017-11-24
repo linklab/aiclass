@@ -22,7 +22,7 @@ class Affine(tfg.Operation):
         self.db = None
         super().__init__([w, x, b], name, graph)
 
-    def forward(self, w_value, x_value, b_value, is_numba):
+    def forward(self, w_value, x_value, b_value, is_train=True, is_numba=False):
         """Compute the output of the affine operation
 
         Args:
@@ -94,7 +94,7 @@ class ReLU(tfg.Operation):
         self.mask = None
         super().__init__([u], name, graph)
 
-    def forward(self, u_value, is_numba):
+    def forward(self, u_value, is_train=True, is_numba=False):
         self.u_value = u_value
         self.mask = (u_value <= 0.0)
         out = u_value.copy()
@@ -147,7 +147,7 @@ class Sigmoid(tfg.Operation):
         self.out = None
         super().__init__([u], name, graph)
 
-    def forward(self, u_value, is_numba):
+    def forward(self, u_value, is_train=True, is_numba=False):
         self.u_value = u_value
         self.out = tff.sigmoid(u_value, is_numba=is_numba)
         return self.out
@@ -180,7 +180,7 @@ class SquaredError(tfg.Operation):
         self.target_value = None  # target_value
         super().__init__([forward_final_output, target], name, graph)
 
-    def forward(self, forward_final_output_value, target_value, is_numba):
+    def forward(self, forward_final_output_value, target_value, is_train=True, is_numba=False):
         self.forward_final_output_value = forward_final_output_value
         self.target_value = target_value
         return tff.squared_error(forward_final_output_value, target_value, is_numba=is_numba)
@@ -213,7 +213,7 @@ class SoftmaxWithCrossEntropyLoss(tfg.Operation):
         self.y = None
         super().__init__([forward_final_output, target], name, graph)
 
-    def forward(self, forward_final_output_value, target_value, is_numba):
+    def forward(self, forward_final_output_value, target_value, is_train=True, is_numba=False):
         self.target_value = target_value
         self.y = tff.softmax(forward_final_output_value, is_numba=is_numba)
         loss = tff.cross_entropy_error(self.y, self.target_value, is_numba=is_numba)
@@ -254,7 +254,7 @@ class Affine2(tfg.Operation):
         self.db = None
         super().__init__([w, x1, x2, b], name, graph)
 
-    def forward(self, w_value, x1_value, x2_value, b_value):
+    def forward(self, w_value, x1_value, x2_value, b_value, is_train=True, is_numba=False):
         """Compute the output of the add operation
 
         Args:
@@ -303,7 +303,7 @@ class Convolution(tfg.Operation):
         self.db = None
         super().__init__([w, x, b], name, graph)
 
-    def forward(self, w_value, x_value, b_value, is_numba):
+    def forward(self, w_value, x_value, b_value, is_train=True, is_numba=False):
         self.w_value = w_value
         self.x_value = x_value
         self.b_value = b_value
@@ -396,9 +396,9 @@ class Pooling(tfg.Operation):
         self.pad = 0
 
         self.arg_max = None
-        super().__init__([None, x], name, graph)
+        super().__init__([x], name, graph)
 
-    def forward(self, x_value, is_numba):
+    def forward(self, x_value, is_train=True, is_numba=False):
         self.x_value = x_value
 
         if is_numba:
@@ -476,11 +476,73 @@ class Reshape(tfg.Operation):
         self.batch_size = None
         super().__init__([u], name, graph)
 
-    def forward(self, u_value, is_numba=False):
+    def forward(self, u_value, is_train=True, is_numba=False):
         self.batch_size = u_value.shape[0]
         out = np.reshape(u_value, (self.batch_size, self.n_shape))
         return out
 
     def backward(self, din, is_numba=False):
         dx = np.reshape(din, (self.batch_size, *self.p_shape))
+        return dx
+
+
+class BatchNormalization(tfg.Operation):
+    def __init__(self, x, gamma, beta, name, graph):
+        self.x_value = None
+        self.input_shape = None
+        self.batch_size = None
+
+        self.gamma = gamma
+        self.beta = beta
+        self.xc = None
+        self.xn = None
+        self.std = None
+        self.dgamma = None
+        self.dbeta = None
+        super().__init__([x], name, graph)
+
+    def forward(self, x_value, is_train=True, is_numba=False):
+        self.x_value = x_value
+        self.input_shape = self.x_value.shape
+        self.batch_size = self.x_value.shape[0]
+
+        if self.x_value.ndim != 2:
+            N, C, H, W = self.x_value.shape
+            self.x_value = self.x_value.reshape(N, -1)
+
+        if is_train:
+            mu = self.x_value.mean(axis=0)
+            xc = self.x_value - mu
+            var = np.mean(xc ** 2, axis=0)
+            std = np.sqrt(var + 10e-7)
+            xn = xc / std
+            self.xc = xc
+            self.xn = xn
+            self.std = std
+        else:
+            xn = self.x_value
+
+        out = self.gamma.value * xn + self.beta.value
+        out = out.reshape(*self.input_shape)
+        return out
+
+    def backward(self, din, is_numba=False):
+        if din.ndim != 2:
+            N, C, H, W = din.shape
+            din = din.reshape(N, -1)
+
+        dbeta = din.sum(axis=0)
+        dgamma = np.sum(self.xn * din, axis=0)
+        dxn = self.gamma.value * din
+        dxc = dxn / self.std
+        dstd = -np.sum((dxn * self.xc) / (self.std * self.std), axis=0)
+        dvar = 0.5 * dstd / self.std
+        dxc += (2.0 / self.batch_size) * self.xc * dvar
+        dmu = np.sum(dxc, axis=0)
+        dx = dxc - dmu / self.batch_size
+
+        self.dgamma = dgamma
+        self.dbeta = dbeta
+
+        dx = dx.reshape(*self.input_shape)
         return dx
