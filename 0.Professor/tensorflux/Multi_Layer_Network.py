@@ -23,6 +23,7 @@ class Multi_Layer_Network(dnn.Deep_Neural_Network):
                  output_size,
                  input_node=None,
                  target_node=None,
+                 use_batch_normalization=False,
                  initializer=tfe.Initializer.Normal.value,
                  init_sd=0.01,
                  activator=tfe.Activator.ReLU.value,
@@ -36,6 +37,8 @@ class Multi_Layer_Network(dnn.Deep_Neural_Network):
 
         self.input_node = input_node
         self.target_node = target_node
+
+        self.use_batch_normalization = use_batch_normalization
 
         self.activator = activator
         self.initializer = initializer
@@ -99,22 +102,16 @@ class Multi_Layer_Network(dnn.Deep_Neural_Network):
         self.param_kurtosis_list['b'] = {}
 
         for idx in range(self.hidden_layer_num + 1):
-            if self.initializer is tfe.Initializer.Normal.value or self.initializer is tfe.Initializer.Truncated_Normal.value:
-                self.params['W' + str(idx)] = self.initializer(
-                    shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
-                    name="W" + str(idx),
-                    mean=mean,
-                    sd=sd
-                ).param
-            else:
-                self.params['W' + str(idx)] = self.initializer(
-                    shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
-                    name="W" + str(idx)
-                ).param
+            self.params['W' + str(idx)] = self.initializer(
+                shape=(self.params_size_list[idx], self.params_size_list[idx + 1]),
+                name="W" + str(idx),
+                mean=mean,
+                sd=sd
+            ).param
 
             self.params['b' + str(idx)] = tfe.Initializer.Zero.value(
                 shape=(self.params_size_list[idx + 1],),
-                name="b" + str(idx)
+                name="b" + str(idx),
             ).param
 
             self.param_mean_list['W'][idx] = []
@@ -126,6 +123,21 @@ class Multi_Layer_Network(dnn.Deep_Neural_Network):
             self.param_variance_list['b'][idx] = []
             self.param_skewness_list['b'][idx] = []
             self.param_kurtosis_list['b'][idx] = []
+
+            if self.use_batch_normalization and idx < self.hidden_layer_num:
+                self.params['gamma' + str(idx)] = self.initializer(
+                    shape=(1, 1),
+                    name="gamma" + str(idx),
+                    mean=mean,
+                    sd=sd
+                ).param
+
+                self.params['beta' + str(idx)] = self.initializer(
+                    shape=(1, 1),
+                    name="beta" + str(idx),
+                    mean=mean,
+                    sd=sd
+                ).param
 
     def layering(self, refitting=False):
         input_node = self.input_node
@@ -149,8 +161,21 @@ class Multi_Layer_Network(dnn.Deep_Neural_Network):
                 name='affine' + str(idx),
                 graph=self
             )
+
+            if self.use_batch_normalization:
+                self.layers['batch_normal' + str(idx)] = tfl.BatchNormalization(
+                    x=self.layers['affine' + str(idx)],
+                    gamma=self.params['gamma' + str(idx)],
+                    beta=self.params['beta' + str(idx)],
+                    name='batch_normal' + str(idx),
+                    graph=self
+                )
+                next_input_node = self.layers['batch_normal' + str(idx)]
+            else:
+                next_input_node = self.layers['affine' + str(idx)],
+
             self.layers['activation' + str(idx)] = self.activator(
-                self.layers['affine' + str(idx)],
+                next_input_node,
                 name='activation' + str(idx),
                 graph=self
             )
@@ -186,8 +211,8 @@ class Multi_Layer_Network(dnn.Deep_Neural_Network):
 
         self.error = tfl.SoftmaxWithCrossEntropyLoss(self.output, self.target_node, name="SCEL", graph=self)
 
-    def feed_forward(self, input_data, is_numba=False):
-        return self.session.run(self.output, {self.input_node: input_data}, is_numba, verbose=False)
+    def feed_forward(self, input_data, is_train=True, is_numba=False):
+        return self.session.run(self.output, {self.input_node: input_data}, is_train=is_train, is_numba=False, verbose=False)
 
     def backward_propagation(self, is_numba):
         grads = {}
@@ -203,6 +228,10 @@ class Multi_Layer_Network(dnn.Deep_Neural_Network):
         for idx in range(self.hidden_layer_num + 1):
             grads['W' + str(idx)] = self.layers['affine' + str(idx)].dw
             grads['b' + str(idx)] = self.layers['affine' + str(idx)].db
+
+            if self.use_batch_normalization and idx < self.hidden_layer_num:
+                grads['gamma' + str(idx)] = self.layers['batch_normal' + str(idx)].dgamma
+                grads['beta' + str(idx)] = self.layers['batch_normal' + str(idx)].dbeta
 
         return grads
 
@@ -230,6 +259,7 @@ class Multi_Layer_Network(dnn.Deep_Neural_Network):
                             self.input_node: i_batch,
                             self.target_node: t_batch
                         },
+                        is_train=True,
                         is_numba=is_numba,
                         verbose=False)
 
@@ -283,6 +313,7 @@ class Multi_Layer_Network(dnn.Deep_Neural_Network):
                 self.input_node: i_batch,
                 self.target_node: t_batch
             },
+            is_train=False,
             is_numba=is_numba,
             verbose=False)
         self.train_error_list.append(train_error)
@@ -293,6 +324,7 @@ class Multi_Layer_Network(dnn.Deep_Neural_Network):
                 self.input_node: data.validation_input,
                 self.target_node: data.validation_target
             },
+            is_train=False,
             is_numba=is_numba,
             verbose=False)
         self.validation_error_list.append(validation_error)
@@ -305,7 +337,7 @@ class Multi_Layer_Network(dnn.Deep_Neural_Network):
             self.save_params()
             min_flag = True
 
-        forward_final_output = self.feed_forward(input_data=data.test_input, is_numba=is_numba)
+        forward_final_output = self.feed_forward(input_data=data.test_input, is_train=False, is_numba=is_numba)
 
         test_accuracy = tff.accuracy(forward_final_output, data.test_target)
         self.test_accuracy_list.append(test_accuracy)
@@ -417,12 +449,12 @@ class Multi_Layer_Network(dnn.Deep_Neural_Network):
             all_param_flatten_list.extend([item for item in param.value.flatten()])
         return stats.describe(np.array(all_param_flatten_list))
 
-    def print_feed_forward(self, num_data, input_data, target_data, is_numba, verbose=False):
+    def print_feed_forward(self, num_data, input_data, target_data, is_train, is_numba, verbose=False):
         for idx in range(num_data):
             train_input_data = input_data[idx]
             train_target_data = target_data[idx]
 
-            output = self.session.run(self.output, {self.input_node: train_input_data}, is_numba, verbose)
+            output = self.session.run(self.output, {self.input_node: train_input_data}, is_train, is_numba, verbose)
             print("Input Data: {:>5}, Feed Forward Output: {:>6}, Target: {:>6}".format(
                 str(train_input_data), np.array2string(output), str(train_target_data)))
 

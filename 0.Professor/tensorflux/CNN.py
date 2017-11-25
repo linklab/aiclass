@@ -146,7 +146,9 @@ class CNN(dnn.Deep_Neural_Network):
             if cnn_param['type'] == 'conv':
                 self.params['W' + str(idx)] = self.conv_initializer(
                     shape=(cnn_param['filter_num'], pre_channel_num, cnn_param['filter_h'], cnn_param['filter_w']),
-                    name="W" + str(idx)
+                    name="W" + str(idx),
+                    mean=mean,
+                    sd=sd
                 ).param
 
                 self.params['b' + str(idx)] = tfe.Initializer.Zero.value(
@@ -163,30 +165,19 @@ class CNN(dnn.Deep_Neural_Network):
                 )
 
                 if self.use_batch_normalization:
-                    if self.initializer is tfe.Initializer.Normal.value or self.initializer is tfe.Initializer.Truncated_Normal.value:
-                        self.params['gamma' + str(idx)] = self.initializer(
-                            shape=(1, 1),
-                            name="gamma" + str(idx),
-                            mean=mean,
-                            sd=sd
-                        ).param
+                    self.params['gamma' + str(idx)] = self.initializer(
+                        shape=(1, 1),
+                        name="gamma" + str(idx),
+                        mean=mean,
+                        sd=sd
+                    ).param
 
-                        self.params['beta' + str(idx)] = self.initializer(
-                            shape=(1, 1),
-                            name="beta" + str(idx),
-                            mean=mean,
-                            sd=sd
-                        ).param
-                    else:
-                        self.params['gamma' + str(idx)] = self.initializer(
-                            shape=(1, 1),
-                            name="gamma" + str(idx)
-                        ).param
-
-                        self.params['beta' + str(idx)] = self.initializer(
-                            shape=(1, 1),
-                            name="beta" + str(idx)
-                        ).param
+                    self.params['beta' + str(idx)] = self.initializer(
+                        shape=(1, 1),
+                        name="beta" + str(idx),
+                        mean=mean,
+                        sd=sd
+                    ).param
 
                 print("[Convolution Layer {:d}]".format(idx))
                 print("Param Key: W{:d}, Shape: {:s}".format(idx, str((cnn_param['filter_num'], pre_channel_num, cnn_param['filter_h'], cnn_param['filter_w']))))
@@ -237,18 +228,13 @@ class CNN(dnn.Deep_Neural_Network):
         print("         |")
 
         idx += 1
-        if self.initializer is tfe.Initializer.Normal.value or self.initializer is tfe.Initializer.Truncated_Normal.value:
-            self.params['W' + str(idx)] = self.initializer(
-                shape=(self.num_neurons_flatten_for_fc, self.fc_hidden_size),
-                name="W" + str(idx),
-                mean=mean,
-                sd=sd
-            ).param
-        else:
-            self.params['W' + str(idx)] = self.initializer(
-                shape=(self.num_neurons_flatten_for_fc, self.fc_hidden_size),
-                name="W" + str(idx)
-            ).param
+
+        self.params['W' + str(idx)] = self.initializer(
+            shape=(self.num_neurons_flatten_for_fc, self.fc_hidden_size),
+            name="W" + str(idx),
+            mean=mean,
+            sd=sd
+        ).param
 
         self.params['b' + str(idx)] = tfe.Initializer.Zero.value(
             shape=(self.fc_hidden_size,),
@@ -277,18 +263,13 @@ class CNN(dnn.Deep_Neural_Network):
         self.param_kurtosis_list['b'][idx] = []
 
         idx += 1
-        if self.initializer is tfe.Initializer.Normal.value or self.initializer is tfe.Initializer.Truncated_Normal.value:
-            self.params['W' + str(idx)] = self.initializer(
-                shape=(self.fc_hidden_size, self.output_size),
-                name="W" + str(idx),
-                mean=mean,
-                sd=sd
-            ).param
-        else:
-            self.params['W' + str(idx)] = self.initializer(
-                shape=(self.fc_hidden_size, self.output_size),
-                name="W" + str(idx)
-            ).param
+
+        self.params['W' + str(idx)] = self.initializer(
+            shape=(self.fc_hidden_size, self.output_size),
+            name="W" + str(idx),
+            mean=mean,
+            sd=sd
+        ).param
 
         self.params['b' + str(idx)] = tfe.Initializer.Zero.value(
             shape=(self.output_size,),

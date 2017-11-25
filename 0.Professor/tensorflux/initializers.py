@@ -11,9 +11,11 @@ import math
 
 
 class Initializer:
-    def __init__(self, shape, name):
+    def __init__(self, shape, name, mean=0.0, sd=1.0):
         self.shape = shape
         self.name = name
+        self.mean = mean
+        self.sd = sd
 
         self.param = None
         self.initialize_param()
@@ -25,7 +27,7 @@ class Initializer:
 class Value_Assignment_Initializer(Initializer):
     def __init__(self, value, name):
         self.value = value
-        super().__init__([1], name)
+        super().__init__([1], 0.0, 1.0, name)
 
     def initialize_param(self):
         self.param = tfg.Variable(self.value, name=self.name)
@@ -50,17 +52,6 @@ class Point_One_Initializer(Initializer):
 
 
 class Random_Normal_Initializer(Initializer):
-    """
-    Parameters :
-    loc : float -- Mean (“centre”) of the distribution.
-    scale : float -- Standard deviation (spread or “width”) of the distribution.
-    size : tuple of ints -- Output shape.
-    """
-    def __init__(self, shape, name, mean=0.0, sd=1.0):
-        self.mean = mean
-        self.sd = sd
-        super().__init__(shape, name)
-
     def initialize_param(self):
         self.param = tfg.Variable(np.random.normal(loc=self.mean, scale=self.sd, size=self.shape), name=self.name)
 
@@ -71,30 +62,29 @@ class Random_Uniform_Initializer(Initializer):
 
 
 class Truncated_Normal_Initializer(Initializer):
-    def __init__(self, shape, name, mean=0.0, sd=1.0):
-        self.mean = mean
-        self.sd = sd
-        self.low = -sd
-        self.upp = sd
-        super().__init__(shape, name)
-
     def initialize_param(self):
         self.param = tfg.Variable(tff.get_truncated_normal(shape=self.shape,
                                                            mean=self.mean,
                                                            sd=self.sd,
-                                                           low=self.low,
-                                                           upp=self.upp), name=self.name)
+                                                           low=-self.sd,
+                                                           upp=self.sd), name=self.name)
 
 class Lecun_Normal(Initializer):
     def initialize_param(self):
         sd = math.sqrt(1.0 / self.shape[0])
-        self.param = tfg.Variable(tff.get_truncated_normal(shape=self.shape, mean=0.0, sd=sd, low=-sd, upp=sd), name=self.name)
+        self.param = tfg.Variable(tff.get_truncated_normal(shape=self.shape,
+                                                           mean=self.mean,
+                                                           sd=sd,
+                                                           low=-sd,
+                                                           upp=sd), name=self.name)
 
 
 class Lecun_Uniform(Initializer):
     def initialize_param(self):
         sd = math.sqrt(1.0 / self.shape[0])
-        self.param = tfg.Variable(np.random.uniform(low=-sd, high=sd, size=self.shape), name=self.name)
+        self.param = tfg.Variable(np.random.uniform(low=-sd,
+                                                    high=sd,
+                                                    size=self.shape), name=self.name)
 
 
 class Xavier_Normal(Initializer): # Glorot_Normal
@@ -103,7 +93,11 @@ class Xavier_Normal(Initializer): # Glorot_Normal
             sd = math.sqrt(1.0 / (self.shape[0] + self.shape[1]))
         else:
             sd = math.sqrt(1.0 / self.shape[0])
-        self.param = tfg.Variable(tff.get_truncated_normal(shape=self.shape, mean=0.0, sd=sd, low=-sd, upp=sd), name=self.name)
+        self.param = tfg.Variable(tff.get_truncated_normal(shape=self.shape,
+                                                           mean=self.mean,
+                                                           sd=sd,
+                                                           low=-sd,
+                                                           upp=sd), name=self.name)
 
 
 class Xavier_Uniform(Initializer):
@@ -112,7 +106,9 @@ class Xavier_Uniform(Initializer):
             sd = math.sqrt(1.0 / (self.shape[0] + self.shape[1]))
         else:
             sd = math.sqrt(1.0 / self.shape[0])
-        self.param = tfg.Variable(np.random.uniform(low=-sd, high=sd, size=self.shape), name=self.name)
+        self.param = tfg.Variable(np.random.uniform(low=-sd,
+                                                    high=sd,
+                                                    size=self.shape), name=self.name)
 
 
 class He_Normal(Initializer):
@@ -121,7 +117,11 @@ class He_Normal(Initializer):
             sd = math.sqrt(2.0 / (self.shape[0] + self.shape[1]))
         else:
             sd = math.sqrt(2.0 / self.shape[0])
-        self.param = tfg.Variable(tff.get_truncated_normal(shape=self.shape, mean=0.0, sd=sd, low=-sd, upp=sd), name=self.name)
+        self.param = tfg.Variable(tff.get_truncated_normal(shape=self.shape,
+                                                           mean=self.mean,
+                                                           sd=sd,
+                                                           low=-sd,
+                                                           upp=sd), name=self.name)
 
 
 class He_Uniform(Initializer):
@@ -130,28 +130,42 @@ class He_Uniform(Initializer):
             sd = math.sqrt(2.0 / (self.shape[0] + self.shape[1]))
         else:
             sd = math.sqrt(2.0 / self.shape[0])
-        self.param = tfg.Variable(np.random.uniform(low=-sd, high=sd, size=self.shape), name=self.name)
+        self.param = tfg.Variable(np.random.uniform(low=-sd,
+                                                    high=sd,
+                                                    size=self.shape), name=self.name)
 
 
 class Conv_Xavier_Normal(Initializer): # Glorot_Normal
     def initialize_param(self):
         sd = math.sqrt(1.0 / (self.shape[1] * self.shape[2] * self.shape[3]))
-        self.param = tfg.Variable(tff.get_truncated_normal(shape=self.shape, mean=0.0, sd=sd, low=-sd, upp=sd), name=self.name)
+        self.param = tfg.Variable(tff.get_truncated_normal(shape=self.shape,
+                                                           mean=self.mean,
+                                                           sd=sd,
+                                                           low=-sd,
+                                                           upp=sd), name=self.name)
 
 
 class Conv_Xavier_Uniform(Initializer):
     def initialize_param(self):
         sd = math.sqrt(1.0 / (self.shape[1] * self.shape[2] * self.shape[3]))
-        self.param = tfg.Variable(np.random.uniform(low=-sd, high=sd, size=self.shape), name=self.name)
+        self.param = tfg.Variable(np.random.uniform(low=-sd,
+                                                    high=sd,
+                                                    size=self.shape), name=self.name)
 
 
 class Conv_He_Normal(Initializer):
     def initialize_param(self):
         sd = math.sqrt(2.0 / (self.shape[1] * self.shape[2] * self.shape[3]))
-        self.param = tfg.Variable(tff.get_truncated_normal(shape=self.shape, mean=0.0, sd=sd, low=-sd, upp=sd), name=self.name)
+        self.param = tfg.Variable(tff.get_truncated_normal(shape=self.shape,
+                                                           mean=self.mean,
+                                                           sd=sd,
+                                                           low=-sd,
+                                                           upp=sd), name=self.name)
 
 
 class Conv_He_Uniform(Initializer):
     def initialize_param(self):
         sd = math.sqrt(2.0 / (self.shape[1] * self.shape[2] * self.shape[3]))
-        self.param = tfg.Variable(np.random.uniform(low=-sd, high=sd, size=self.shape), name=self.name)
+        self.param = tfg.Variable(np.random.uniform(low=-sd,
+                                                    high=sd,
+                                                    size=self.shape), name=self.name)
