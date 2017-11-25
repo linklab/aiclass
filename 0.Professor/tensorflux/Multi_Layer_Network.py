@@ -172,7 +172,7 @@ class Multi_Layer_Network(dnn.Deep_Neural_Network):
                 )
                 next_input_node = self.layers['batch_normal' + str(idx)]
             else:
-                next_input_node = self.layers['affine' + str(idx)],
+                next_input_node = self.layers['affine' + str(idx)]
 
             self.layers['activation' + str(idx)] = self.activator(
                 next_input_node,
