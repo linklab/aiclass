@@ -24,6 +24,8 @@ class Multi_Layer_Network(dnn.Deep_Neural_Network):
                  input_node=None,
                  target_node=None,
                  use_batch_normalization=False,
+                 use_dropout=True,
+                 dropout_ratio_list=None,
                  initializer=tfe.Initializer.Normal.value,
                  init_sd=0.01,
                  activator=tfe.Activator.ReLU.value,
@@ -39,6 +41,8 @@ class Multi_Layer_Network(dnn.Deep_Neural_Network):
         self.target_node = target_node
 
         self.use_batch_normalization = use_batch_normalization
+        self.use_dropout = use_dropout
+        self.dropout_ratio_list = dropout_ratio_list
 
         self.activator = activator
         self.initializer = initializer
@@ -179,7 +183,17 @@ class Multi_Layer_Network(dnn.Deep_Neural_Network):
                 name='activation' + str(idx),
                 graph=self
             )
-            input_node = self.layers['activation' + str(idx)]
+
+            if self.use_dropout:
+                self.layers['dropout' + str(idx)] = tfl.Dropout(
+                    x=self.layers['activation' + str(idx)],
+                    dropout_ratio=self.dropout_ratio_list[idx],
+                    name='dropout' + str(idx),
+                    graph=self
+                )
+                input_node = self.layers['dropout' + str(idx)]
+            else:
+                input_node = self.layers['activation' + str(idx)]
 
             if not refitting:
                 self.output_mean_list['affine'][idx] = []
@@ -193,9 +207,15 @@ class Multi_Layer_Network(dnn.Deep_Neural_Network):
                 self.output_kurtosis_list['activation'][idx] = []
 
         idx = self.hidden_layer_num
+
+        if self.use_dropout:
+            input_node = self.layers['dropout' + str(idx - 1)]
+        else:
+            input_node = self.layers['activation' + str(idx - 1)]
+
         self.layers['affine' + str(idx)] = tfl.Affine(
             self.params['W' + str(idx)],
-            self.layers['activation' + str(idx - 1)],
+            input_node,
             self.params['b' + str(idx)],
             name='affine' + str(idx),
             graph=self

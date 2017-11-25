@@ -559,3 +559,22 @@ class BatchNormalization(tfg.Operation):
 
         dx = dx.reshape(*self.input_shape)
         return dx
+
+
+class Dropout(tfg.Operation):
+    def __init__(self, x, dropout_ratio, name, graph):
+        self.dropout_ratio = dropout_ratio
+        self.x_value = None
+        self.mask = None
+        super().__init__([x], name, graph)
+
+    def forward(self, x_value, is_train=True, is_numba=False):
+        self.x_value = x_value
+        if is_train:
+            self.mask = np.random.rand(*self.x_value.shape) > self.dropout_ratio
+            return self.x_value * self.mask
+        else:
+            return self.x_value * (1.0 - self.dropout_ratio)
+
+    def backward(self, din, is_numba=False):
+        return din * self.mask

@@ -5,9 +5,9 @@ import datasource.mnist as mnist
 import tensorflux.functions as tff
 
 """
-    conv0 (batch_normal0, relu0) - pool1 - 
-    conv2 (batch_normal2, relu2) - pool3 - 
-    affine4 (relu4) - affine5 - softmax (output)
+    (conv0 - batch_normal0 - relu0 - dropout0) - pool1 - 
+    (conv2 - batch_normal2 - relu2 - dropout2) - pool3 - reshape -
+    (affine4 - batch_normal4 - relu4 - dropout4) - affine5 - softmax (output)
 """
 
 input_dim = (1, 28, 28)
@@ -17,6 +17,11 @@ cnn_param_list = [
     {'type': 'conv', 'filter_num': 3, 'filter_h': 3, 'filter_w': 3, 'pad': 1, 'stride': 1},
     {'type': 'pooling', 'filter_h': 2, 'filter_w': 2, 'stride': 2},
 ]
+
+dropout_ratio0 = 0.5
+dropout_ratio2 = 0.5
+dropout_ratio4 = 0.5
+
 fc_hidden_size = 64
 output_size = 10
 
@@ -31,6 +36,8 @@ n = tfn.CNN(
     input_node=x,
     target_node=target,
     use_batch_normalization=True,
+    use_dropout=True,
+    dropout_ratio_list=[dropout_ratio0, None, dropout_ratio2, None, dropout_ratio4],
     conv_initializer=tfe.Initializer.Conv_Xavier_Normal.value,
     initializer=tfe.Initializer.Normal.value,
     init_sd=0.01,

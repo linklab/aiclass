@@ -4,9 +4,16 @@ import tensorflux.enums as tfe
 import datasource.mnist as mnist
 import tensorflux.functions as tff
 
+"""
+    (affine0 - batch_normal0 - relu0 - dropout0) - 
+    (affine1 - batch_normal1 - relu1 - dropout1) - affine2 - softmax (output)
+"""
+
 input_size = 784
+hidden_layer0_size = 128
 hidden_layer1_size = 128
-hidden_layer2_size = 128
+dropout_ratio0 = 0.5
+dropout_ratio1 = 0.5
 output_size = 10
 
 x = tfg.Placeholder(name="x")
@@ -14,11 +21,13 @@ target = tfg.Placeholder(name="target")
 
 n = tfn.Multi_Layer_Network(
     input_size=input_size,
-    hidden_size_list=[hidden_layer1_size, hidden_layer2_size],
+    hidden_size_list=[hidden_layer0_size, hidden_layer1_size],
     output_size=output_size,
     input_node=x,
     target_node=target,
     use_batch_normalization=True,
+    use_dropout=True,
+    dropout_ratio_list=[dropout_ratio0, dropout_ratio1],
     initializer=tfe.Initializer.Normal.value,
     init_sd=0.01,
     # initializer=tfe.Initializer.Xavier.value,

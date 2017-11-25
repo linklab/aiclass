@@ -36,6 +36,8 @@ class CNN(dnn.Deep_Neural_Network):
                  input_node=None,
                  target_node=None,
                  use_batch_normalization=False,
+                 use_dropout=True,
+                 dropout_ratio_list=None,
                  conv_initializer=tfe.Initializer.Conv_Xavier_Normal,
                  initializer=tfe.Initializer.Normal.value,
                  init_sd=0.01,
@@ -51,6 +53,8 @@ class CNN(dnn.Deep_Neural_Network):
         self.output_size = output_size
 
         self.use_batch_normalization = use_batch_normalization
+        self.use_dropout = use_dropout
+        self.dropout_ratio_list = dropout_ratio_list
 
         self.input_node = input_node
         self.target_node = target_node
@@ -193,6 +197,10 @@ class CNN(dnn.Deep_Neural_Network):
                 print("[Activation Layer {:d}]".format(idx))
                 print("Data Size: {:s}".format(str((cnn_param['filter_num'], input_height, input_width))))
                 print("         |")
+                if self.use_dropout:
+                    print("[Dropout {:d}]".format(idx))
+                    print("Data Size: {:s}".format(str((cnn_param['filter_num'], input_height, input_width))))
+                    print("         |")
                 pre_channel_num = cnn_param['filter_num']
 
                 self.param_idx_list.append(idx)
@@ -241,15 +249,39 @@ class CNN(dnn.Deep_Neural_Network):
             name="b" + str(idx)
         ).param
 
+        if self.use_batch_normalization:
+            self.params['gamma' + str(idx)] = self.initializer(
+                shape=(1, 1),
+                name="gamma" + str(idx),
+                mean=mean,
+                sd=sd
+            ).param
+
+            self.params['beta' + str(idx)] = self.initializer(
+                shape=(1, 1),
+                name="beta" + str(idx),
+                mean=mean,
+                sd=sd
+            ).param
+
         print("[Affine Layer {:d}]".format(idx))
         print("Param Key: W{:d}, Shape: {:s}".format(idx, str((self.num_neurons_flatten_for_fc, self.fc_hidden_size))))
         print("Param Key: b{:d}, Shape: {:s}".format(idx, str((self.fc_hidden_size,))))
         print("Data Size: {:s}".format(str(self.fc_hidden_size)))
         print("         |")
+        if self.use_batch_normalization:
+            print("[Batch Normalization {:d}]".format(idx))
+            print("Param Key: gamma{:d}, Shape: {:s}".format(idx, str((1, 1))))
+            print("Param Key: beta{:d}, Shape: {:s}".format(idx, str((1, 1))))
+            print("Data Size: {:s}".format(str(self.fc_hidden_size)))
+            print("         |")
         print("[Activation Layer {:d}]".format(idx))
         print("Data Size: {:s}".format(str(self.fc_hidden_size)))
         print("         |")
-
+        if self.use_dropout:
+            print("[Dropout {:d}]".format(idx))
+            print("Data Size: {:s}".format(str(self.fc_hidden_size)))
+            print("         |")
         self.param_idx_list.append(idx)
 
         self.param_mean_list['W'][idx] = []
@@ -284,7 +316,6 @@ class CNN(dnn.Deep_Neural_Network):
         print("[Softmax Layer {:d}]".format(idx))
         print("Data Size: {:s}".format(str(self.output_size)))
         print()
-
 
         self.param_idx_list.append(idx)
 
@@ -333,6 +364,7 @@ class CNN(dnn.Deep_Neural_Network):
                     name    ='conv' + str(idx),
                     graph   =self
                 )
+
                 if self.use_batch_normalization:
                     self.layers['batch_normal' + str(idx)] = tfl.BatchNormalization(
                         x       =self.layers['conv' + str(idx)],
@@ -350,7 +382,17 @@ class CNN(dnn.Deep_Neural_Network):
                     name    ='activation' + str(idx),
                     graph   =self
                 )
-                input_node = self.layers['activation' + str(idx)]
+
+                if self.use_dropout:
+                    self.layers['dropout' + str(idx)] = tfl.Dropout(
+                        x=self.layers['activation' + str(idx)],
+                        dropout_ratio=self.dropout_ratio_list[idx],
+                        name='dropout' + str(idx),
+                        graph=self
+                    )
+                    input_node = self.layers['dropout' + str(idx)]
+                else:
+                    input_node = self.layers['activation' + str(idx)]
 
                 if not refitting:
                     self.output_mean_list['conv'][idx] = []
@@ -396,11 +438,35 @@ class CNN(dnn.Deep_Neural_Network):
             name    ='affine' + str(idx),
             graph   =self
         )
+
+        if self.use_batch_normalization:
+            self.layers['batch_normal' + str(idx)] = tfl.BatchNormalization(
+                x=self.layers['affine' + str(idx)],
+                gamma=self.params['gamma' + str(idx)],
+                beta=self.params['beta' + str(idx)],
+                name='batch_normal' + str(idx),
+                graph=self
+            )
+            next_input_node = self.layers['batch_normal' + str(idx)]
+        else:
+            next_input_node = self.layers['affine' + str(idx)]
+
         self.layers['activation' + str(idx)] = self.activator(
-            u       =self.layers['affine' + str(idx)],
+            u       =next_input_node,
             name    ='activation' + str(idx),
             graph   =self
         )
+
+        if self.use_dropout:
+            self.layers['dropout' + str(idx)] = tfl.Dropout(
+                x=self.layers['activation' + str(idx)],
+                dropout_ratio=self.dropout_ratio_list[idx],
+                name='dropout' + str(idx),
+                graph=self
+            )
+            input_node = self.layers['dropout' + str(idx)]
+        else:
+            input_node = self.layers['activation' + str(idx)]
 
         if not refitting:
             self.output_mean_list['affine'][idx] = []
@@ -416,7 +482,7 @@ class CNN(dnn.Deep_Neural_Network):
         idx += 1
         self.layers['affine' + str(idx)] = tfl.Affine(
             w       =self.params['W' + str(idx)],
-            x       =self.layers['activation' + str(idx - 1)],
+            x       =input_node,
             b       =self.params['b' + str(idx)],
             name    ='affine' + str(idx),
             graph   =self
@@ -459,6 +525,10 @@ class CNN(dnn.Deep_Neural_Network):
         idx += 1
         grads['W' + str(idx)] = self.layers['affine' + str(idx)].dw
         grads['b' + str(idx)] = self.layers['affine' + str(idx)].db
+
+        if self.use_batch_normalization:
+            grads['gamma' + str(idx)] = self.layers['batch_normal' + str(idx)].dgamma
+            grads['beta' + str(idx)] = self.layers['batch_normal' + str(idx)].dbeta
 
         idx += 1
         grads['W' + str(idx)] = self.layers['affine' + str(idx)].dw
