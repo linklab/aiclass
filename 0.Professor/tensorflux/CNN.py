@@ -183,6 +183,9 @@ class CNN(dnn.Deep_Neural_Network):
                         sd=sd
                     ).param
 
+                    self.params['running_mean' + str(idx)] = np.zeros((cnn_param['filter_num'],input_height, input_width))
+                    self.params['running_var' + str(idx)] = np.zeros((cnn_param['filter_num'],input_height, input_width))
+
                 print("[Convolution Layer {:d}]".format(idx))
                 print("Param Key: W{:d}, Shape: {:s}".format(idx, str((cnn_param['filter_num'], pre_channel_num, cnn_param['filter_h'], cnn_param['filter_w']))))
                 print("Param Key: b{:d}, Shape: {:s}".format(idx, str((cnn_param['filter_num'],))))
@@ -263,6 +266,9 @@ class CNN(dnn.Deep_Neural_Network):
                 mean=mean,
                 sd=sd
             ).param
+
+            self.params['running_mean' + str(idx)] = np.zeros((self.fc_hidden_size,))
+            self.params['running_var' + str(idx)] = np.zeros((self.fc_hidden_size,))
 
         print("[Affine Layer {:d}]".format(idx))
         print("Param Key: W{:d}, Shape: {:s}".format(idx, str((self.num_neurons_flatten_for_fc, self.fc_hidden_size))))
@@ -370,6 +376,8 @@ class CNN(dnn.Deep_Neural_Network):
                         x       =self.layers['conv' + str(idx)],
                         gamma   =self.params['gamma' + str(idx)],
                         beta    =self.params['beta' + str(idx)],
+                        running_mean=self.params['running_mean' + str(idx)],
+                        running_var=self.params['running_var' + str(idx)],
                         name    ='batch_normal' + str(idx),
                         graph   =self
                     )
@@ -444,6 +452,8 @@ class CNN(dnn.Deep_Neural_Network):
                 x=self.layers['affine' + str(idx)],
                 gamma=self.params['gamma' + str(idx)],
                 beta=self.params['beta' + str(idx)],
+                running_mean=self.params['running_mean' + str(idx)],
+                running_var=self.params['running_var' + str(idx)],
                 name='batch_normal' + str(idx),
                 graph=self
             )
@@ -573,6 +583,13 @@ class CNN(dnn.Deep_Neural_Network):
                     else:
                         grads = self.backward_propagation(is_numba)
                         self.optimizer.update(params=self.params, grads=grads)
+
+                    if self.use_batch_normalization:
+                        for key, layer in self.layers.items():
+                            if key.startswith('batch_normal'):
+                                idx = key.split('batch_normal')[1]
+                                self.params['running_mean' + str(idx)] = layer.running_mean
+                                self.params['running_var' + str(idx)] = layer.running_var
 
                 self.set_learning_process_specification(data, batch_size, epoch, print_period, is_numba, fold_idx, max_epoch, verbose)
 
