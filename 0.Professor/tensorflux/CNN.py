@@ -36,7 +36,7 @@ class CNN(dnn.Deep_Neural_Network):
                  input_node=None,
                  target_node=None,
                  use_batch_normalization=False,
-                 use_dropout=True,
+                 use_dropout=False,
                  dropout_ratio_list=None,
                  conv_initializer=tfe.Initializer.Conv_Xavier_Normal,
                  initializer=tfe.Initializer.Normal.value,

@@ -24,7 +24,7 @@ class Multi_Layer_Network(dnn.Deep_Neural_Network):
                  input_node=None,
                  target_node=None,
                  use_batch_normalization=False,
-                 use_dropout=True,
+                 use_dropout=False,
                  dropout_ratio_list=None,
                  initializer=tfe.Initializer.Normal.value,
                  init_sd=0.01,
