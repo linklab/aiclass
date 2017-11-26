@@ -143,6 +143,9 @@ class Multi_Layer_Network(dnn.Deep_Neural_Network):
                     sd=sd
                 ).param
 
+                self.params['running_mean' + str(idx)] = np.zeros((self.params_size_list[idx + 1],))
+                self.params['running_var' + str(idx)] = np.zeros((self.params_size_list[idx + 1],))
+
     def layering(self, refitting=False):
         input_node = self.input_node
 
@@ -171,6 +174,8 @@ class Multi_Layer_Network(dnn.Deep_Neural_Network):
                     x=self.layers['affine' + str(idx)],
                     gamma=self.params['gamma' + str(idx)],
                     beta=self.params['beta' + str(idx)],
+                    running_mean=self.params['running_mean' + str(idx)],
+                    running_var=self.params['running_var' + str(idx)],
                     name='batch_normal' + str(idx),
                     graph=self
                 )
@@ -291,6 +296,13 @@ class Multi_Layer_Network(dnn.Deep_Neural_Network):
                     else:
                         grads = self.backward_propagation(is_numba)
                         self.optimizer.update(params=self.params, grads=grads)
+
+                    if self.use_batch_normalization:
+                        for key, layer in self.layers.items():
+                            if key.startswith('batch_normal'):
+                                idx = key.split('batch_normal')[1]
+                                self.params['running_mean' + str(idx)] = layer.running_mean
+                                self.params['running_var' + str(idx)] = layer.running_var
 
                 self.set_learning_process_specification(data, batch_size, epoch, print_period, is_numba, fold_idx, max_epoch, verbose)
 
@@ -440,7 +452,6 @@ class Multi_Layer_Network(dnn.Deep_Neural_Network):
                 print()
 
     def save_params(self):
-        #optimal_params = copy.deepcopy(self.params)
         optimal_params = pickle.loads(pickle.dumps(self.params, -1))
         self.optimal_epoch_and_params = [self.min_validation_error_epoch, optimal_params]
 
