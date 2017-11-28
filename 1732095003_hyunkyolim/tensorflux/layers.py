@@ -22,7 +22,7 @@ class Affine(tfg.Operation):
         self.db = None
         super().__init__([w, x, b], name, graph)
 
-    def forward(self, w_value, x_value, b_value, is_numba):
+    def forward(self, w_value, x_value, b_value, is_train=True, is_numba=False):
         """Compute the output of the affine operation
 
         Args:
@@ -94,7 +94,7 @@ class ReLU(tfg.Operation):
         self.mask = None
         super().__init__([u], name, graph)
 
-    def forward(self, u_value, is_numba):
+    def forward(self, u_value, is_train=True, is_numba=False):
         self.u_value = u_value
         self.mask = (u_value <= 0.0)
         out = u_value.copy()
@@ -147,7 +147,7 @@ class Sigmoid(tfg.Operation):
         self.out = None
         super().__init__([u], name, graph)
 
-    def forward(self, u_value, is_numba):
+    def forward(self, u_value, is_train=True, is_numba=False):
         self.u_value = u_value
         self.out = tff.sigmoid(u_value, is_numba=is_numba)
         return self.out
@@ -180,7 +180,7 @@ class SquaredError(tfg.Operation):
         self.target_value = None  # target_value
         super().__init__([forward_final_output, target], name, graph)
 
-    def forward(self, forward_final_output_value, target_value, is_numba):
+    def forward(self, forward_final_output_value, target_value, is_train=True, is_numba=False):
         self.forward_final_output_value = forward_final_output_value
         self.target_value = target_value
         return tff.squared_error(forward_final_output_value, target_value, is_numba=is_numba)
@@ -213,7 +213,7 @@ class SoftmaxWithCrossEntropyLoss(tfg.Operation):
         self.y = None
         super().__init__([forward_final_output, target], name, graph)
 
-    def forward(self, forward_final_output_value, target_value, is_numba):
+    def forward(self, forward_final_output_value, target_value, is_train=True, is_numba=False):
         self.target_value = target_value
         self.y = tff.softmax(forward_final_output_value, is_numba=is_numba)
         loss = tff.cross_entropy_error(self.y, self.target_value, is_numba=is_numba)
@@ -254,7 +254,7 @@ class Affine2(tfg.Operation):
         self.db = None
         super().__init__([w, x1, x2, b], name, graph)
 
-    def forward(self, w_value, x1_value, x2_value, b_value):
+    def forward(self, w_value, x1_value, x2_value, b_value, is_train=True, is_numba=False):
         """Compute the output of the add operation
 
         Args:
@@ -303,7 +303,7 @@ class Convolution(tfg.Operation):
         self.db = None
         super().__init__([w, x, b], name, graph)
 
-    def forward(self, w_value, x_value, b_value, is_numba):
+    def forward(self, w_value, x_value, b_value, is_train=True, is_numba=False):
         self.w_value = w_value
         self.x_value = x_value
         self.b_value = b_value
@@ -383,36 +383,35 @@ class Convolution(tfg.Operation):
 
 
 class Pooling(tfg.Operation):
-    def __init__(self, w, x, pad, stride, name=None, graph=None):
+    def __init__(self, x, filter_h, filter_w, stride, name=None, graph=None):
         """Construct Pooling
 
         Args:
           x: Filter node, y: Input node, b: Bias node
         """
-        self.w_value = None
         self.x_value = None
+        self.filter_h = filter_h
+        self.filter_w = filter_w
         self.stride = stride
-        self.pad = pad
+        self.pad = 0
 
-        self.arg_max
-        super().__init__([w, x], name, graph)
+        self.arg_max = None
+        super().__init__([x], name, graph)
 
-    def forward(self, w_value, x_value, is_numba):
-        self.w_value = w_value
+    def forward(self, x_value, is_train=True, is_numba=False):
         self.x_value = x_value
 
         if is_numba:
-            arg_max, out = self._forward(self.w_value, self.x_value, self.pad, self.stride)
+            arg_max, out = self._forward(self.x_value, self.filter_h, self.filter_w, self.pad, self.stride)
             self.arg_max = arg_max
             return out
         else:
-            FN, C, FH, FW = self.w_value.shape
             N, C, H, W = self.x_value.shape
-            out_h = int(1 + (H - FH) / self.stride)
-            out_w = int(1 + (W - FW) / self.stride)
+            out_h = int(1 + (H - self.filter_h) / self.stride)
+            out_w = int(1 + (W - self.filter_w) / self.stride)
 
-            col = tff.im2col(self.x_value, FH, FW, self.stride, self.pad)
-            col = col.reshape(-1, FH * FW)
+            col = tff.im2col(self.x_value, self.filter_h, self.filter_w, self.stride, self.pad)
+            col = col.reshape(-1, self.filter_h * self.filter_w)
 
             arg_max = np.argmax(col, axis=1)
             out = np.max(col, axis=1)
@@ -423,14 +422,13 @@ class Pooling(tfg.Operation):
 
     @staticmethod
     @jit(nopython=True)
-    def _forward(w_value, x_value, pad, stride):
-        FN, C, FH, FW = w_value.shape
+    def _forward(x_value, filter_h, filter_w, pad, stride):
         N, C, H, W = x_value.shape
-        out_h = int(1 + (H - FH) / stride)
-        out_w = int(1 + (W - FW) / stride)
+        out_h = int(1 + (H - filter_h) / stride)
+        out_w = int(1 + (W - filter_w) / stride)
 
-        col = tff.im2col(x_value, FH, FW, stride, pad)
-        col = col.reshape(-1, FH * FW)
+        col = tff.im2col(x_value, filter_h, filter_w, stride, pad)
+        col = col.reshape(-1, filter_h * filter_w)
 
         arg_max = np.argmax(col, axis=1)
         out = np.max(col, axis=1)
@@ -440,36 +438,35 @@ class Pooling(tfg.Operation):
 
     def backward(self, din, is_numba):
         if is_numba:
-            self._backward(din, self.w_value, self.x_value, self.pad, self.stride, self.arg_max)
+            self._backward(din, self.x_value, self.filter_h, self.filter_w, self.pad, self.stride, self.arg_max)
         else:
-            FN, C, FH, FW = self.w_value.shape
             din = din.transpose(0, 2, 3, 1)
 
-            pool_size = FH * FW
+            pool_size = self.filter_h * self.filter_w
             dmax = np.zeros((din.size, pool_size))
             dmax[np.arange(self.arg_max.size), self.arg_max.flatten()] = din.flatten()
             dmax = dmax.reshape(din.shape + (pool_size,))
 
             dcol = dmax.reshape(dmax.shape[0] * dmax.shape[1] * dmax.shape[2], -1)
-            dx = tff.col2im(dcol, self.x_value.shape, FH, FW, self.stride, self.pad)
+            dx = tff.col2im(dcol, self.x_value.shape, self.filter_h, self.filter_w, self.stride, self.pad)
 
             return dx
 
     @staticmethod
     @jit(nopython=True)
-    def _backward(din, w_value, x_value, pad, stride, arg_max):
-        FN, C, FH, FW = w_value.shape
+    def _backward(din, x_value, filter_h, filter_w, pad, stride, arg_max):
         din = din.transpose(0, 2, 3, 1)
 
-        pool_size = FH * FW
+        pool_size = filter_h * filter_w
         dmax = np.zeros((din.size, pool_size))
         dmax[np.arange(arg_max.size), arg_max.flatten()] = din.flatten()
         dmax = dmax.reshape(din.shape + (pool_size,))
 
         dcol = dmax.reshape(dmax.shape[0] * dmax.shape[1] * dmax.shape[2], -1)
-        dx = tff.col2im(dcol, x_value.shape, FH, FW, stride, pad)
+        dx = tff.col2im(dcol, x_value.shape, filter_h, filter_w, stride, pad)
 
         return dx
+
 
 class Reshape(tfg.Operation):
     def __init__(self, u, p_shape, n_shape, name=None, graph=None):
@@ -479,7 +476,7 @@ class Reshape(tfg.Operation):
         self.batch_size = None
         super().__init__([u], name, graph)
 
-    def forward(self, u_value, is_numba=False):
+    def forward(self, u_value, is_train=True, is_numba=False):
         self.batch_size = u_value.shape[0]
         out = np.reshape(u_value, (self.batch_size, self.n_shape))
         return out
@@ -487,3 +484,96 @@ class Reshape(tfg.Operation):
     def backward(self, din, is_numba=False):
         dx = np.reshape(din, (self.batch_size, *self.p_shape))
         return dx
+
+
+class BatchNormalization(tfg.Operation):
+    def __init__(self, x, gamma, beta, running_mean, running_var, name, graph):
+        self.x_value = None
+        self.input_shape = None
+        self.batch_size = None
+
+        self.gamma = gamma
+        self.beta = beta
+        self.xc = None
+        self.xn = None
+        self.std = None
+
+        self.momentum = 0.9
+        self.running_mean = running_mean
+        self.running_var = running_var
+
+        self.dgamma = None
+        self.dbeta = None
+        super().__init__([x], name, graph)
+
+    def forward(self, x_value, is_train=True, is_numba=False):
+        self.x_value = x_value
+        self.input_shape = self.x_value.shape
+        self.batch_size = self.x_value.shape[0]
+
+        if self.x_value.ndim != 2:
+            N, C, H, W = self.x_value.shape
+            self.x_value = self.x_value.reshape(N, -1)
+
+        if self.running_mean.ndim != 1:
+            self.running_mean = self.running_mean.flatten()
+            self.running_var = self.running_var.flatten()
+
+        if is_train:
+            mu = self.x_value.mean(axis=0)
+            xc = self.x_value - mu
+            var = np.mean(xc ** 2, axis=0)
+            std = np.sqrt(var + 10e-7)
+            xn = xc / std
+            self.xc = xc
+            self.xn = xn
+            self.std = std
+            self.running_mean = self.momentum * self.running_mean + (1 - self.momentum) * mu
+            self.running_var = self.momentum * self.running_var + (1 - self.momentum) * var
+        else:
+            xc = self.x_value - self.running_mean
+            xn = xc / (np.sqrt(self.running_var + 10e-7))
+
+        out = self.gamma.value * xn + self.beta.value
+        out = out.reshape(*self.input_shape)
+        return out
+
+    def backward(self, din, is_numba=False):
+        if din.ndim != 2:
+            N, C, H, W = din.shape
+            din = din.reshape(N, -1)
+
+        dbeta = din.sum(axis=0)
+        dgamma = np.sum(self.xn * din, axis=0)
+        dxn = self.gamma.value * din
+        dxc = dxn / self.std
+        dstd = -np.sum((dxn * self.xc) / (self.std * self.std), axis=0)
+        dvar = 0.5 * dstd / self.std
+        dxc += (2.0 / self.batch_size) * self.xc * dvar
+        dmu = np.sum(dxc, axis=0)
+        dx = dxc - dmu / self.batch_size
+
+        self.dgamma = dgamma
+        self.dbeta = dbeta
+
+        dx = dx.reshape(*self.input_shape)
+        return dx
+
+
+class Dropout(tfg.Operation):
+    def __init__(self, x, dropout_ratio, name, graph):
+        self.dropout_ratio = dropout_ratio
+        self.x_value = None
+        self.mask = None
+        super().__init__([x], name, graph)
+
+    def forward(self, x_value, is_train=True, is_numba=False):
+        self.x_value = x_value
+        if is_train:
+            self.mask = np.random.rand(*self.x_value.shape) > self.dropout_ratio
+            return self.x_value * self.mask
+        else:
+            return self.x_value * (1.0 - self.dropout_ratio)
+
+    def backward(self, din, is_numba=False):
+        return din * self.mask

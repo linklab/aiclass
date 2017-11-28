@@ -4,6 +4,7 @@ import tensorflux.layers as tfl
 import tensorflux.session as tfs
 import tensorflux.functions as tff
 import matplotlib.pyplot as plt
+from matplotlib import cm
 import networkx as nx
 import tensorflux.Deep_Neural_Network as dnn
 from networkx.drawing.nx_agraph import graphviz_layout
@@ -15,11 +16,16 @@ import sys
 import random
 import string
 
-"""
-    conv0 (activation0) - conv1 (activation1) - pool2 - 
-    conv3 (activation3) - conv4 (activation4) - pool5 - 
-    affine6 (activation6) - affine7 - softmax (output)
-"""
+color_dic = {
+            0: 'r',
+            1: 'b',
+            2: 'g',
+            3: 'c',
+            4: 'm',
+            5: 'y',
+            6: 'k',
+            7: 'w'
+}
 
 class CNN(dnn.Deep_Neural_Network):
     def __init__(self,
@@ -29,6 +35,9 @@ class CNN(dnn.Deep_Neural_Network):
                  output_size,
                  input_node=None,
                  target_node=None,
+                 use_batch_normalization=False,
+                 use_dropout=False,
+                 dropout_ratio_list=None,
                  conv_initializer=tfe.Initializer.Conv_Xavier_Normal,
                  initializer=tfe.Initializer.Normal.value,
                  init_sd=0.01,
@@ -42,6 +51,10 @@ class CNN(dnn.Deep_Neural_Network):
         self.cnn_param_list = cnn_param_list
         self.fc_hidden_size = fc_hidden_size
         self.output_size = output_size
+
+        self.use_batch_normalization = use_batch_normalization
+        self.use_dropout = use_dropout
+        self.dropout_ratio_list = dropout_ratio_list
 
         self.input_node = input_node
         self.target_node = target_node
@@ -79,35 +92,67 @@ class CNN(dnn.Deep_Neural_Network):
 
         self.min_validation_error_per_fold = []
 
+        self.param_mean_list = {}
+        self.param_variance_list = {}
+        self.param_skewness_list = {}
+        self.param_kurtosis_list = {}
+
+        self.output_mean_list = {}
+        self.output_variance_list = {}
+        self.output_skewness_list = {}
+        self.output_kurtosis_list = {}
+
         self.shape_before_fc = None
         self.num_neurons_flatten_for_fc = None
+
+        self.last_layer_idx = -1
+        self.global_last_epoch = -1
+
+        self.param_idx_list = []
+        self.conv_param_idx_list = []
 
         self.initialize_param(sd=init_sd)
         self.layering()
 
-    def get_conv_layer_output_size(self, input_height, input_width, filter_size, padding_size, stride_size):
-        output_height = (input_height - filter_size + 2 * padding_size) / stride_size + 1
-        output_width  = (input_width - filter_size + 2 * padding_size) / stride_size + 1
+    def get_conv_layer_output_size(self, input_height, input_width, filter_height, filter_width, padding_size, stride_size):
+        output_height = (input_height - filter_height + 2 * padding_size) / stride_size + 1
+        output_width  = (input_width - filter_width + 2 * padding_size) / stride_size + 1
         assert output_height == int(output_height)
         assert output_width == int(output_width)
-        return output_height, output_width
+        return int(output_height), int(output_width)
 
-    def get_pooling_layer_output_size(self, input_height, input_width, filter_size, stride_size):
-        output_height = (input_height - filter_size) / stride_size + 1
-        output_width = (input_width - filter_size) / stride_size + 1
+    def get_pooling_layer_output_size(self, input_height, input_width, filter_height, filter_width, stride_size):
+        output_height = (input_height - filter_height) / stride_size + 1
+        output_width = (input_width - filter_width) / stride_size + 1
         assert output_height == int(output_height)
         assert output_width == int(output_width)
-        return output_height, output_width
+        return int(output_height), int(output_width)
 
     def initialize_param(self, mean=0.0, sd=1.0):
+        self.param_mean_list['W'] = {}
+        self.param_variance_list['W'] = {}
+        self.param_skewness_list['W'] = {}
+        self.param_kurtosis_list['W'] = {}
+
+        self.param_mean_list['b'] = {}
+        self.param_variance_list['b'] = {}
+        self.param_skewness_list['b'] = {}
+        self.param_kurtosis_list['b'] = {}
+
         pre_channel_num = self.input_dim[0]
         input_height = self.input_dim[1]
         input_width = self.input_dim[2]
+
+        print("Data Size: {:s}".format(str(self.input_dim)))
+        print("         |")
+
         for idx, cnn_param in enumerate(self.cnn_param_list):
             if cnn_param['type'] == 'conv':
                 self.params['W' + str(idx)] = self.conv_initializer(
-                    shape=(cnn_param['filter_num'], pre_channel_num, cnn_param['filter_size'], cnn_param['filter_size']),
-                    name="W" + str(idx)
+                    shape=(cnn_param['filter_num'], pre_channel_num, cnn_param['filter_h'], cnn_param['filter_w']),
+                    name="W" + str(idx),
+                    mean=mean,
+                    sd=sd
                 ).param
 
                 self.params['b' + str(idx)] = tfe.Initializer.Zero.value(
@@ -117,63 +162,202 @@ class CNN(dnn.Deep_Neural_Network):
                 input_height, input_width = self.get_conv_layer_output_size(
                     input_height,
                     input_width,
-                    cnn_param['filter_size'],
+                    cnn_param['filter_h'],
+                    cnn_param['filter_w'],
                     cnn_param['pad'],
                     cnn_param['stride']
                 )
+
+                if self.use_batch_normalization:
+                    self.params['gamma' + str(idx)] = self.initializer(
+                        shape=(1, 1),
+                        name="gamma" + str(idx),
+                        mean=mean,
+                        sd=sd
+                    ).param
+
+                    self.params['beta' + str(idx)] = self.initializer(
+                        shape=(1, 1),
+                        name="beta" + str(idx),
+                        mean=mean,
+                        sd=sd
+                    ).param
+
+                    self.params['running_mean' + str(idx)] = np.zeros((cnn_param['filter_num'],input_height, input_width))
+                    self.params['running_var' + str(idx)] = np.zeros((cnn_param['filter_num'],input_height, input_width))
+
+                print("[Convolution Layer {:d}]".format(idx))
+                print("Param Key: W{:d}, Shape: {:s}".format(idx, str((cnn_param['filter_num'], pre_channel_num, cnn_param['filter_h'], cnn_param['filter_w']))))
+                print("Param Key: b{:d}, Shape: {:s}".format(idx, str((cnn_param['filter_num'],))))
+                print("Data Size: {:s}".format(str((cnn_param['filter_num'], input_height, input_width))))
+                print("         |")
+                if self.use_batch_normalization:
+                    print("[Batch Normalization {:d}]".format(idx))
+                    print("Param Key: gamma{:d}, Shape: {:s}".format(idx, str((1,1))))
+                    print("Param Key: beta{:d}, Shape: {:s}".format(idx, str((1,1))))
+                    print("Data Size: {:s}".format(str((cnn_param['filter_num'], input_height, input_width))))
+                    print("         |")
+                print("[Activation Layer {:d}]".format(idx))
+                print("Data Size: {:s}".format(str((cnn_param['filter_num'], input_height, input_width))))
+                print("         |")
+                if self.use_dropout:
+                    print("[Dropout {:d}]".format(idx))
+                    print("Data Size: {:s}".format(str((cnn_param['filter_num'], input_height, input_width))))
+                    print("         |")
                 pre_channel_num = cnn_param['filter_num']
+
+                self.param_idx_list.append(idx)
+                self.conv_param_idx_list.append(idx)
+
+                self.param_mean_list['W'][idx] = []
+                self.param_variance_list['W'][idx] = []
+                self.param_skewness_list['W'][idx] = []
+                self.param_kurtosis_list['W'][idx] = []
+
+                self.param_mean_list['b'][idx] = []
+                self.param_variance_list['b'][idx] = []
+                self.param_skewness_list['b'][idx] = []
+                self.param_kurtosis_list['b'][idx] = []
 
             if cnn_param['type'] == 'pooling':
                 input_height, input_width = self.get_pooling_layer_output_size(
                     input_height,
                     input_width,
-                    cnn_param['filter_size'],
+                    cnn_param['filter_h'],
+                    cnn_param['filter_w'],
                     cnn_param['stride']
                 )
+                print("[Pooling Layer {:d}]".format(idx))
+                print("Data Size: {:s}".format(str((pre_channel_num, input_height, input_width))))
+                print("         |")
 
         self.shape_before_fc = (int(pre_channel_num), int(input_height), int(input_width))
         self.num_neurons_flatten_for_fc = int(pre_channel_num * input_height * input_width)
 
+        print("[Reshape Layer]")
+        print("Data Size: {:s}".format(str(self.num_neurons_flatten_for_fc)))
+        print("         |")
+
         idx += 1
-        if self.initializer is tfe.Initializer.Normal.value or self.initializer is tfe.Initializer.Truncated_Normal.value:
-            self.params['W' + str(idx)] = self.initializer(
-                shape=(self.num_neurons_flatten_for_fc, self.fc_hidden_size),
-                name="W" + str(idx),
-                mean=mean,
-                sd=sd
-            ).param
-        else:
-            self.params['W' + str(idx)] = self.initializer(
-                shape=(self.num_neurons_flatten_for_fc, self.fc_hidden_size),
-                name="W" + str(idx)
-            ).param
+
+        self.params['W' + str(idx)] = self.initializer(
+            shape=(self.num_neurons_flatten_for_fc, self.fc_hidden_size),
+            name="W" + str(idx),
+            mean=mean,
+            sd=sd
+        ).param
 
         self.params['b' + str(idx)] = tfe.Initializer.Zero.value(
             shape=(self.fc_hidden_size,),
             name="b" + str(idx)
         ).param
 
-        idx += 1
-        if self.initializer is tfe.Initializer.Normal.value or self.initializer is tfe.Initializer.Truncated_Normal.value:
-            self.params['W' + str(idx)] = self.initializer(
-                shape=(self.fc_hidden_size, self.output_size),
-                name="W" + str(idx),
+        if self.use_batch_normalization:
+            self.params['gamma' + str(idx)] = self.initializer(
+                shape=(1, 1),
+                name="gamma" + str(idx),
                 mean=mean,
                 sd=sd
             ).param
-        else:
-            self.params['W' + str(idx)] = self.initializer(
-                shape=(self.fc_hidden_size, self.output_size),
-                name="W" + str(idx)
+
+            self.params['beta' + str(idx)] = self.initializer(
+                shape=(1, 1),
+                name="beta" + str(idx),
+                mean=mean,
+                sd=sd
             ).param
+
+            self.params['running_mean' + str(idx)] = np.zeros((self.fc_hidden_size,))
+            self.params['running_var' + str(idx)] = np.zeros((self.fc_hidden_size,))
+
+        print("[Affine Layer {:d}]".format(idx))
+        print("Param Key: W{:d}, Shape: {:s}".format(idx, str((self.num_neurons_flatten_for_fc, self.fc_hidden_size))))
+        print("Param Key: b{:d}, Shape: {:s}".format(idx, str((self.fc_hidden_size,))))
+        print("Data Size: {:s}".format(str(self.fc_hidden_size)))
+        print("         |")
+        if self.use_batch_normalization:
+            print("[Batch Normalization {:d}]".format(idx))
+            print("Param Key: gamma{:d}, Shape: {:s}".format(idx, str((1, 1))))
+            print("Param Key: beta{:d}, Shape: {:s}".format(idx, str((1, 1))))
+            print("Data Size: {:s}".format(str(self.fc_hidden_size)))
+            print("         |")
+        print("[Activation Layer {:d}]".format(idx))
+        print("Data Size: {:s}".format(str(self.fc_hidden_size)))
+        print("         |")
+        if self.use_dropout:
+            print("[Dropout {:d}]".format(idx))
+            print("Data Size: {:s}".format(str(self.fc_hidden_size)))
+            print("         |")
+        self.param_idx_list.append(idx)
+
+        self.param_mean_list['W'][idx] = []
+        self.param_variance_list['W'][idx] = []
+        self.param_skewness_list['W'][idx] = []
+        self.param_kurtosis_list['W'][idx] = []
+
+        self.param_mean_list['b'][idx] = []
+        self.param_variance_list['b'][idx] = []
+        self.param_skewness_list['b'][idx] = []
+        self.param_kurtosis_list['b'][idx] = []
+
+        idx += 1
+
+        self.params['W' + str(idx)] = self.initializer(
+            shape=(self.fc_hidden_size, self.output_size),
+            name="W" + str(idx),
+            mean=mean,
+            sd=sd
+        ).param
 
         self.params['b' + str(idx)] = tfe.Initializer.Zero.value(
             shape=(self.output_size,),
             name="b" + str(idx)
         ).param
 
+        print("[Affine Layer {:d}]".format(idx))
+        print("Param Key: W{:d}, Shape: {:s}".format(idx, str((self.fc_hidden_size, self.output_size))))
+        print("Param Key: b{:d}, Shape: {:s}".format(idx, str((self.output_size,))))
+        print("Data Size: {:s}".format(str(self.output_size)))
+        print("         |")
+        print("[Softmax Layer {:d}]".format(idx))
+        print("Data Size: {:s}".format(str(self.output_size)))
+        print()
+
+        self.param_idx_list.append(idx)
+
+        self.param_mean_list['W'][idx] = []
+        self.param_variance_list['W'][idx] = []
+        self.param_skewness_list['W'][idx] = []
+        self.param_kurtosis_list['W'][idx] = []
+
+        self.param_mean_list['b'][idx] = []
+        self.param_variance_list['b'][idx] = []
+        self.param_skewness_list['b'][idx] = []
+        self.param_kurtosis_list['b'][idx] = []
+
     def layering(self, refitting=False):
         input_node = self.input_node
+
+        if not refitting:
+            self.output_mean_list['conv'] = {}
+            self.output_variance_list['conv'] = {}
+            self.output_skewness_list['conv'] = {}
+            self.output_kurtosis_list['conv'] = {}
+
+            self.output_mean_list['pooling'] = {}
+            self.output_variance_list['pooling'] = {}
+            self.output_skewness_list['pooling'] = {}
+            self.output_kurtosis_list['pooling'] = {}
+
+            self.output_mean_list['affine'] = {}
+            self.output_variance_list['affine'] = {}
+            self.output_skewness_list['affine'] = {}
+            self.output_kurtosis_list['affine'] = {}
+
+            self.output_mean_list['activation'] = {}
+            self.output_variance_list['activation'] = {}
+            self.output_skewness_list['activation'] = {}
+            self.output_kurtosis_list['activation'] = {}
 
         for idx, cnn_param in enumerate(self.cnn_param_list):
             if cnn_param['type'] == 'conv':
@@ -186,22 +370,65 @@ class CNN(dnn.Deep_Neural_Network):
                     name    ='conv' + str(idx),
                     graph   =self
                 )
+
+                if self.use_batch_normalization:
+                    self.layers['batch_normal' + str(idx)] = tfl.BatchNormalization(
+                        x       =self.layers['conv' + str(idx)],
+                        gamma   =self.params['gamma' + str(idx)],
+                        beta    =self.params['beta' + str(idx)],
+                        running_mean=self.params['running_mean' + str(idx)],
+                        running_var=self.params['running_var' + str(idx)],
+                        name    ='batch_normal' + str(idx),
+                        graph   =self
+                    )
+                    next_input_node = self.layers['batch_normal' + str(idx)]
+                else:
+                    next_input_node = self.layers['conv' + str(idx)]
+
                 self.layers['activation' + str(idx)] = self.activator(
-                    u       =self.layers['conv' + str(idx)],
+                    u       =next_input_node,
                     name    ='activation' + str(idx),
                     graph   =self
                 )
-                input_node = self.layers['activation' + str(idx)]
+
+                if self.use_dropout:
+                    self.layers['dropout' + str(idx)] = tfl.Dropout(
+                        x=self.layers['activation' + str(idx)],
+                        dropout_ratio=self.dropout_ratio_list[idx],
+                        name='dropout' + str(idx),
+                        graph=self
+                    )
+                    input_node = self.layers['dropout' + str(idx)]
+                else:
+                    input_node = self.layers['activation' + str(idx)]
+
+                if not refitting:
+                    self.output_mean_list['conv'][idx] = []
+                    self.output_variance_list['conv'][idx] = []
+                    self.output_skewness_list['conv'][idx] = []
+                    self.output_kurtosis_list['conv'][idx] = []
+
+                    self.output_mean_list['activation'][idx] = []
+                    self.output_variance_list['activation'][idx] = []
+                    self.output_skewness_list['activation'][idx] = []
+                    self.output_kurtosis_list['activation'][idx] = []
+
             elif cnn_param['type'] == 'pooling':
                 self.layers['pooling' + str(idx)] = tfl.Pooling(
-                    w=self.params['W' + str(idx)],
                     x=input_node,
-                    pad=cnn_param['pad'],
+                    filter_h=cnn_param['filter_h'],
+                    filter_w=cnn_param['filter_w'],
                     stride=cnn_param['stride'],
                     name='pooling' + str(idx),
                     graph=self
                 )
                 input_node = self.layers['pooling' + str(idx)]
+
+                if not refitting:
+                    self.output_mean_list['pooling'][idx] = []
+                    self.output_variance_list['pooling'][idx] = []
+                    self.output_skewness_list['pooling'][idx] = []
+                    self.output_kurtosis_list['pooling'][idx] = []
 
         self.layers['reshape'] = tfl.Reshape(
             u       =input_node,
@@ -219,27 +446,72 @@ class CNN(dnn.Deep_Neural_Network):
             name    ='affine' + str(idx),
             graph   =self
         )
+
+        if self.use_batch_normalization:
+            self.layers['batch_normal' + str(idx)] = tfl.BatchNormalization(
+                x=self.layers['affine' + str(idx)],
+                gamma=self.params['gamma' + str(idx)],
+                beta=self.params['beta' + str(idx)],
+                running_mean=self.params['running_mean' + str(idx)],
+                running_var=self.params['running_var' + str(idx)],
+                name='batch_normal' + str(idx),
+                graph=self
+            )
+            next_input_node = self.layers['batch_normal' + str(idx)]
+        else:
+            next_input_node = self.layers['affine' + str(idx)]
+
         self.layers['activation' + str(idx)] = self.activator(
-            u       =self.layers['affine' + str(idx)],
+            u       =next_input_node,
             name    ='activation' + str(idx),
             graph   =self
         )
 
+        if self.use_dropout:
+            self.layers['dropout' + str(idx)] = tfl.Dropout(
+                x=self.layers['activation' + str(idx)],
+                dropout_ratio=self.dropout_ratio_list[idx],
+                name='dropout' + str(idx),
+                graph=self
+            )
+            input_node = self.layers['dropout' + str(idx)]
+        else:
+            input_node = self.layers['activation' + str(idx)]
+
+        if not refitting:
+            self.output_mean_list['affine'][idx] = []
+            self.output_variance_list['affine'][idx] = []
+            self.output_skewness_list['affine'][idx] = []
+            self.output_kurtosis_list['affine'][idx] = []
+
+            self.output_mean_list['activation'][idx] = []
+            self.output_variance_list['activation'][idx] = []
+            self.output_skewness_list['activation'][idx] = []
+            self.output_kurtosis_list['activation'][idx] = []
+
         idx += 1
         self.layers['affine' + str(idx)] = tfl.Affine(
             w       =self.params['W' + str(idx)],
-            x       =self.layers['activation' + str(idx - 1)],
+            x       =input_node,
             b       =self.params['b' + str(idx)],
             name    ='affine' + str(idx),
             graph   =self
         )
 
+        self.last_layer_idx = idx
+
+        if not refitting:
+            self.output_mean_list['affine'][idx] = []
+            self.output_variance_list['affine'][idx] = []
+            self.output_skewness_list['affine'][idx] = []
+            self.output_kurtosis_list['affine'][idx] = []
+
         self.output = self.layers['affine' + str(idx)]
 
         self.error = tfl.SoftmaxWithCrossEntropyLoss(self.output, self.target_node, name="SCEL", graph=self)
 
-    def feed_forward(self, input_data, is_numba=False):
-        return self.session.run(self.output, {self.input_node: input_data}, is_numba, verbose=False)
+    def feed_forward(self, input_data, is_train=True, is_numba=False):
+        return self.session.run(self.output, {self.input_node: input_data}, is_train, is_numba, verbose=False)
 
     def backward_propagation(self, is_numba):
         grads = {}
@@ -256,10 +528,17 @@ class CNN(dnn.Deep_Neural_Network):
             if cnn_param['type'] == 'conv':
                 grads['W' + str(idx)] = self.layers['conv' + str(idx)].dw
                 grads['b' + str(idx)] = self.layers['conv' + str(idx)].db
+                if self.use_batch_normalization:
+                    grads['gamma' + str(idx)] = self.layers['batch_normal' + str(idx)].dgamma
+                    grads['beta' + str(idx)] = self.layers['batch_normal' + str(idx)].dbeta
 
         idx += 1
         grads['W' + str(idx)] = self.layers['affine' + str(idx)].dw
         grads['b' + str(idx)] = self.layers['affine' + str(idx)].db
+
+        if self.use_batch_normalization:
+            grads['gamma' + str(idx)] = self.layers['batch_normal' + str(idx)].dgamma
+            grads['beta' + str(idx)] = self.layers['batch_normal' + str(idx)].dbeta
 
         idx += 1
         grads['W' + str(idx)] = self.layers['affine' + str(idx)].dw
@@ -291,8 +570,10 @@ class CNN(dnn.Deep_Neural_Network):
                             self.input_node: i_batch,
                             self.target_node: t_batch
                         },
+                        is_train=True,
                         is_numba=is_numba,
-                        verbose=False)
+                        verbose=False
+                    )
 
                     #backward
                     if isinstance(self.optimizer, tfe.Optimizer.NAG.value):
@@ -303,9 +584,18 @@ class CNN(dnn.Deep_Neural_Network):
                         grads = self.backward_propagation(is_numba)
                         self.optimizer.update(params=self.params, grads=grads)
 
+                    if self.use_batch_normalization:
+                        for key, layer in self.layers.items():
+                            if key.startswith('batch_normal'):
+                                idx = key.split('batch_normal')[1]
+                                self.params['running_mean' + str(idx)] = layer.running_mean
+                                self.params['running_var' + str(idx)] = layer.running_var
+
                 self.set_learning_process_specification(data, batch_size, epoch, print_period, is_numba, fold_idx, max_epoch, verbose)
 
             print()
+
+            self.global_last_epoch = len(self.train_error_list) - 1
 
             self.min_train_error = float(self.train_error_list[self.min_validation_error_epoch])
             self.min_validation_error = float(self.validation_error_list[self.min_validation_error_epoch])
@@ -344,8 +634,10 @@ class CNN(dnn.Deep_Neural_Network):
                 self.input_node: i_batch,
                 self.target_node: t_batch
             },
+            is_train=False,
             is_numba=is_numba,
-            verbose=False)
+            verbose=False
+        )
         self.train_error_list.append(train_error)
 
         validation_error = self.session.run(
@@ -354,8 +646,10 @@ class CNN(dnn.Deep_Neural_Network):
                 self.input_node: data.validation_input,
                 self.target_node: data.validation_target
             },
+            is_train=False,
             is_numba=is_numba,
-            verbose=False)
+            verbose=False
+        )
         self.validation_error_list.append(validation_error)
 
         min_flag = False
@@ -366,12 +660,68 @@ class CNN(dnn.Deep_Neural_Network):
             self.save_params()
             min_flag = True
 
-        forward_final_output = self.feed_forward(input_data=data.test_input, is_numba=is_numba)
+        forward_final_output = self.feed_forward(input_data=data.test_input, is_train=False, is_numba=is_numba)
 
         test_accuracy = tff.accuracy(forward_final_output, data.test_target)
         self.test_accuracy_list.append(test_accuracy)
 
+        for layer_name, _ in self.layers.items():
+            if layer_name.startswith("conv") or layer_name.startswith("affine"):
+                if layer_name.startswith("conv"):
+                    idx = int(layer_name[4:])
+                else:
+                    idx = int(layer_name[6:])
+                d = self.get_param_describe(layer_num=idx, kind="W")
+                self.param_mean_list['W'][idx].append(d.mean)
+                self.param_variance_list['W'][idx].append(d.variance)
+                self.param_skewness_list['W'][idx].append(d.skewness)
+                self.param_kurtosis_list['W'][idx].append(d.kurtosis)
 
+                d = self.get_param_describe(layer_num=idx, kind="b")
+                self.param_mean_list['b'][idx].append(d.mean)
+                self.param_variance_list['b'][idx].append(d.variance)
+                self.param_skewness_list['b'][idx].append(d.skewness)
+                self.param_kurtosis_list['b'][idx].append(d.kurtosis)
+
+            if layer_name.startswith("conv"):
+                kind_name = "conv"
+                idx = int(layer_name[4:])
+                d = self.get_output_describe(layer_num=idx, kind=kind_name)
+                self.output_mean_list[kind_name][idx].append(d.mean)
+                self.output_variance_list[kind_name][idx].append(d.variance)
+                self.output_skewness_list[kind_name][idx].append(d.skewness)
+                self.output_kurtosis_list[kind_name][idx].append(d.kurtosis)
+
+                kind_name = "activation"
+                d = self.get_output_describe(layer_num=idx, kind=kind_name)
+                self.output_mean_list[kind_name][idx].append(d.mean)
+                self.output_variance_list[kind_name][idx].append(d.variance)
+                self.output_skewness_list[kind_name][idx].append(d.skewness)
+                self.output_kurtosis_list[kind_name][idx].append(d.kurtosis)
+            elif layer_name.startswith("affine"):
+                kind_name = "affine"
+                idx = int(layer_name[6:])
+                d = self.get_output_describe(layer_num=idx, kind=kind_name)
+                self.output_mean_list[kind_name][idx].append(d.mean)
+                self.output_variance_list[kind_name][idx].append(d.variance)
+                self.output_skewness_list[kind_name][idx].append(d.skewness)
+                self.output_kurtosis_list[kind_name][idx].append(d.kurtosis)
+
+                if idx != self.last_layer_idx:
+                    kind_name = "activation"
+                    d = self.get_output_describe(layer_num=idx, kind=kind_name)
+                    self.output_mean_list[kind_name][idx].append(d.mean)
+                    self.output_variance_list[kind_name][idx].append(d.variance)
+                    self.output_skewness_list[kind_name][idx].append(d.skewness)
+                    self.output_kurtosis_list[kind_name][idx].append(d.kurtosis)
+            elif layer_name.startswith("pooling"):
+                kind_name = "pooling"
+                idx = int(layer_name[7:])
+                d = self.get_output_describe(layer_num=idx, kind=kind_name)
+                self.output_mean_list[kind_name][idx].append(d.mean)
+                self.output_variance_list[kind_name][idx].append(d.variance)
+                self.output_skewness_list[kind_name][idx].append(d.skewness)
+                self.output_kurtosis_list[kind_name][idx].append(d.kurtosis)
 
         if epoch % print_period == 0:
             print(
@@ -454,12 +804,12 @@ class CNN(dnn.Deep_Neural_Network):
             all_param_flatten_list.extend([item for item in param.value.flatten()])
         return stats.describe(np.array(all_param_flatten_list))
 
-    def print_feed_forward(self, num_data, input_data, target_data, is_numba, verbose=False):
+    def print_feed_forward(self, num_data, input_data, target_data, is_train=False, is_numba=False, verbose=False):
         for idx in range(num_data):
             train_input_data = input_data[idx]
             train_target_data = target_data[idx]
 
-            output = self.session.run(self.output, {self.input_node: train_input_data}, is_numba, verbose)
+            output = self.session.run(self.output, {self.input_node: train_input_data}, is_train, is_numba, verbose)
             print("Input Data: {:>5}, Feed Forward Output: {:>6}, Target: {:>6}".format(
                 str(train_input_data), np.array2string(output), str(train_target_data)))
 
@@ -509,7 +859,7 @@ class CNN(dnn.Deep_Neural_Network):
 
 
     def draw_false_prediction(self, test_input, test_target, labels, num=5, figsize=(20, 5)):
-        forward_final_output = self.feed_forward(input_data=test_input, is_numba=False)
+        forward_final_output = self.feed_forward(input_data=test_input, is_train=False, is_numba=False)
         y = np.argmax(forward_final_output, axis=1)
         if test_target.ndim != 1:
             target = np.argmax(test_target, axis=1)
@@ -520,6 +870,7 @@ class CNN(dnn.Deep_Neural_Network):
         for i in range(len(test_input)):
             if y[i] != target[i]:
                 diff_index_list.append(i)
+
         plt.figure(figsize=figsize)
 
         for i in range(num):
@@ -533,8 +884,6 @@ class CNN(dnn.Deep_Neural_Network):
         plt.show()
 
     def get_param_describe(self, layer_num=0, kind="W"):
-        assert layer_num <= self.hidden_layer_num
-
         if kind == "W":
             param_flatten_list = self.params['W' + str(layer_num)].value.flatten()
         else:
@@ -542,12 +891,251 @@ class CNN(dnn.Deep_Neural_Network):
 
         return stats.describe(np.array(param_flatten_list))
 
-    def get_activation_describe(self, layer_num=0, kind="affine"):
-        assert layer_num <= self.hidden_layer_num
-
-        if kind == "affine":
-            output_flatten_list = self.layers['affine' + str(layer_num)].output.flatten()
-        else:
-            output_flatten_list = self.layers['activation' + str(layer_num)].output.flatten()
-
+    def get_output_describe(self, layer_num=0, kind="affine"):
+        output_flatten_list = self.layers[kind + str(layer_num)].output.flatten()
         return stats.describe(np.array(output_flatten_list))
+
+    def draw_param_description(self, figsize=(20, 5)):
+        # Draw Error Values and Accuracy
+        plt.figure(figsize=figsize)
+        plt.subplots_adjust(hspace=.5)
+
+        epoch_list = np.arange(self.global_last_epoch + 1)
+
+        plt.subplot(241)
+        for idx in self.param_idx_list:
+            plt.plot(epoch_list, self.param_mean_list['W'][idx], color_dic[idx], label='W' + str(idx))
+        plt.ylabel('Mean')
+        plt.xlabel('Epochs')
+        plt.grid(True)
+        plt.legend(loc='lower left')
+
+        plt.subplot(242)
+        for idx in self.param_idx_list:
+            plt.plot(epoch_list, self.param_variance_list['W'][idx], color_dic[idx], label='W' + str(idx))
+        plt.ylabel('Variance')
+        plt.xlabel('Epochs')
+        plt.grid(True)
+        plt.legend(loc='lower left')
+
+        plt.subplot(243)
+        for idx in self.param_idx_list:
+            plt.plot(epoch_list, self.param_skewness_list['W'][idx], color_dic[idx], label='W' + str(idx))
+        plt.ylabel('Skewness')
+        plt.xlabel('Epochs')
+        plt.grid(True)
+        plt.legend(loc='lower left')
+
+        plt.subplot(244)
+        for idx in self.param_idx_list:
+            plt.plot(epoch_list, self.param_kurtosis_list['W'][idx], color_dic[idx], label='W' + str(idx))
+        plt.ylabel('Kurtosis')
+        plt.xlabel('Epochs')
+        plt.grid(True)
+        plt.legend(loc='lower left')
+
+        plt.subplot(245)
+        for idx in self.param_idx_list:
+            plt.plot(epoch_list, self.param_mean_list['b'][idx], color_dic[idx], label='b' + str(idx))
+        plt.ylabel('Mean')
+        plt.xlabel('Epochs')
+        plt.grid(True)
+        plt.legend(loc='lower left')
+
+        plt.subplot(246)
+        for idx in self.param_idx_list:
+            plt.plot(epoch_list, self.param_variance_list['b'][idx], color_dic[idx], label='b' + str(idx))
+        plt.ylabel('Variance')
+        plt.xlabel('Epochs')
+        plt.grid(True)
+        plt.legend(loc='lower left')
+
+        plt.subplot(247)
+        for idx in self.param_idx_list:
+            plt.plot(epoch_list, self.param_skewness_list['b'][idx], color_dic[idx], label='b' + str(idx))
+        plt.ylabel('Skewness')
+        plt.xlabel('Epochs')
+        plt.grid(True)
+        plt.legend(loc='lower left')
+
+        plt.subplot(248)
+        for idx in self.param_idx_list:
+            plt.plot(epoch_list, self.param_kurtosis_list['b'][idx], color_dic[idx], label='b' + str(idx))
+        plt.ylabel('Kurtosis')
+        plt.xlabel('Epochs')
+        plt.grid(True)
+        plt.legend(loc='lower left')
+
+        plt.show()
+
+    def draw_output_description(self, figsize=(20, 5)):
+        plt.figure(figsize=figsize)
+        plt.subplots_adjust(hspace=.5)
+
+        epoch_list = np.arange(self.global_last_epoch + 1)
+
+        for layer_name, layer in self.layers.items():
+            print("[{:s}]".format(layer_name))
+            if layer_name.startswith("conv"):
+                kind_name = "conv"
+                idx = int(layer_name[4:])
+            elif layer_name.startswith("activation"):
+                kind_name = "activation"
+                idx = int(layer_name[10:])
+            elif layer_name.startswith("pooling"):
+                kind_name = "pooling"
+                idx = int(layer_name[7:])
+            elif layer_name.startswith("affine"):
+                kind_name = "affine"
+                idx = int(layer_name[6:])
+
+            plt.subplot(241)
+            plt.plot(epoch_list, self.output_mean_list[kind_name][idx], color_dic[idx], label=kind_name + str(idx))
+            plt.ylabel('Mean')
+            plt.xlabel('Epochs')
+            plt.grid(True)
+            plt.legend(loc='lower left')
+
+            plt.subplot(242)
+            plt.plot(epoch_list, self.output_variance_list[kind_name][idx], color_dic[idx], label=kind_name + str(idx))
+            plt.ylabel('Variance')
+            plt.xlabel('Epochs')
+            plt.grid(True)
+            plt.legend(loc='lower left')
+
+            plt.subplot(243)
+            plt.plot(epoch_list, self.output_skewness_list[kind_name][idx], color_dic[idx], label=kind_name + str(idx))
+            plt.ylabel('Skewness')
+            plt.xlabel('Epochs')
+            plt.grid(True)
+            plt.legend(loc='lower left')
+
+            plt.subplot(244)
+            plt.plot(epoch_list, self.output_kurtosis_list[kind_name][idx], color_dic[idx], label=kind_name + str(idx))
+            plt.ylabel('Kurtosis')
+            plt.xlabel('Epochs')
+            plt.grid(True)
+            plt.legend(loc='lower left')
+
+        plt.show()
+
+    def draw_filters(self, figsize=(20, 5)):
+        for idx in self.conv_param_idx_list:
+            print("[Convolution Layer {:d}]".format(idx))
+            filter_num = self.params['W' + str(idx)].value.shape[0]
+            plt.figure(figsize=(self.params['W' + str(idx)].value[0].shape[2], int(self.params['W' + str(idx)].value[0].shape[1] / filter_num)))
+            for filter_idx in range(filter_num):
+                plt.subplot(100 + filter_num * 10 + filter_idx + 1)
+                img = self.params['W' + str(idx)].value[filter_idx]
+                if (img.shape[0] == 1):
+                    img = np.reshape(img, (img.shape[1], img.shape[2]))
+                    print(img.shape)
+                    plt.imshow(img, cmap='gray')
+                elif(img.shape[0] == 3 or img.shape[0] == 4):
+                    img = np.transpose(img, (1, 2, 0))
+                    print(img.shape)
+                    plt.imshow(img, cmap=cm.PRGn)
+                else:
+                    print("Image Channel Size (Filter Num) should be 1, 3, 4")
+                    sys.exit(-1)
+            plt.show()
+
+    def draw_filtered_images(self, test_inputs, figsize=(20, 5)):
+        self.feed_forward(input_data=test_inputs, is_train=False, is_numba=False)
+
+        plt.figure(figsize=figsize)
+        for idx in range(len(test_inputs)):
+            plt.subplot(100 + len(test_inputs) * 10 + idx + 1)
+            img = test_inputs[idx]
+            img.shape = (28, 28)
+            print(img.shape)
+            plt.imshow(img, cmap='gray')
+        plt.show()
+
+        for layer_name, layer in self.layers.items():
+            if layer_name.startswith("conv"):
+                print("[Convolution Layer: {:s}]".format(layer_name))
+                plt.figure(figsize=(layer.output[0].shape[2], int(layer.output[0].shape[1] / len(layer.output))))
+                for idx in range(len(layer.output)):
+                    plt.subplot(100 + len(layer.output) * 10 + idx + 1)
+                    img = layer.output[idx]
+                    if (img.shape[0] == 1):
+                        img = np.reshape(img, (img.shape[1], img.shape[2]))
+                        print(img.shape)
+                        plt.imshow(img, cmap='gray')
+                    elif (img.shape[0] == 3 or img.shape[0] == 4):
+                        img = np.transpose(img, (1, 2, 0))
+                        print(img.shape)
+                        plt.imshow(img, cmap=cm.PRGn)
+                    else:
+                        print("Image Channel Size (Filter Num) should be 1, 3, 4")
+                plt.show()
+
+                activation_layer_name = "activation" + layer_name[4:]
+                activation_layer = self.layers[activation_layer_name]
+
+                print("[Activation Layer: {:s}]".format(activation_layer_name))
+                plt.figure(figsize=(activation_layer.output[0].shape[2], int(activation_layer.output[0].shape[1] / len(activation_layer.output))))
+                for idx in range(len(activation_layer.output)):
+                    plt.subplot(100 + len(activation_layer.output) * 10 + idx + 1)
+                    img = activation_layer.output[idx]
+                    if (img.shape[0] == 1):
+                        img = np.reshape(img, (img.shape[1], img.shape[2]))
+                        print(img.shape)
+                        plt.imshow(img, cmap='gray')
+                    elif (img.shape[0] == 3 or img.shape[0] == 4):
+                        img = np.transpose(img, (1, 2, 0))
+                        print(img.shape)
+                        plt.imshow(img, cmap=cm.PRGn)
+                    else:
+                        print("Image Channel Size (Filter Num) should be 1, 3, 4")
+                plt.show()
+
+            if layer_name.startswith("pooling"):
+                print("[Pooling Layer: {:s}]".format(layer_name))
+                plt.figure(figsize=(layer.output[0].shape[2], int(layer.output[0].shape[1] / len(layer.output))))
+                for idx in range(len(layer.output)):
+                    plt.subplot(100 + len(layer.output) * 10 + idx + 1)
+                    img = layer.output[idx]
+                    if (img.shape[0] == 1):
+                        img = np.reshape(img, (img.shape[1], img.shape[2]))
+                        print(img.shape)
+                        plt.imshow(img, cmap='gray')
+                    elif (img.shape[0] == 3 or img.shape[0] == 4):
+                        img = np.transpose(img, (1, 2, 0))
+                        print(img.shape)
+                        plt.imshow(img, cmap=cm.PRGn)
+                    else:
+                        print("Image Channel Size (Filter Num) should be 1, 3, 4")
+                plt.show()
+
+            if layer_name.startswith("reshape"):
+                print("[Pooling Layer: {:s}]".format(layer_name))
+                for idx in range(len(layer.output)):
+                    plt.figure(figsize=(layer.output.shape[1], int(layer.output.shape[0])))
+                    img = layer.output[idx]
+                    img.shape = (1, len(img))
+                    print(img.shape)
+                    plt.imshow(img, cmap='gray')
+                plt.show()
+
+            if layer_name.startswith("affine"):
+                print("[Affine Layer: {:s}]".format(layer_name))
+                for idx in range(len(layer.output)):
+                    plt.figure(figsize=(layer.output.shape[1], int(layer.output.shape[0])))
+                    img = layer.output[idx]
+                    img.shape = (1, len(img))
+                    print(img.shape)
+                    plt.imshow(img, cmap='gray')
+                plt.show()
+
+        print("[Softmax Layer]")
+        np.set_printoptions(precision=3)
+        for idx in range(len(layer.output)):
+            plt.figure(figsize=(layer.output.shape[1], int(layer.output.shape[0])))
+            img = layer.output[idx]
+            softmax_img = tff.softmax(img, is_numba=False)
+            softmax_img.shape = (1, len(softmax_img))
+            print(softmax_img.shape, ":", softmax_img)
+            plt.imshow(softmax_img, cmap='gray')
+        plt.show()

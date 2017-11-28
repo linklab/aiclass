@@ -9,7 +9,7 @@ class Session:
     """Represents a particular execution of a computational graph.
     """
 
-    def run(self, operation, feed_dict, is_numba, verbose=False):
+    def run(self, operation, feed_dict, is_train, is_numba, verbose=False):
         """Computes the output of an operation
         
         Args:
@@ -28,7 +28,9 @@ class Session:
 
         # Iterate all nodes to determine their value
         for node in nodes_postorder:
-            if type(node) == tfg.Placeholder:
+            if node is None:
+                continue
+            elif type(node) == tfg.Placeholder:
                 # Set the node value to the placeholder value from feed_dict
                 node.output = feed_dict[node]
             elif type(node) == tfg.Variable:
@@ -39,10 +41,10 @@ class Session:
                 node.output = node.value
             else: # Operation
                 # Get the input values for this operation from node_values
-                node_inputs = [input_node.output for input_node in node.input_nodes]
+                node_inputs = [input_node.output for input_node in node.input_nodes if input_node is not None]
 
                 # Compute the output of this operation
-                node.output = node.forward(*node_inputs, is_numba)
+                node.output = node.forward(*node_inputs, is_train, is_numba)
 
             # Convert lists to numpy arrays
             if type(node.output) is not np.ndarray:
